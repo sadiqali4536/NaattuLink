@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
       child: BlocBuilder<ThemeBloc, ThemeState>(builder: (context, state) {
         return GetMaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Swift Clean',
+          title: 'Naattu Link',
           theme: ThemeData.light(),
           darkTheme: ThemeData.dark(),
           themeMode: state.themeMode,

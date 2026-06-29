@@ -24,50 +24,77 @@ class _SplashScreenState extends State<SplashScreen> {
     initTo();
   }
 
-
-
   void initTo() async {
-  await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2));
 
-  final auth = FirebaseAuth.instance.currentUser;
+    final auth = FirebaseAuth.instance.currentUser;
 
-  if (auth == null) {
-    Get.off(() => LoginAndSigning(), transition: Transition.zoom);
-    return;
-  }
+    if (auth == null) {
+      Get.off(() => LoginAndSigning(), transition: Transition.zoom);
+      return;
+    }
 
-  final role = await getRole(auth.uid); // ⬅️ Await the role here
+    final role = await getRole(auth.uid); // ⬅️ Await the role here
 
-  if (role == 'user') {
-    Get.off(() => Bottomnvigationbar(), transition: Transition.zoom);
-  } else if (role == 'worker') {
-    final isVerifiedSnapshot = await FirebaseFirestore.instance
-        .collection('workers')
-        .doc(auth.uid)
-        .get();
+    if (role == 'user') {
+      Get.off(() => Bottomnvigationbar(), transition: Transition.zoom);
+    } else if (role == 'worker') {
+      final isVerifiedSnapshot = await FirebaseFirestore.instance
+          .collection('workers')
+          .doc(auth.uid)
+          .get();
 
-    final isVerified = isVerifiedSnapshot.data()?['isVerified'] == 1;
+      final isVerified = isVerifiedSnapshot.data()?['isVerified'] == 1;
 
-    if (isVerified) {
-      Get.offAll(() => WorkerDashboard());
+      if (isVerified) {
+        Get.offAll(() => WorkerDashboard());
+      } else {
+        Get.off(() => LoginAndSigning(), transition: Transition.zoom);
+      }
     } else {
       Get.off(() => LoginAndSigning(), transition: Transition.zoom);
     }
-  } else {
-    Get.off(() => LoginAndSigning(), transition: Transition.zoom);
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final logoWidth = screenWidth * 0.75;
+
     return Scaffold(
-      backgroundColor: primary.c,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 50),
-          child: Image.asset("assets/icons/logo.png"),
-        ),
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            height: double.infinity,
+            child: Image.asset(
+              "assets/bg/Splash.png",
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned(
+            top: screenHeight * 0.12,
+            left: (screenWidth - logoWidth) / 2,
+            width: logoWidth,
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.elasticOut,
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: child,
+                );
+              },
+              child: Image.asset(
+                "assets/logo/logo_with_name.png",
+                width: logoWidth,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
