@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 
 import 'package:swiftclean_project/MVVM/View/Authentication/SplashScreen.dart';
+import 'package:swiftclean_project/MVVM/Viewmodel/location_controller.dart';
 import 'package:swiftclean_project/MVVM/Viewmodel/themes_bloc.dart';
 import 'package:swiftclean_project/firebase_options.dart';
 
@@ -11,6 +12,8 @@ late Size mq;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Register LocationController globally before the app starts
+  Get.put(LocationController(), permanent: true);
   runApp(MyApp());
 }
 

@@ -425,7 +425,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/Worker/worker_main_page.dart';
+import 'package:swiftclean_project/MVVM/Viewmodel/location_controller.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 
 class WorkerDashboard extends StatefulWidget {
@@ -475,7 +477,36 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Worker Dashboard"),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Worker Dashboard',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
+            Obx(() {
+              final loc = LocationController.to.currentLocation.value;
+              if (loc.isEmpty) return const SizedBox.shrink();
+              return Row(
+                children: [
+                  const Icon(Icons.location_on, color: Color(0xFFF5B544), size: 13),
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      loc,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
         backgroundColor: gradientgreen2.c,
         foregroundColor: Colors.white,
         actions: [

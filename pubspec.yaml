@@ -52,6 +52,8 @@ dependencies:
   http: ^1.4.0
   flashy_flushbar: ^1.4.0
   another_flushbar: ^1.12.30
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
 
 dev_dependencies:
   flutter_test:

@@ -4,11 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/Forget_password.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/Registrationpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/Worker_Dashboard.dart';
+import 'package:swiftclean_project/MVVM/View/Authentication/current_loaction_fetch.dart';
 import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/Founctions/helper_functions.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/BottomNavigationbar/BottomNvigationBar.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/formfield/customformfield.dart';
 
@@ -222,17 +220,21 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
                                             .doc(userId)
                                             .get();
 
-                                         final workerDoc = await FirebaseFirestore
-                                            .instance
-                                            .collection('workers')
-                                            .doc(userId)
-                                            .get();
+                                        final workerDoc =
+                                            await FirebaseFirestore.instance
+                                                .collection('workers')
+                                                .doc(userId)
+                                                .get();
 
-                                        final userrole = userDoc.data()?['role'];
-                                        final workerrole = workerDoc.data()?['role'];
+                                        final userrole =
+                                            userDoc.data()?['role'];
+                                        final workerrole =
+                                            workerDoc.data()?['role'];
 
                                         if (userrole == 'user') {
-                                          Get.offAll(Bottomnvigationbar());
+                                          Get.offAll(
+                                            () => const FindingLocationPage(),
+                                          );
                                         } else if (workerrole == 'worker') {
                                           // Fetch worker verification status
                                           final workerDoc =
@@ -245,7 +247,9 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
                                               workerDoc.data()?['isVerified'];
 
                                           if (isVerified == 1) {
-                                            Get.offAll(WorkerDashboard());
+                                            Get.offAll(
+                                              () => const FindingLocationPage(),
+                                            );
                                           } else if (isVerified == -1) {
                                             Get.snackbar(
                                               'Verification',
