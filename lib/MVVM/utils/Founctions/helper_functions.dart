@@ -34,7 +34,8 @@ class HelperFunctions {
   }
 }
 
-String formatDate(Timestamp timestamp) {
+String formatDate(Timestamp? timestamp) {
+  if (timestamp == null) return 'N/A';
   final dateTime = timestamp.toDate(); // Convert Timestamp to DateTime
   final formatter = DateFormat('d MMM, y'); // e.g. 24 May, 2025
   return formatter.format(dateTime);

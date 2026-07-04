@@ -1500,6 +1500,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/auth_controller.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/button/dropdown/custdropdown.dart';
 
@@ -1664,19 +1665,25 @@ class _RegistrationpageState extends State<Registrationpage> {
                           SizedBox(
                             height: 55,
                             width: double.infinity,
-                            child: Custombutton(
-                              color: const Color(0xFF0A235C),
-                              borderRadius: 15,
-                              text: const Text(
-                                "Register",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              onpress: _handleRegister,
-                            ),
+                            child: Obx(() => Custombutton(
+                                  color: const Color(0xFF0A235C),
+                                  borderRadius: 15,
+                                  text: AuthController.to.isLoading
+                                      ? const Center(
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text(
+                                          "Register",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                  onpress: _handleRegister,
+                                )),
                           ),
                           const SizedBox(height: 25),
 
@@ -2056,128 +2063,24 @@ class _RegistrationpageState extends State<Registrationpage> {
 
     if (formKey.currentState!.validate()) {
       if (isUser) {
-        registerUser();
+        AuthController.to.registerUser(
+          context,
+          username: userNameController.text.trim(),
+          phone: userPhoneController.text.trim(),
+          email: userEmailController.text.trim(),
+          password: userPasswordController.text.trim(),
+        );
       } else {
-        registerWorker();
+        AuthController.to.registerWorker(
+          context,
+          username: workerNameController.text.trim(),
+          phone: workerPhoneController.text.trim(),
+          email: workerEmailController.text.trim(),
+          password: workerPasswordController.text.trim(),
+          category: selectedCategory ?? "",
+        );
       }
     }
-  }
-
-  void registerUser() async {
-    try {
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: userEmailController.text.trim(),
-        password: userPasswordController.text.trim(),
-      );
-      final uid = userCredential.user!.uid;
-
-      await FirebaseFirestore.instance.collection("users").doc(uid).set({
-        "username": userNameController.text.trim(),
-        "phone": userPhoneController.text.trim(),
-        "email": userEmailController.text.trim(),
-        "role": "user",
-        "profile_img": "",
-        "created_at": FieldValue.serverTimestamp(),
-        "updated_at": FieldValue.serverTimestamp(),
-        "status": "active",
-        "password": userPasswordController.text.trim(),
-        "loyalty_points": 0,
-      });
-
-      Get.snackbar("Success", "User registered successfully",
-          backgroundColor: Colors.green, colorText: Colors.white);
-      if (mounted) Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
-      _handleAuthError(e);
-    } catch (e) {
-      Get.snackbar("Error", "Something went wrong. Please try again.$e",
-          backgroundColor: Colors.red, colorText: Colors.white);
-    }
-  }
-
-  void registerAdmin() async {
-    try {
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: userEmailController.text.trim(),
-        password: userPasswordController.text.trim(),
-      );
-      final uid = userCredential.user!.uid;
-
-      await FirebaseFirestore.instance.collection("admin").doc(uid).set({
-        "username": userNameController.text.trim(),
-        "email": userEmailController.text.trim(),
-        "role": "admin",
-        "profile_img": "",
-        "created_at": FieldValue.serverTimestamp(),
-        "password": userPasswordController.text.trim(),
-      });
-
-      Get.snackbar("Success", "User registered successfully",
-          backgroundColor: Colors.green, colorText: Colors.white);
-      if (mounted) Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
-      _handleAuthError(e);
-    } catch (e) {
-      Get.snackbar("Error", "Something went wrong. Please try again.$e",
-          backgroundColor: Colors.red, colorText: Colors.white);
-    }
-  }
-
-  void registerWorker() async {
-    if (selectedCategory == null || selectedCategory!.isEmpty) {
-      Get.snackbar("Error", "Please select a service category",
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return;
-    }
-
-    try {
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: workerEmailController.text.trim(),
-        password: workerPasswordController.text.trim(),
-      );
-      final uid = userCredential.user!.uid;
-
-      await FirebaseFirestore.instance.collection("workers").doc(uid).set({
-        "username": workerNameController.text.trim(),
-        "phone": workerPhoneController.text.trim(),
-        "email": workerEmailController.text.trim(),
-        "role": "worker",
-        "category": selectedCategory,
-        "profile_img": "",
-        "created_at": FieldValue.serverTimestamp(),
-        "updated_at": FieldValue.serverTimestamp(),
-        "status": "pending",
-        "services": [],
-        "ratings": 0,
-        "total_reviews": 0,
-        "isVerified": 0,
-        "password": workerPasswordController.text.trim(),
-      });
-
-      Get.snackbar(
-          "Success", "Worker registered successfully. Awaiting admin approval.",
-          backgroundColor: Colors.green, colorText: Colors.white);
-      if (mounted) Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
-      _handleAuthError(e);
-    } catch (e) {
-      Get.snackbar("Error", "Something went wrong. Please try again.",
-          backgroundColor: Colors.red, colorText: Colors.white);
-    }
-  }
-
-  void _handleAuthError(FirebaseAuthException e) {
-    String errorMessage = switch (e.code) {
-      'weak-password' => 'The password provided is too weak.',
-      'email-already-in-use' => 'An account already exists for that email.',
-      'invalid-email' => 'Please enter a valid email address.',
-      _ => e.message ?? "An unknown error occurred",
-    };
-    Get.snackbar("Error", errorMessage,
-        backgroundColor: Colors.red, colorText: Colors.white);
   }
 }
 

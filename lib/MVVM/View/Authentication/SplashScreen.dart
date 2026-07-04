@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/current_loaction_fetch.dart';
+import 'package:swiftclean_project/MVVM/View/Authentication/Authgate.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,11 +17,9 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _goToLocationPage() async {
-    // Show splash for 3 seconds, then always open the location-fetch screen.
-    // FindingLocationPage handles auth-check + routing after the location is ready.
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-    Get.off(() => const FindingLocationPage(), transition: Transition.zoom);
+    Get.off(() => const Authgate(), transition: Transition.zoom);
   }
 
   @override

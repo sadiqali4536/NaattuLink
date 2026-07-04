@@ -6,9 +6,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/Worker/Worker_Dashboard.dart';
-import 'package:swiftclean_project/MVVM/Viewmodel/location_controller.dart';
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:swiftclean_project/MVVM/utils/Founctions/helper_functions.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/BottomNavigationbar/BottomNvigationBar.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/user_Dashboard.dart';
 
 class FindingLocationPage extends StatefulWidget {
   const FindingLocationPage({super.key});
@@ -148,7 +148,7 @@ class _FindingLocationPageState extends State<FindingLocationPage>
     print('[LOC] User role: $role');
 
     if (role == 'user') {
-      Get.offAll(() => Bottomnvigationbar());
+      Get.offAll(() => user_Dashboard());
     } else if (role == 'worker') {
       final workerDoc = await FirebaseFirestore.instance
           .collection('workers')

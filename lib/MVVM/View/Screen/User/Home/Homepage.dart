@@ -9,10 +9,10 @@ import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Home_Booki
 import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/service_functions/ServiceCardwith map.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/button/Scrollable/scrollable_horizontal_buttons.dart';
-import 'package:swiftclean_project/MVVM/Viewmodel/location_controller.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({Key? key}) : super(key: key);

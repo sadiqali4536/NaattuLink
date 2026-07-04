@@ -1,5 +1,3 @@
-
-
 import 'dart:developer';
 import 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_notch_bottom_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,16 +9,17 @@ import 'package:swiftclean_project/MVVM/View/Screen/User/Home/Homepage.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/services/Services_list.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/profile/profile.dart';
 
-class Bottomnvigationbar extends StatefulWidget {
-  const Bottomnvigationbar({super.key});
+class user_Dashboard extends StatefulWidget {
+  const user_Dashboard({super.key});
 
   @override
-  State<Bottomnvigationbar> createState() => _BottomNavigationBarScreenState();
+  State<user_Dashboard> createState() => _BottomNavigationBarScreenState();
 }
 
-class _BottomNavigationBarScreenState extends State<Bottomnvigationbar> {
+class _BottomNavigationBarScreenState extends State<user_Dashboard> {
   final _pageController = PageController(initialPage: 0);
-  final NotchBottomBarController _controller = NotchBottomBarController(index: 0);
+  final NotchBottomBarController _controller =
+      NotchBottomBarController(index: 0);
 
   int maxCount = 5;
   int cartCount = 0;
@@ -33,7 +32,7 @@ class _BottomNavigationBarScreenState extends State<Bottomnvigationbar> {
     _bottomBarPages = [
       const Homepage(),
       const ServicesList(),
-       CartPage(),
+      CartPage(),
       const ChatPage(),
       const Profile(),
     ];
@@ -83,7 +82,8 @@ class _BottomNavigationBarScreenState extends State<Bottomnvigationbar> {
       body: PageView.builder(
         controller: _pageController,
         itemCount: _bottomBarPages.length,
-        physics: const NeverScrollableScrollPhysics(), // Change to NeverScrollableScrollPhysics() to disable swipe
+        physics:
+            const NeverScrollableScrollPhysics(), // Change to NeverScrollableScrollPhysics() to disable swipe
         onPageChanged: (index) {
           _controller.index = index; // Sync bottom bar with swipe
         },
@@ -115,7 +115,8 @@ class _BottomNavigationBarScreenState extends State<Bottomnvigationbar> {
               kIconSize: 24.0,
               bottomBarItems: [
                 BottomBarItem(
-                  inActiveItem: Icon(Icons.home_filled, color: const Color.fromRGBO(133, 130, 130, 1)),
+                  inActiveItem: Icon(Icons.home_filled,
+                      color: const Color.fromRGBO(133, 130, 130, 1)),
                   activeItem: Icon(Icons.home_filled, color: Colors.white),
                 ),
                 BottomBarItem(
@@ -143,7 +144,8 @@ class _BottomNavigationBarScreenState extends State<Bottomnvigationbar> {
                               color: Colors.red,
                               shape: BoxShape.circle,
                             ),
-                            constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                            constraints: const BoxConstraints(
+                                minWidth: 20, minHeight: 20),
                             child: Center(
                               child: Text(
                                 '$cartCount',
@@ -161,7 +163,8 @@ class _BottomNavigationBarScreenState extends State<Bottomnvigationbar> {
                   activeItem: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      Image.asset("assets/icons/cart_bottombar.png", color: Colors.white),
+                      Image.asset("assets/icons/cart_bottombar.png",
+                          color: Colors.white),
                       if (cartCount > 0)
                         Positioned(
                           left: 20,
@@ -200,7 +203,8 @@ class _BottomNavigationBarScreenState extends State<Bottomnvigationbar> {
                   ),
                 ),
                 BottomBarItem(
-                  inActiveItem: Image.asset("assets/icons/profile_bottombar.png"),
+                  inActiveItem:
+                      Image.asset("assets/icons/profile_bottombar.png"),
                   activeItem: Image.asset(
                     "assets/icons/profile_bottombar.png",
                     color: Colors.white,

@@ -7,34 +7,53 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:swiftclean_project/MVVM/model/models/user_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
+import 'package:swiftclean_project/MVVM/utils/Config/Toast.dart';
 
 class FirebaseAuthServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore db = FirebaseFirestore.instance;
 
   // Sign in with Email and Password
-  Future<UserCredential?> signIn(BuildContext context, String email, String password) async {
+  Future<UserCredential?> signIn(
+      BuildContext context, String email, String password) async {
     try {
-      UserCredential credential = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      UserCredential credential = await _auth.signInWithEmailAndPassword(
+          email: email, password: password);
       return credential;
     } on FirebaseAuthException catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Error: \${e.message}"),
-          backgroundColor: Colors.red,
-        ));
+        String message = "Incorrect email or password. Please try again.";
+        if (e.code == 'invalid-email') {
+          message = "Please enter a valid email address.";
+        } else if (e.code == 'user-disabled') {
+          message = "This account has been disabled. Please contact support.";
+        } else if (e.code == 'too-many-requests') {
+          message = "Too many login attempts. Please try again later.";
+        } else if (e.code == 'network-request-failed') {
+          message = "Network error. Please check your internet connection.";
+        } else if (e.message != null &&
+            e.message!.contains("supplied auth credential is incorrect")) {
+          message = "Incorrect email or password. Please try again.";
+        }
+
+        toastError(message);
       }
-    } catch (e) {
-      debugPrint("Error: \$e");
+    } catch (e, stackTrace) {
+      debugPrint("Generic Sign-In Error: $e");
+      debugPrint("Stack Trace: $stackTrace");
+      if (context.mounted) {
+        toastError("An unexpected login error occurred. Please try again.");
+      }
     }
     return null;
   }
 
   // Create User
-  Future<User?> createUser(BuildContext context, String email, String password, String role) async {
+  Future<User?> createUser(
+      BuildContext context, String email, String password, String role) async {
     try {
-      UserCredential credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+      UserCredential credential = await _auth.createUserWithEmailAndPassword(
+          email: email, password: password);
       final user = credential.user;
 
       if (user != null) {
@@ -53,22 +72,32 @@ class FirebaseAuthServices {
       }
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Registration Successful"),
-          backgroundColor: Colors.black,
-        ));
+        toastSuccess("Registration Successful");
       }
 
       return user;
     } on FirebaseAuthException catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Error: \${e.message}"),
-          backgroundColor: Colors.red,
-        ));
+        String message = "Registration failed. Please try again.";
+        if (e.code == 'email-already-in-use') {
+          message = "This email is already registered. Please sign in instead.";
+        } else if (e.code == 'weak-password') {
+          message = "Password is too weak. Please use at least 6 characters.";
+        } else if (e.code == 'invalid-email') {
+          message = "Please enter a valid email address.";
+        } else if (e.code == 'network-request-failed') {
+          message = "Network error. Please check your internet connection.";
+        }
+
+        toastError(message);
       }
-    } catch (e) {
-      debugPrint("Error: \$e");
+    } catch (e, stackTrace) {
+      debugPrint("Generic Registration Error: $e");
+      debugPrint("Stack Trace: $stackTrace");
+      if (context.mounted) {
+        toastError(
+            "An unexpected registration error occurred. Please try again.");
+      }
     }
     return null;
   }
@@ -79,7 +108,8 @@ class FirebaseAuthServices {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return 'Sign-in aborted by user';
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -98,10 +128,7 @@ class FirebaseAuthServices {
   Future<void> signOut(BuildContext context) async {
     await _auth.signOut();
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Logout Successful!"),
-        backgroundColor: Colors.black,
-      ));
+      toastSuccess("Logout Successful!");
     }
   }
 
@@ -131,20 +158,15 @@ class FirebaseAuthServices {
       await db.collection('carts').add(cartData);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Service added to cart"), backgroundColor: Colors.green),
-        );
+        toastSuccess("Service added to cart");
       }
     } catch (e) {
       if (context.mounted) {
-        CustomSnackBar.show(
-        icon: Icons.cancel,
-        iconcolor: erroriconcolor,
-        context: context,
-         message: "Failed to add to cart: ${e.toString()}",color: Colors.white);
-        
+        toastError("Failed to add to cart: ${e.toString()}");
+      }
     }
   }
+
   // Send 5-digit verification code for booking cancellation
   Future<void> sendCancellationCodeToEmail({
     required String email,
@@ -186,19 +208,14 @@ class FirebaseAuthServices {
 
       if (response.statusCode == 200) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Verification code sent to email."),
-            backgroundColor: Colors.green,
-          ));
+          toastSuccess("Verification code sent to email.");
         }
       } else {
         throw Exception("Failed to send email");
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
-        );
+        toastError("Error: $e");
       }
     }
   }
@@ -228,13 +245,9 @@ class FirebaseAuthServices {
     await db.collection('bookingCancelCodes').doc(user.uid).delete();
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Booking canceled successfully."),
-        backgroundColor: Colors.green,
-      ));
+      toastSuccess("Booking canceled successfully.");
     }
 
     return true;
   }
-}
 }

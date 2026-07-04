@@ -421,13 +421,12 @@
 //   }
 // }
 
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/Worker/worker_main_page.dart';
-import 'package:swiftclean_project/MVVM/Viewmodel/location_controller.dart';
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 
 class WorkerDashboard extends StatefulWidget {
@@ -489,7 +488,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               if (loc.isEmpty) return const SizedBox.shrink();
               return Row(
                 children: [
-                  const Icon(Icons.location_on, color: Color(0xFFF5B544), size: 13),
+                  const Icon(Icons.location_on,
+                      color: Color(0xFFF5B544), size: 13),
                   const SizedBox(width: 3),
                   Flexible(
                     child: Text(
@@ -524,7 +524,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('bookings').snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
 
           final allBookings = snapshot.data!.docs;
 
@@ -558,24 +559,25 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             padding: const EdgeInsets.all(16),
             children: [
               if (myRequested.isNotEmpty)
-                _jobCard(myRequested.first, "Requested (Waiting for Admin)", Colors.orange),
-
+                _jobCard(myRequested.first, "Requested (Waiting for Admin)",
+                    Colors.orange),
               if (myApproved.isNotEmpty)
-                _jobCard(myApproved.first, "In Progress", Colors.green, showCompleteButton: true),
-
+                _jobCard(myApproved.first, "In Progress", Colors.green,
+                    showCompleteButton: true),
               if (myCompleted.isNotEmpty) ...[
                 const SizedBox(height: 20),
-                const Text("Completed Jobs", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ...myCompleted.map((doc) => _jobCard(doc, "Completed", Colors.grey)),
+                const Text("Completed Jobs",
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ...myCompleted
+                    .map((doc) => _jobCard(doc, "Completed", Colors.grey)),
               ],
-
               const SizedBox(height: 20),
               const Divider(thickness: 1),
               const SizedBox(height: 10),
-
-              const Text("Available Jobs", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text("Available Jobs",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-
               if (hasActiveJob)
                 const Padding(
                   padding: EdgeInsets.all(12),
@@ -596,7 +598,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     );
   }
 
-  Widget _jobCard(QueryDocumentSnapshot doc, String label, Color color, {bool showCompleteButton = false}) {
+  Widget _jobCard(QueryDocumentSnapshot doc, String label, Color color,
+      {bool showCompleteButton = false}) {
     final data = doc.data() as Map<String, dynamic>;
 
     return Card(
@@ -649,7 +652,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   Future<void> _requestJob(String bookingId) async {
     if (user == null || workerName == null) return;
 
-    await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
+    await FirebaseFirestore.instance
+        .collection('bookings')
+        .doc(bookingId)
+        .update({
       'status': 'requested',
       'workerId': user!.uid,
       'workerName': workerName,
@@ -662,7 +668,10 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   }
 
   Future<void> _markCompleted(String bookingId) async {
-    await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
+    await FirebaseFirestore.instance
+        .collection('bookings')
+        .doc(bookingId)
+        .update({
       'status': 'completed',
     });
 

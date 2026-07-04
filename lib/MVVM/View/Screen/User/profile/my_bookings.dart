@@ -306,7 +306,6 @@
 //   }
 // }
 
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -314,7 +313,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/Founctions/helper_functions.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/BottomNavigationbar/BottomNvigationBar.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/user_Dashboard.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 
 class MyBookings extends StatelessWidget {
@@ -335,8 +334,10 @@ class MyBookings extends StatelessWidget {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
-                await FirebaseFirestore.instance.collection('bookings').doc(bookingId).delete();
-                
+                await FirebaseFirestore.instance
+                    .collection('bookings')
+                    .doc(bookingId)
+                    .delete();
               },
               child: const Text("Yes, Cancel"),
             ),
@@ -346,7 +347,8 @@ class MyBookings extends StatelessWidget {
     );
   }
 
-  Widget buildBookingCard(BuildContext context, Map<String, dynamic> data, String bookingId) {
+  Widget buildBookingCard(
+      BuildContext context, Map<String, dynamic> data, String bookingId) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: Material(
@@ -365,8 +367,8 @@ class MyBookings extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Image.asset(
-                errorBuilder: (context, error, stackTrace) => Image.network("https://t4.ftcdn.net/jpg/05/17/53/57/360_F_517535712_q7f9QC9X6TQxWi6xYZZbMmw5cnLMr279.jpg"),
-                    
+                    errorBuilder: (context, error, stackTrace) => Image.network(
+                        "https://t4.ftcdn.net/jpg/05/17/53/57/360_F_517535712_q7f9QC9X6TQxWi6xYZZbMmw5cnLMr279.jpg"),
                     data['image'] ?? 'null',
                     height: 120,
                     width: MediaQuery.of(context).size.width * 0.02,
@@ -381,9 +383,11 @@ class MyBookings extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(data['serviceTitle'] ?? 'Service',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 3),
-                      Text("Worker: ${data['workerName'] ?? 'N/A'}", style: const TextStyle(fontSize: 14)),
+                      Text("Worker: ${data['workerName'] ?? 'N/A'}",
+                          style: const TextStyle(fontSize: 14)),
                       const SizedBox(height: 5),
                       Row(
                         children: [
@@ -445,7 +449,8 @@ class MyBookings extends StatelessWidget {
                     onpress: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => Bottomnvigationbar()),
+                        MaterialPageRoute(
+                            builder: (context) => user_Dashboard()),
                       );
                     },
                   ),
@@ -463,10 +468,12 @@ class MyBookings extends StatelessWidget {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('bookings')
-                  .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                  .where('userId',
+                      isEqualTo: FirebaseAuth.instance.currentUser?.uid)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData)
+                  return const Center(child: CircularProgressIndicator());
                 final bookings = snapshot.data!.docs;
                 return ListView.builder(
                   itemCount: bookings.length,

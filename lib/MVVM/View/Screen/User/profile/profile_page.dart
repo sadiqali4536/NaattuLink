@@ -181,9 +181,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                   child: BlocBuilder<ThemeBloc, ThemeState>(
                                     builder: (context, state) {
                                       return CupertinoSwitch(
-                                        value: state.themeMode == ThemeMode.dark,
+                                        value:
+                                            state.themeMode == ThemeMode.dark,
                                         onChanged: (_) {
-                                          context.read<ThemeBloc>().add(ToggleThemeEvent());
+                                          context
+                                              .read<ThemeBloc>()
+                                              .add(ToggleThemeEvent());
                                         },
                                       );
                                     },

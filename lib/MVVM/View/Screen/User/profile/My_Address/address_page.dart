@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/profile/My_Address/User_edit_address.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/BottomNavigationbar/BottomNvigationBar.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/user_Dashboard.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/card/addresscard.dart';
 
@@ -10,11 +10,10 @@ class AddressPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea( 
+      body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
             Padding(
               padding: const EdgeInsets.all(10),
               child: Row(
@@ -23,11 +22,14 @@ class AddressPage extends StatelessWidget {
                     onpress: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => Bottomnvigationbar()),
+                        MaterialPageRoute(
+                            builder: (context) => user_Dashboard()),
                       );
                     },
                   ),
-                  SizedBox(width: 75,),
+                  SizedBox(
+                    width: 75,
+                  ),
                   Text(
                     "My Address",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -35,18 +37,19 @@ class AddressPage extends StatelessWidget {
                 ],
               ),
             ),
-            
             const SizedBox(height: 30),
             Center(
               child: SizedBox(
                 width: 370,
                 height: 160,
                 child: Addresscard(
-                  address: "15/24, Rose Villa\nMG Road, Kochi - 682001\nKerala, India",
+                  address:
+                      "15/24, Rose Villa\nMG Road, Kochi - 682001\nKerala, India",
                   onEdit: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => userEditAddress()),
+                      MaterialPageRoute(
+                          builder: (context) => userEditAddress()),
                     );
                   },
                 ),

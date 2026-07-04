@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/BottomNavigationbar/BottomNvigationBar.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/user_Dashboard.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
 
@@ -22,7 +22,7 @@ class LoyaltyPoints extends StatelessWidget {
                   customBackbutton1(onpress: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => Bottomnvigationbar()),
+                      MaterialPageRoute(builder: (context) => user_Dashboard()),
                     );
                   }),
                   const SizedBox(width: 50),
@@ -55,7 +55,8 @@ class LoyaltyPoints extends StatelessWidget {
                           left: 150,
                           child: Text(
                             "Convertible Points !",
-                            style: TextStyle(fontSize: 18,fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
                             textAlign: TextAlign.left,
                           ),
                         ),
@@ -65,7 +66,8 @@ class LoyaltyPoints extends StatelessWidget {
                           child: SizedBox(
                             height: 70,
                             width: 70,
-                            child: Image.asset("assets/icons/loyality_point.png"),
+                            child:
+                                Image.asset("assets/icons/loyality_point.png"),
                           ),
                         ),
                         Positioned(

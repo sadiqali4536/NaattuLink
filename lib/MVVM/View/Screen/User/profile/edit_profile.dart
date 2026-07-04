@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/BottomNavigationbar/BottomNvigationBar.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/user_Dashboard.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/formfield/customformfield.dart';
@@ -173,8 +173,8 @@ class _EditProfileState extends State<EditProfile> {
       "profile_img": imageUrl,
       "updated_at": FieldValue.serverTimestamp(),
     });
-      Navigator.pop(context);
-                    Navigator.pop(context);
+    Navigator.pop(context);
+    Navigator.pop(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Profile updated successfully")),
@@ -209,7 +209,7 @@ class _EditProfileState extends State<EditProfile> {
               onpress: () {
                 Navigator.pop(
                   context,
-                  MaterialPageRoute(builder: (context) => Bottomnvigationbar()),
+                  MaterialPageRoute(builder: (context) => user_Dashboard()),
                 );
               },
             ),
@@ -330,8 +330,7 @@ class _EditProfileState extends State<EditProfile> {
                       "Update",
                       style: TextStyle(color: Colors.white),
                     ),
-                    onpress: 
-                      _updateProfile),
+                    onpress: _updateProfile),
               ),
             ),
           )

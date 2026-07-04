@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/Forget_password.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/Registrationpage.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/current_loaction_fetch.dart';
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/auth_controller.dart';
 import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
@@ -21,7 +22,6 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -182,25 +182,26 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
                                 SizedBox(
                                   height: 55,
                                   width: double.infinity,
-                                  child: Custombutton(
-                                    color: const Color(0xFF0A235C),
-                                    borderRadius: 15,
-                                    text: _isLoading
-                                        ? const Center(
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Text(
-                                            "Login",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                    onpress: _handleLogin,
-                                  ),
+                                  child: Obx(() => Custombutton(
+                                        color: const Color(0xFF0A235C),
+                                        borderRadius: 15,
+                                        text: AuthController.to.isLoading
+                                            ? const Center(
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  color: Colors.white,
+                                                ),
+                                              )
+                                            : const Text(
+                                                "Login",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                        onpress: _handleLogin,
+                                      )),
                                 ),
                                 const SizedBox(height: 20),
 
@@ -320,103 +321,15 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
 
   Future<void> _handleLogin() async {
     if (formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        final user = await FirebaseAuthServices().signIn(
-          context,
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-        );
-
-        if (user != null) {
-          final userId = FirebaseAuth.instance.currentUser?.uid;
-
-          // Fetch user role from Firestore
-          final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .get();
-
-          final workerDoc = await FirebaseFirestore.instance
-              .collection('workers')
-              .doc(userId)
-              .get();
-
-          final userrole = userDoc.data()?['role'];
-          final workerrole = workerDoc.data()?['role'];
-
-          if (userrole == 'user') {
-            Get.offAll(() => const FindingLocationPage());
-          } else if (workerrole == 'worker') {
-            final isVerified = workerDoc.data()?['isVerified'];
-
-            if (isVerified == 1) {
-              Get.offAll(() => const FindingLocationPage());
-            } else if (isVerified == -1) {
-              Get.snackbar(
-                'Verification',
-                'Your profile has been rejected by the admin due to an unsatisfactory reason.',
-                backgroundColor: Colors.black,
-                colorText: Colors.white,
-              );
-            } else if (isVerified == 0) {
-              Get.snackbar(
-                'Verification',
-                'Your profile is currently under review by the admin. Please wait a moment.',
-                backgroundColor: Colors.black,
-                colorText: Colors.white,
-              );
-            } else {
-              Get.snackbar(
-                'Verification',
-                'Unknown verification status. Please contact support.',
-                backgroundColor: Colors.black,
-                colorText: Colors.white,
-              );
-            }
-          } else {
-            Get.snackbar(
-              'Error',
-              'Unable to determine user role.',
-              backgroundColor: Colors.red,
-              colorText: Colors.white,
-            );
-          }
-        }
-      } catch (e) {
-        print('Login error: $e');
-        Get.snackbar(
-          'Login Failed',
-          e.toString(),
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      }
+      await AuthController.to.login(
+        context,
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
     }
   }
 
   Future<void> _handleGoogleSignIn() async {
-    try {
-      final value = await FirebaseAuthServices().signInWithGoogle();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(value)),
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Google Sign-In Failed',
-        e.toString(),
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    }
+    await AuthController.to.loginWithGoogle(context);
   }
 }
