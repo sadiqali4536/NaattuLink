@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'package:swiftclean_project/MVVM/View/Authentication/SplashScreen.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/controller/location_controller.dart';
@@ -16,6 +17,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await GetStorage.init();
+  await Hive.initFlutter();
+  await Hive.openBox('saved_routes_box');
 
   // Register CommonController
   Get.put(CommonController(), permanent: true);

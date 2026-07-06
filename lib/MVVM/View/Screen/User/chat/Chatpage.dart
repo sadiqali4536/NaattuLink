@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -430,7 +431,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const ChatHistorySkeleton();
                 }
                 final docs = snapshot.data!.docs;
                 return ListView.builder(

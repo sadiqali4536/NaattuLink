@@ -12,6 +12,7 @@ import 'package:swiftclean_project/MVVM/View/Screen/User/profile/profile_page.da
 import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/Founctions/helper_functions.dart';
+import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 import 'package:swiftclean_project/main.dart';
 
 class Profile extends StatelessWidget {
@@ -50,9 +51,7 @@ class Profile extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(color: gradientgreen1.c),
-            );
+            return const ProfileSkeleton();
           }
 
           final data = snapshot.data?.data();
@@ -65,7 +64,7 @@ class Profile extends StatelessWidget {
 
           return SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: const EdgeInsets.only(top: 10, bottom: 110),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [

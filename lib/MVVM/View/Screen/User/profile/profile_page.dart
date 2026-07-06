@@ -11,6 +11,7 @@ import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/containner/custom_image_banner2.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/containner/custom_image_banner.dart';
+import 'package:swiftclean_project/MVVM/utils/widget/containner/premium_app_background.dart';
 
 class ProfilePage extends StatefulWidget {
   String? username;
@@ -71,8 +72,9 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: const Color.fromRGBO(206, 203, 212, 1),
-        body: Column(
+      backgroundColor: Colors.transparent,
+      body: PremiumAppBackground(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 30),
@@ -143,13 +145,16 @@ class _ProfilePageState extends State<ProfilePage> {
                     padding: const EdgeInsets.symmetric(vertical: 40),
                     child: Column(
                       children: [
-                        // Top banners side by side with padding from left
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: const [
-                            CustomImageBanner(),
-                            CustomImageBanner2(),
-                          ],
+                        // Top banners side by side aligned with other items
+                        SizedBox(
+                          width: 350,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: const [
+                              CustomImageBanner(),
+                              CustomImageBanner2(),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 40),
 
@@ -423,8 +428,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
-            ),
+            )
           ],
-        ));
+        ),
+      ),
+    );
   }
 }

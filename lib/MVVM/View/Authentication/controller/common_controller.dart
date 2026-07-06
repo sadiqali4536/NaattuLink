@@ -7,7 +7,6 @@ import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart
 import 'package:swiftclean_project/MVVM/View/Authentication/current_loaction_fetch.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/onboarding/onboarding_screen.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/Home/Homepage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/User_Front_page.dart';
 
 // import 'package:starter_project_feb/app/views/auth/login/login.dart';       // adjust path
 // import 'package:starter_project_feb/app/views/dashboard/dashboard.dart';    // adjust path

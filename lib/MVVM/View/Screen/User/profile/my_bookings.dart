@@ -313,8 +313,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/Founctions/helper_functions.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/user_Dashboard.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class MyBookings extends StatelessWidget {
   const MyBookings({super.key});
@@ -473,7 +474,7 @@ class MyBookings extends StatelessWidget {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData)
-                  return const Center(child: CircularProgressIndicator());
+                  return const BookingsListSkeleton();
                 final bookings = snapshot.data!.docs;
                 return ListView.builder(
                   itemCount: bookings.length,

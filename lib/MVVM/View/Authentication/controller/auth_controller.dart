@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/current_loaction_fetch.dart';
 import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
 import 'package:swiftclean_project/MVVM/utils/Config/Toast.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/Worker_Dashboard.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
 
 class AuthController extends GetxController {
   static AuthController get to => Get.find<AuthController>();

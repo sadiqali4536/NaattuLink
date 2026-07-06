@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/current_loaction_fetch.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/onboarding/onboarding_screen.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/User_Front_page.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/controller/common_controller.dart';
 
 class Authgate extends StatelessWidget {

@@ -5,10 +5,10 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/Worker_Dashboard.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:swiftclean_project/MVVM/utils/Founctions/helper_functions.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/user_Dashboard.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 
 class FindingLocationPage extends StatefulWidget {
   const FindingLocationPage({super.key});

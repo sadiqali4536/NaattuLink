@@ -16,44 +16,37 @@ class CustomImageBanner2 extends StatelessWidget {
           border: Border.all(color: const Color.fromARGB(255, 235, 235, 235)),
           color: Colors.white,
         ),
-        child: Stack(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Center(
+            Container(
+              height: 30,
+              width: 30,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                color: const Color.fromRGBO(88, 142, 12, 0.25),
+              ),
               child: Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Text("0",style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold
-                ),),
+                padding: const EdgeInsets.all(3),
+                child: ClipOval(
+                  child: Image.asset("assets/icons/total_bookings.png"),
+                ),
               ),
             ),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 60),
-                child: Text("Total Booking",style: TextStyle(
-                  fontSize: 12,color: Color.fromRGBO(165, 165, 169, 1)
-                ),),
+            const SizedBox(height: 8),
+            const Text(
+              "0",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            Center(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: 50
-                ),
-                child: Container(
-                  height: 30,
-                  width: 30,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    color: const Color.fromRGBO(88, 142, 12, 0.25),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(3),
-                    child: ClipOval(
-                      child: Image.asset("assets/icons/total_bookings.png"),
-                    ),
-                  ),
-                ),
+            const SizedBox(height: 4),
+            const Text(
+              "Total Booking",
+              style: TextStyle(
+                fontSize: 12,
+                color: Color.fromRGBO(165, 165, 169, 1),
               ),
             ),
           ],

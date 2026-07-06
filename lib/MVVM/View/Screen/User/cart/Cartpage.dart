@@ -506,6 +506,7 @@ import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/service_functions/cartservicecard.dart';
 import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/service_functions/servicecard2.dart';
+import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class CartPage extends StatefulWidget {
   String? serviceName;
@@ -607,7 +608,7 @@ class _CartPageState extends State<CartPage> {
               }
 
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const ServiceCardListSkeleton();
               }
 
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {

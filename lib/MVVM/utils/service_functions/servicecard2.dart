@@ -7,6 +7,7 @@ import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Interior_B
 import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class Servicecard2 extends StatelessWidget {
   final String category;
@@ -40,7 +41,7 @@ class Servicecard2 extends StatelessWidget {
       stream: serviceStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const ServiceCardListSkeleton();
         }
         if (snapshot.hasError) {
           return const Center(child: Text("Something went wrong"));
