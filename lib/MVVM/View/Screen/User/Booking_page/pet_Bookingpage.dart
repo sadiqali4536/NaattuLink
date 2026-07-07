@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
     as CartService;
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
 import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
@@ -41,21 +42,22 @@ class _PetCleaningState extends State<PetCleaning> {
   DateTime selectedDate = DateTime.now();
   int selectedIndex = 0;
 
-  bool isAddedToCart = false; 
+  bool isAddedToCart = false;
 
   @override
   void initState() {
     super.initState();
     checkIfServiceInCart();
+    RecommendationController.to
+        .trackProductView(widget.serviceId ?? widget.serviceName ?? '');
   }
 
-
- bool isBookingFormComplete() {
+  bool isBookingFormComplete() {
     if (widget.serviceName == null ||
         widget.category == null ||
         widget.serviceType == null ||
         widget.discountPrice == null ||
-        selectedPet == null||
+        selectedPet == null ||
         hour < 1 ||
         hour > 12 ||
         minute < 0 ||
@@ -78,6 +80,7 @@ class _PetCleaningState extends State<PetCleaning> {
 
     return selectedDateTime.isAfter(DateTime.now());
   }
+
   Future<void> checkIfServiceInCart() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
@@ -668,7 +671,7 @@ class _PetCleaningState extends State<PetCleaning> {
                 onPressed: () async {
                   if (isAddedToCart) return;
 
-                  if(!isBookingFormComplete()){
+                  if (!isBookingFormComplete()) {
                     CustomSnackBar.show(
                         iconcolor: erroriconcolor,
                         icon: Icons.cancel,
@@ -676,7 +679,7 @@ class _PetCleaningState extends State<PetCleaning> {
                         message:
                             " Please fill the booking before adding to cart.",
                         color: const Color.fromARGB(255, 249, 246, 246));
-                        return;
+                    return;
                   }
 
                   final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -702,6 +705,8 @@ class _PetCleaningState extends State<PetCleaning> {
                       ),
                     );
                     setState(() => isAddedToCart = true);
+                    RecommendationController.to.trackCart(
+                        widget.serviceId ?? widget.serviceName ?? '', true);
                     return;
                   }
 
@@ -715,15 +720,17 @@ class _PetCleaningState extends State<PetCleaning> {
                     rating: widget.rating,
                     category: widget.category,
                     serviceType: widget.serviceType,
-                     selectedDate: null, 
-                     selectedTime: '',
-                      extraDetails: {
+                    selectedDate: null,
+                    selectedTime: '',
+                    extraDetails: {
                       'selectedPet': selectedPet,
-                       'count': count,
-                                                    },
+                      'count': count,
+                    },
                   );
 
                   setState(() => isAddedToCart = true);
+                  RecommendationController.to.trackCart(
+                      widget.serviceId ?? widget.serviceName ?? '', true);
                 },
               ),
             ),
@@ -795,6 +802,9 @@ class _PetCleaningState extends State<PetCleaning> {
                     await FirebaseFirestore.instance
                         .collection('bookings')
                         .add(bookingData);
+                    RecommendationController.to.trackPurchase(
+                        [widget.serviceId ?? widget.serviceName ?? ''],
+                        double.tryParse(widget.discountPrice ?? '') ?? 0.0);
 
                     if (!mounted) return;
                     CustomSnackBar.show(

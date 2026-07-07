@@ -12,7 +12,11 @@ import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Home_Booki
 import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/worker_bookings/worker_details_page.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/controller/location_controller.dart';
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
+import 'package:swiftclean_project/MVVM/model/models/product_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/service_functions/ServiceCardwith map.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/button/Scrollable/scrollable_horizontal_buttons.dart';
@@ -78,7 +82,7 @@ class HomepageState extends State<Homepage> {
     "Workers",
     "Bus",
     "Local Ads",
-    "Emergency"
+    "Online Shops"
   ];
 
   String get selectedCategory => categoryList[selectedCategoryIndex];
@@ -200,7 +204,7 @@ class HomepageState extends State<Homepage> {
               "Workers",
               "Bus",
               "Local Ads",
-              "Emergency"
+              "Online Shops"
             ];
             for (var doc in allServices) {
               final data = doc.data() as Map<String, dynamic>;
@@ -216,7 +220,7 @@ class HomepageState extends State<Homepage> {
                   isDuplicate = true;
                 else if (norm == 'all' || norm == 'for you')
                   isDuplicate = true;
-                else if (norm == 'emergency')
+                else if (norm == 'emergency' || norm == 'online shops')
                   isDuplicate = true;
                 else if (norm == 'pet' || norm == 'home') isDuplicate = true;
 
@@ -451,7 +455,7 @@ class HomepageState extends State<Homepage> {
                     children: [
                       Column(
                         children: [
-                          const SizedBox(height: 310),
+                          const SizedBox(height: 340),
                           if (_searchController.text.isEmpty) ...[
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 400),
@@ -552,6 +556,9 @@ class HomepageState extends State<Homepage> {
                           else if (selectedCategory == "Local Ads" &&
                               _searchController.text.isEmpty)
                             buildLocalAdsTab(allServices)
+                          else if (selectedCategory == "Online Shops" &&
+                              _searchController.text.isEmpty)
+                            buildOnlineShopsTab()
                           else
                             Padding(
                               padding:
@@ -562,7 +569,7 @@ class HomepageState extends State<Homepage> {
                         ],
                       ),
                       Container(
-                        height: 300,
+                        height: 270,
                         width: double.infinity,
                         decoration: const BoxDecoration(
                           color: Color(0xFF0F2E5A), // Premium navy color
@@ -741,6 +748,10 @@ class HomepageState extends State<Homepage> {
                                     controller: _searchController,
                                     onChanged: (value) =>
                                         setState(() => searchQuery = value),
+                                    onFieldSubmitted: (value) {
+                                      RecommendationController.to
+                                          .trackSearch(value, 'Other');
+                                    },
                                     decoration: InputDecoration(
                                       hintText:
                                           "Search for workers, services...",
@@ -804,7 +815,7 @@ class HomepageState extends State<Homepage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 23),
                               AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 300),
                                 child: snapshot.connectionState ==
@@ -820,6 +831,12 @@ class HomepageState extends State<Homepage> {
                                             selectedCategoryIndex = index;
                                             _clearBusSearch();
                                           });
+                                          if (index <
+                                              currentCategoryList.length) {
+                                            RecommendationController.to
+                                                .trackCategoryClick(
+                                                    currentCategoryList[index]);
+                                          }
                                         },
                                         isDark: true,
                                       ),
@@ -980,670 +997,895 @@ class HomepageState extends State<Homepage> {
   }
 
   Widget buildForYouDashboard(List<dynamic> services, {Key? key}) {
-    final expertServices = services.toList();
-    expertServices.sort((a, b) => ((b.data()
-                as Map<String, dynamic>)['rating'] ??
-            0)
-        .toDouble()
-        .compareTo(
-            ((a.data() as Map<String, dynamic>)['rating'] ?? 0).toDouble()));
+    final recController = RecommendationController.to;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+    return Obx(() {
+      if (recController.isLoading.value) {
+        return const Column(
+          children: [
+            ExpertServicesSkeleton(),
+            SizedBox(height: 20),
+            CityEssentialsSkeleton(),
+            SizedBox(height: 20),
+            MarketplaceSkeleton(),
+            SizedBox(height: 20),
+            SpotlightSkeleton(),
+            SizedBox(height: 20),
+            CommunityNewsSkeleton(),
+            SizedBox(height: 20),
+            TrustSectionSkeleton(),
+          ],
+        );
+      }
+
+      // Helper widget for horizontal expert services carousel
+      Widget buildExpertServicesCarousel(List<dynamic> rawServices) {
+        final expertServices = rawServices.where((doc) {
+          final category = (doc['category'] ?? '').toString();
+          return category == 'Exterior';
+        }).toList();
+
+        if (expertServices.isEmpty) return const SizedBox.shrink();
+
+        // Sort by rating to show the highest rated ones first
+        expertServices.sort((a, b) => (b['rating'] ?? 0.0)
+            .toDouble()
+            .compareTo((a['rating'] ?? 0.0).toDouble()));
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        "Expert Services",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F2E5A),
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        "Highly-rated local professionals",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedCategoryIndex = 1; // Switch to Workers tab
+                      });
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        "View All",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F2E5A),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 185,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: expertServices.length,
+                itemBuilder: (context, index) {
+                  final service = expertServices[index];
+                  final name = service['service_name'] ?? '';
+                  final category = service['category'] ?? '';
+                  final rating = (service['rating'] ?? 0.0).toDouble();
+                  final price = service['price'] ?? 0;
+                  final image = service['image'] ?? '';
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => WorkerDetailsPage(
+                            category: category,
+                            serviceName: name,
+                            rating: rating,
+                            originalPrice: service['original_price'] ?? 0,
+                            discount: service['discount'] ?? 0,
+                            image: image,
+                            discountPrice: price,
+                            serviceType: service['service_type'],
+                            businessLat:
+                                (service['businessLat'] as num?)?.toDouble(),
+                            businessLng:
+                                (service['businessLng'] as num?)?.toDouble(),
+                            businessAddress:
+                                service['businessAddress'] as String?,
+                            businessMapsUrl:
+                                service['businessMapsUrl'] as String?,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 140,
+                      margin:
+                          const EdgeInsets.only(right: 14, bottom: 6, top: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(20)),
+                                child: image.startsWith('http')
+                                    ? Image.network(
+                                        image,
+                                        height: 95,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
+                                          height: 95,
+                                          width: double.infinity,
+                                          color: const Color(0xFFF1F5F9),
+                                          child: const Icon(
+                                              Icons.image_outlined,
+                                              size: 24,
+                                              color: Colors.grey),
+                                        ),
+                                      )
+                                    : Image.asset(
+                                        image,
+                                        height: 95,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
+                                          height: 95,
+                                          width: double.infinity,
+                                          color: const Color(0xFFF1F5F9),
+                                          child: const Icon(
+                                              Icons.image_outlined,
+                                              size: 24,
+                                              color: Colors.grey),
+                                        ),
+                                      ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFB800),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.star,
+                                          size: 11, color: Color(0xFF0F2E5A)),
+                                      const SizedBox(width: 2.5),
+                                      Text(
+                                        rating.toString(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF0F2E5A),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F2E5A),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "₹$price ",
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F2E5A),
+                                        ),
+                                      ),
+                                      const TextSpan(
+                                        text: "onwards",
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        );
+      }
+
+      // Reusable widget for horizontal product carousels
+      Widget buildHorizontalCarousel(
+          String title, List<ProductModel> products) {
+        if (products.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   Text(
-                    "Expert Services",
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F2E5A),
+                    ),
+                  ),
+                  const Text(
+                    "View All",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F2E5A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 185,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  return GestureDetector(
+                    onTap: () {
+                      // Track view
+                      recController.trackProductView(product.productId);
+                      // Open appropriate page based on category
+                      final category = product.category;
+                      if (category == 'Exterior' || category == 'Workers') {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => ExteriorBookingpage(
+                                      category: product.category,
+                                      serviceName: product.title,
+                                      rating: product.rating.toInt(),
+                                      originalPrice: (product.price * 1.5)
+                                          .toStringAsFixed(0),
+                                      discount: "33% OFF",
+                                      image: product.image,
+                                      discountPrice:
+                                          product.price.toStringAsFixed(0),
+                                      serviceType: product.subCategory,
+                                    )));
+                      } else if (category == 'Interior' || category == 'Bus') {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => InteriorBookingPage(
+                                      category: product.category,
+                                      serviceName: product.title,
+                                      rating: product.rating.toInt(),
+                                      originalPrice: (product.price * 1.5)
+                                          .toStringAsFixed(0),
+                                      discount: "33% OFF",
+                                      image: product.image,
+                                      discountPrice:
+                                          product.price.toStringAsFixed(0),
+                                      serviceType: product.subCategory,
+                                    )));
+                      } else if (category == 'Vehicle' ||
+                          category == 'Local Ads') {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => VehicleBookingPage(
+                                      category: product.category,
+                                      serviceName: product.title,
+                                      rating: product.rating.toInt(),
+                                      originalPrice: (product.price * 1.5)
+                                          .toStringAsFixed(0),
+                                      discount: "33% OFF",
+                                      image: product.image,
+                                      discountPrice:
+                                          product.price.toStringAsFixed(0),
+                                      serviceType: product.subCategory,
+                                    )));
+                      } else if (category == 'Pet') {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => PetCleaning(
+                                      category: product.category,
+                                      serviceName: product.title,
+                                      rating: product.rating.toInt(),
+                                      originalPrice: (product.price * 1.5)
+                                          .toStringAsFixed(0),
+                                      discount: "33% OFF",
+                                      image: product.image,
+                                      discountPrice:
+                                          product.price.toStringAsFixed(0),
+                                      serviceType: product.subCategory,
+                                    )));
+                      } else if (category == 'Home') {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => HomeBookingPage(
+                                      category: product.category,
+                                      serviceName: product.title,
+                                      rating: product.rating.toInt(),
+                                      originalPrice: (product.price * 1.5)
+                                          .toStringAsFixed(0),
+                                      discount: "33% OFF",
+                                      image: product.image,
+                                      discountPrice:
+                                          product.price.toStringAsFixed(0),
+                                      serviceType: product.subCategory,
+                                    )));
+                      }
+                    },
+                    child: Container(
+                      width: 140,
+                      margin:
+                          const EdgeInsets.only(right: 14, bottom: 6, top: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(20)),
+                                child: product.image.startsWith('http')
+                                    ? Image.network(
+                                        product.image,
+                                        height: 95,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
+                                          height: 95,
+                                          width: double.infinity,
+                                          color: const Color(0xFFF1F5F9),
+                                          child: const Icon(
+                                              Icons.image_outlined,
+                                              size: 24,
+                                              color: Colors.grey),
+                                        ),
+                                      )
+                                    : Image.asset(
+                                        product.image,
+                                        height: 95,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
+                                          height: 95,
+                                          width: double.infinity,
+                                          color: const Color(0xFFF1F5F9),
+                                          child: const Icon(
+                                              Icons.image_outlined,
+                                              size: 24,
+                                              color: Colors.grey),
+                                        ),
+                                      ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFB800),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.star,
+                                          size: 11, color: Color(0xFF0F2E5A)),
+                                      const SizedBox(width: 2.5),
+                                      Text(
+                                        product.rating.toString(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF0F2E5A),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  product.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F2E5A),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text:
+                                            "₹${product.price.toStringAsFixed(0)} ",
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F2E5A),
+                                        ),
+                                      ),
+                                      const TextSpan(
+                                        text: "onwards",
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        );
+      }
+
+      return RefreshIndicator(
+        onRefresh: () => recController.fetchRecommendations(),
+        child: ListView(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          children: [
+            // Expert Services (matching ExpertServicesSkeleton)
+            buildExpertServicesCarousel(services),
+
+            // 1. Recently Viewed
+            buildHorizontalCarousel(
+                "Recently Viewed", recController.recentlyViewed),
+
+            // 2. Based on Your Searches
+            buildHorizontalCarousel(
+                "Based on Your Searches", recController.basedOnSearches),
+
+            // 3. Continue Shopping
+            buildHorizontalCarousel(
+                "Continue Shopping", recController.continueShopping),
+
+            // 4. Recommended for You
+            buildHorizontalCarousel(
+                "Recommended for You", recController.recommendedForYou),
+
+            // 5. Trending Near You
+            buildHorizontalCarousel(
+                "Trending Near You", recController.trendingNearYou),
+
+            // 6. Homemade Cakes
+            buildHorizontalCarousel(
+                "Homemade Cakes", recController.homemadeCakes),
+
+            // 7. Fashion Picks
+            buildHorizontalCarousel(
+                "Fashion Picks", recController.fashionPicks),
+
+            // 8. Watches
+            buildHorizontalCarousel("Watches", recController.watches),
+
+            // 9. Electronics
+            buildHorizontalCarousel("Electronics", recController.electronics),
+
+            // 10. Cars & Bikes
+            buildHorizontalCarousel("Cars & Bikes", recController.carsAndBikes),
+
+            // 11. Local Businesses
+            buildHorizontalCarousel(
+                "Local Businesses", recController.localBusinesses),
+
+            // 12. Best Sellers
+            buildHorizontalCarousel("Best Sellers", recController.bestSellers),
+
+            // 13. Flash Sale
+            buildHorizontalCarousel("Flash Sale", recController.flashSale),
+
+            // 14. New Arrivals
+            buildHorizontalCarousel("New Arrivals", recController.newArrivals),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: const Text(
+                "City Essentials",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F2E5A),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        buildEssentialItem(
+                          icon: Icons.directions_car_outlined,
+                          label: "Auto/Taxi",
+                          bgColor: const Color(0xFFEEF2FF),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const AutoTaxiPage()),
+                            );
+                          },
+                        ),
+                        buildEssentialItem(
+                          icon: Icons.local_hospital_outlined,
+                          label: "Clinics",
+                          bgColor: const Color(0xFFEEF2FF),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            int emgIndex = categoryList.indexOf("Online Shops");
+                            if (emgIndex != -1) {
+                              setState(() {
+                                selectedCategoryIndex = emgIndex;
+                                _clearBusSearch();
+                              });
+                            }
+                          },
+                        ),
+                        buildEssentialItem(
+                          icon: Icons.emergency_outlined,
+                          label: "Helpline",
+                          bgColor: const Color(0xFFEEF2FF),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            int emgIndex = categoryList.indexOf("Online Shops");
+                            if (emgIndex != -1) {
+                              setState(() {
+                                selectedCategoryIndex = emgIndex;
+                                _clearBusSearch();
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        buildEssentialItem(
+                          icon: Icons.school_outlined,
+                          label: "Tuition",
+                          bgColor: const Color(0xFFEEF2FF),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            setState(() {
+                              searchQuery = "Tuition";
+                              _searchController.text = "Tuition";
+                            });
+                          },
+                        ),
+                        buildEssentialItem(
+                          icon: Icons.restaurant_outlined,
+                          label: "Food",
+                          bgColor: const Color(0xFFEEF2FF),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            setState(() {
+                              searchQuery = "Food";
+                              _searchController.text = "Food";
+                            });
+                          },
+                        ),
+                        buildEssentialItem(
+                          icon: Icons.laptop_outlined,
+                          label: "Internet Cafe",
+                          bgColor: const Color(0xFFEEF2FF),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            setState(() {
+                              searchQuery = "Internet Cafe";
+                              _searchController.text = "Internet Cafe";
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        buildEssentialItem(
+                          icon: Icons.local_shipping_outlined,
+                          label: "Pickup",
+                          bgColor: const Color(0xFFEEF2FF),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            setState(() {
+                              searchQuery = "Pickup";
+                              _searchController.text = "Pickup";
+                            });
+                          },
+                        ),
+                        buildEssentialItem(
+                          icon: Icons.engineering_outlined,
+                          label: "JCBs",
+                          bgColor: const Color(0xFFEEF2FF),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            setState(() {
+                              searchQuery = "JCB";
+                              _searchController.text = "JCB";
+                            });
+                          },
+                        ),
+                        const Expanded(
+                            child: SizedBox()), // Placeholder for alignment
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Local Marketplace Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Local Marketplace",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0F2E5A),
                     ),
                   ),
-                  SizedBox(height: 2),
-                  Text(
-                    "Highly-rated local professionals",
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF64748B),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFB800),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      "Top Deals",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F2E5A),
+                      ),
                     ),
                   ),
                 ],
               ),
-              GestureDetector(
-                onTap: () {
-                  int workersIndex = categoryList.indexOf("Workers");
-                  if (workersIndex != -1) {
-                    setState(() {
-                      selectedCategoryIndex = workersIndex;
-                      _clearBusSearch();
-                    });
-                  }
-                },
-                child: const Text(
-                  "View All",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F2E5A),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 180,
-          child: expertServices.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Center(child: Text("No expert services available")),
-                )
-              : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount:
-                      expertServices.length > 5 ? 5 : expertServices.length,
-                  itemBuilder: (context, index) {
-                    final doc = expertServices[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    final serviceName = data['service_name'] ?? 'Service';
-                    final rating = (data['rating'] ?? 0.0).toDouble();
-                    final image = data['image'] ?? '';
-                    final price =
-                        data['price'] ?? data['original_price'] ?? '189';
-
-                    return GestureDetector(
-                      onTap: () {
-                        final category = data['category'];
-                        if (category == 'Exterior') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => ExteriorBookingpage(
-                                        category: data['category'],
-                                        serviceName: data['service_name'],
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: data['image'],
-                                        discountPrice: data['price'],
-                                        serviceType: data['service_type'],
-                                      )));
-                        } else if (category == 'Interior') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => InteriorBookingPage(
-                                        category: data['category'],
-                                        serviceName: data['service_name'],
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: data['image'],
-                                        discountPrice: data['price'],
-                                        serviceType: data['service_type'],
-                                      )));
-                        } else if (category == 'Vehicle') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => VehicleBookingPage(
-                                        category: data['category'],
-                                        serviceName: data['service_name'],
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: data['image'],
-                                        discountPrice: data['price'],
-                                        serviceType: data['service_type'],
-                                      )));
-                        } else if (category == 'Pet') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => PetCleaning(
-                                        category: data['category'],
-                                        serviceName: data['service_name'],
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: data['image'],
-                                        discountPrice: data['price'],
-                                        serviceType: data['service_type'],
-                                      )));
-                        } else if (category == 'Home') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => HomeBookingPage(
-                                        category: data['category'],
-                                        serviceName: data['service_name'],
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: data['image'],
-                                        discountPrice: data['price'],
-                                        serviceType: data['service_type'],
-                                      )));
-                        }
-                      },
-                      child: Container(
-                        width: 140,
-                        margin:
-                            const EdgeInsets.only(right: 14, bottom: 6, top: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(20)),
-                                  child: image.startsWith('http')
-                                      ? Image.network(
-                                          image,
-                                          height: 95,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  Container(
-                                            height: 95,
-                                            width: double.infinity,
-                                            color: const Color(0xFFF1F5F9),
-                                            child: const Icon(
-                                                Icons.image_outlined,
-                                                size: 24,
-                                                color: Colors.grey),
-                                          ),
-                                        )
-                                      : Image.asset(
-                                          image,
-                                          height: 95,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  Container(
-                                            height: 95,
-                                            width: double.infinity,
-                                            color: const Color(0xFFF1F5F9),
-                                            child: const Icon(
-                                                Icons.image_outlined,
-                                                size: 24,
-                                                color: Colors.grey),
-                                          ),
-                                        ),
-                                ),
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFB800),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.star,
-                                            size: 11, color: Color(0xFF0F2E5A)),
-                                        const SizedBox(width: 2.5),
-                                        Text(
-                                          rating.toString(),
-                                          style: const TextStyle(
-                                            color: Color(0xFF0F2E5A),
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 8),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    serviceName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0F2E5A),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: "₹$price ",
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF0F2E5A),
-                                          ),
-                                        ),
-                                        const TextSpan(
-                                          text: "onwards",
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: Color(0xFF64748B),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: const Text(
-            "City Essentials",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0F2E5A),
             ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    buildEssentialItem(
-                      icon: Icons.local_taxi_outlined,
-                      label: "Auto/Taxi",
-                      bgColor: const Color(0xFFEEF2FF),
-                      iconColor: const Color(0xFF4F46E5),
-                      onTap: () {
-                        int busIndex = categoryList.indexOf("Bus");
-                        if (busIndex != -1) {
-                          setState(() {
-                            selectedCategoryIndex = busIndex;
-                            _clearBusSearch();
-                          });
-                        }
-                      },
-                    ),
-                    buildEssentialItem(
-                      icon: Icons.local_hospital_outlined,
-                      label: "Clinics",
-                      bgColor: const Color(0xFFFEF2F2),
-                      iconColor: const Color(0xFFEF4444),
-                      onTap: () {
-                        int emgIndex = categoryList.indexOf("Emergency");
-                        if (emgIndex != -1) {
-                          setState(() {
-                            selectedCategoryIndex = emgIndex;
-                            _clearBusSearch();
-                          });
-                        }
-                      },
-                    ),
-                    buildEssentialItem(
-                      icon: Icons.phone_in_talk_outlined,
-                      label: "Helpline",
-                      bgColor: const Color(0xFFECFDF5),
-                      iconColor: const Color(0xFF10B981),
-                      onTap: () {
-                        int emgIndex = categoryList.indexOf("Emergency");
-                        if (emgIndex != -1) {
-                          setState(() {
-                            selectedCategoryIndex = emgIndex;
-                            _clearBusSearch();
-                          });
-                        }
-                      },
-                    ),
-                    buildEssentialItem(
-                      icon: Icons.school_outlined,
-                      label: "Tuition",
-                      bgColor: const Color(0xFFFEF3C7),
-                      iconColor: const Color(0xFFD97706),
-                      onTap: () {
-                        setState(() {
-                          searchQuery = "Tuition";
-                          _searchController.text = "Tuition";
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    buildEssentialItem(
-                      icon: Icons.restaurant_outlined,
-                      label: "Food",
-                      bgColor: const Color(0xFFF5F3FF),
-                      iconColor: const Color(0xFF8B5CF6),
-                      onTap: () {
-                        setState(() {
-                          searchQuery = "Food";
-                          _searchController.text = "Food";
-                        });
-                      },
-                    ),
-                    buildEssentialItem(
-                      icon: Icons.computer_outlined,
-                      label: "Internet Cafe",
-                      bgColor: const Color(0xFFF0F9FF),
-                      iconColor: const Color(0xFF0EA5E9),
-                      onTap: () {
-                        int adsIndex = categoryList.indexOf("Local Ads");
-                        if (adsIndex != -1) {
-                          setState(() {
-                            selectedCategoryIndex = adsIndex;
-                            _clearBusSearch();
-                          });
-                        }
-                      },
-                    ),
-                    buildEssentialItem(
-                      icon: Icons.local_shipping_outlined,
-                      label: "Pickup",
-                      bgColor: const Color(0xFFFDF2F8),
-                      iconColor: const Color(0xFFDB2777),
-                      onTap: () {
-                        int adsIndex = categoryList.indexOf("Local Ads");
-                        if (adsIndex != -1) {
-                          setState(() {
-                            selectedCategoryIndex = adsIndex;
-                            _clearBusSearch();
-                          });
-                        }
-                      },
-                    ),
-                    buildEssentialItem(
-                      icon: Icons.work_outline,
-                      label: "Jobs",
-                      bgColor: const Color(0xFFFFF7ED),
-                      iconColor: const Color(0xFFEA580C),
-                      onTap: () {
-                        int workersIndex = categoryList.indexOf("Workers");
-                        if (workersIndex != -1) {
-                          setState(() {
-                            selectedCategoryIndex = workersIndex;
-                            _clearBusSearch();
-                          });
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Local Marketplace",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F2E5A),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFB800),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  "Top Deals",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              Expanded(
-                child: buildMarketplaceCard(
-                  image: "assets/image/add_image.png",
-                  title: "Premium Calicut Halwa",
-                  price: 320,
-                  originalPrice: 600,
-                  discountBadge: "50% OFF",
-                  discountColor: Colors.red,
-                  bottomInfo: "1h Free Delivery",
-                  bottomInfoColor: const Color(0xFF10B981),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: buildMarketplaceCard(
-                  image: "assets/image/add_image.png",
-                  title: "Bamboo Lamp Shade",
-                  price: 850,
-                  originalPrice: 1300,
-                  discountBadge: "BEST DEAL",
-                  discountColor: const Color(0xFFFFB800),
-                  bottomInfo: "Limited Stock",
-                  bottomInfoColor: Colors.orange,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: const Text(
-            "Local Shop Spotlight",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0F2E5A),
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 140,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            children: [
-              buildSpotlightCard(
-                shopName: "Zayan Textiles",
-                location: "Calicut Beach Road",
-                offer: "Flat 30% Off",
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F2E5A), Color(0xFF1E3A8A)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              buildSpotlightCard(
-                shopName: "Green Grocers",
-                location: "Thalayad Road",
-                offer: "Fresh Organic: 10% Off",
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0D9488), Color(0xFF0F766E)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: const [
-              Icon(Icons.newspaper, color: Color(0xFF0F2E5A), size: 20),
-              SizedBox(width: 6),
-              Text(
-                "Community News",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F2E5A),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEEF2F6),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              children: [
-                buildNewsItem(
-                  image: "assets/image/add_image.png",
-                  title: "New Solar Park project announced for Thalayad area.",
-                  timeAndSource: "2 hours ago • Local Council",
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(color: Colors.black12, height: 1),
-                ),
-                buildNewsItem(
-                  image: "assets/image/add_image.png",
-                  title: "Annual Community Boat Race registration now open.",
-                  timeAndSource: "4 hours ago • Sports Club",
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: CustomPaint(
-            painter: DashedBorderPainter(
-              color: const Color(0xFFCBD5E1),
-              strokeWidth: 1.5,
-              gap: 6,
-              dashLength: 6,
-              borderRadius: 20,
-            ),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 220,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
-                  const Text(
-                    "Why book through Thalayadukkar?",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F2E5A),
+                  SizedBox(
+                    width: 160,
+                    child: buildMarketplaceCard(
+                      image:
+                          "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=300&q=80",
+                      title: "Premium Calicut Halwa",
+                      price: 320,
+                      originalPrice: 400,
+                      discountBadge: "20% OFF",
+                      discountColor: const Color(0xFFEF4444),
+                      bottomInfo: "🚚 Free Delivery",
+                      bottomInfoColor: const Color(0xFF10B981),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      buildTrustBadge(
-                        icon: Icons.verified_user_outlined,
-                        title: "Background Checked",
-                        subtitle: "Safe & secure",
-                      ),
-                      buildTrustBadge(
-                        icon: Icons.payments_outlined,
-                        title: "Transparent Pricing",
-                        subtitle: "Upfront quotes",
-                      ),
-                      buildTrustBadge(
-                        icon: Icons.flash_on_outlined,
-                        title: "Quick Response",
-                        subtitle: "Instant booking",
-                      ),
-                    ],
+                  const SizedBox(width: 14),
+                  SizedBox(
+                    width: 160,
+                    child: buildMarketplaceCard(
+                      image:
+                          "https://images.unsplash.com/photo-1616627547584-bf28cee262db?auto=format&fit=crop&w=300&q=80",
+                      title: "Bamboo Lamp Shade",
+                      price: 850,
+                      originalPrice: 1200,
+                      discountBadge: "HOT DEAL",
+                      discountColor: const Color(0xFFFFB800),
+                      bottomInfo: "⏳ Limited Stock",
+                      bottomInfoColor: const Color(0xFFEF4444),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  SizedBox(
+                    width: 160,
+                    child: buildMarketplaceCard(
+                      image:
+                          "https://images.unsplash.com/photo-1583209814683-c023dd293cc6?auto=format&fit=crop&w=300&q=80",
+                      title: "Handmade Kerala Saree",
+                      price: 1530,
+                      originalPrice: 1800,
+                      discountBadge: "15% OFF",
+                      discountColor: const Color(0xFF8B5CF6),
+                      bottomInfo: "🚚 Free Delivery",
+                      bottomInfoColor: const Color(0xFF10B981),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
+            const SizedBox(height: 24),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: const Text(
+                "Local Shop Spotlight",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F2E5A),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 140,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  buildSpotlightCard(
+                    shopName: "Zayan Textiles",
+                    location: "Calicut Beach Road",
+                    offer: "Flat 30% Off",
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0F2E5A), Color(0xFF1E3A8A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  buildSpotlightCard(
+                    shopName: "Green Grocers",
+                    location: "Thalayad Road",
+                    offer: "Fresh Organic: 10% Off",
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0D9488), Color(0xFF0F766E)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
-    );
+      );
+    });
   }
 
   Widget buildEssentialItem({
@@ -2041,222 +2283,929 @@ class HomepageState extends State<Homepage> {
             final price = service['price'] ?? 0;
             final image = service['image'] ?? '';
 
-            return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFEFEFEF)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WorkerDetailsPage(
+                      category: category,
+                      serviceName: name,
+                      rating: rating,
+                      originalPrice: service['original_price'] ?? 0,
+                      discount: service['discount'] ?? 0,
+                      image: image,
+                      discountPrice: price,
+                      serviceType: service['service_type'],
+                      businessLat: (service['businessLat'] as num?)?.toDouble(),
+                      businessLng: (service['businessLng'] as num?)?.toDouble(),
+                      businessAddress: service['businessAddress'] as String?,
+                      businessMapsUrl: service['businessMapsUrl'] as String?,
                     ),
-                    child: image.isNotEmpty
-                        ? Image.network(
-                            image,
-                            height: 110,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
+                  ),
+                );
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFEFEFEF)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      child: image.isNotEmpty
+                          ? Image.network(
+                              image,
+                              height: 110,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                height: 110,
+                                width: double.infinity,
+                                color: Colors.grey[200],
+                                alignment: Alignment.center,
+                                child: const Icon(Icons.image_not_supported,
+                                    color: Colors.grey),
+                              ),
+                            )
+                          : Container(
                               height: 110,
                               width: double.infinity,
                               color: Colors.grey[200],
                               alignment: Alignment.center,
-                              child: const Icon(Icons.image_not_supported,
-                                  color: Colors.grey),
+                              child:
+                                  const Icon(Icons.image, color: Colors.grey),
                             ),
-                          )
-                        : Container(
-                            height: 110,
-                            width: double.infinity,
-                            color: Colors.grey[200],
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.image, color: Colors.grey),
-                          ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F2E5A),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.star,
-                                  color: Color(0xFFFFB800), size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                rating.toStringAsFixed(1),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w600,
-                                ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F2E5A),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Starts from ₹$price",
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[800],
-                              fontWeight: FontWeight.w500,
                             ),
-                          ),
-                          const Spacer(),
-                          GestureDetector(
-                            onTap: () {
-                              if (category == 'Interior') {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => InteriorBookingPage(
-                                              category: category,
-                                              serviceName: name,
-                                              rating: rating.toInt(),
-                                              originalPrice:
-                                                  service['original_price'],
-                                              discount: service['discount'],
-                                              image: image,
-                                              discountPrice: price,
-                                              serviceType:
-                                                  service['service_type'],
-                                            )));
-                              } else if (category == 'Exterior') {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => ExteriorBookingpage(
-                                              category: category,
-                                              serviceName: name,
-                                              rating: rating.toInt(),
-                                              originalPrice:
-                                                  service['original_price'],
-                                              discount: service['discount'],
-                                              image: image,
-                                              discountPrice: price,
-                                              serviceType:
-                                                  service['service_type'],
-                                            )));
-                              } else if (category == 'Vehicle') {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => VehicleBookingPage(
-                                              category: category,
-                                              serviceName: name,
-                                              rating: rating.toInt(),
-                                              originalPrice:
-                                                  service['original_price'],
-                                              discount: service['discount'],
-                                              image: image,
-                                              discountPrice: price,
-                                              serviceType:
-                                                  service['service_type'],
-                                            )));
-                              } else if (category == 'Pet') {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => PetCleaning(
-                                              category: category,
-                                              serviceName: name,
-                                              rating: rating.toInt(),
-                                              originalPrice:
-                                                  service['original_price'],
-                                              discount: service['discount'],
-                                              image: image,
-                                              discountPrice: price,
-                                              serviceType:
-                                                  service['service_type'],
-                                            )));
-                              } else if (category == 'Home') {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => HomeBookingPage(
-                                              category: category,
-                                              serviceName: name,
-                                              rating: rating.toInt(),
-                                              originalPrice:
-                                                  service['original_price'],
-                                              discount: service['discount'],
-                                              image: image,
-                                              discountPrice: price,
-                                              serviceType:
-                                                  service['service_type'],
-                                            )));
-                              } else {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => ExteriorBookingpage(
-                                              category: category,
-                                              serviceName: name,
-                                              rating: rating.toInt(),
-                                              originalPrice:
-                                                  service['original_price'],
-                                              discount: service['discount'],
-                                              image: image,
-                                              discountPrice: price,
-                                              serviceType:
-                                                  service['service_type'],
-                                            )));
-                              }
-                            },
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFB800),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  "Book Now",
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.star,
+                                    color: Color(0xFFFFB800), size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  rating.toStringAsFixed(1),
                                   style: TextStyle(
-                                    color: Color(0xFF0F2E5A),
                                     fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Starts from ₹$price",
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[800],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () {
+                                if (category == 'Interior') {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => InteriorBookingPage(
+                                                category: category,
+                                                serviceName: name,
+                                                rating: rating.toInt(),
+                                                originalPrice:
+                                                    service['original_price'],
+                                                discount: service['discount'],
+                                                image: image,
+                                                discountPrice: price,
+                                                serviceType:
+                                                    service['service_type'],
+                                              )));
+                                } else if (category == 'Exterior') {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => ExteriorBookingpage(
+                                                category: category,
+                                                serviceName: name,
+                                                rating: rating.toInt(),
+                                                originalPrice:
+                                                    service['original_price'],
+                                                discount: service['discount'],
+                                                image: image,
+                                                discountPrice: price,
+                                                serviceType:
+                                                    service['service_type'],
+                                              )));
+                                } else if (category == 'Vehicle') {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => VehicleBookingPage(
+                                                category: category,
+                                                serviceName: name,
+                                                rating: rating.toInt(),
+                                                originalPrice:
+                                                    service['original_price'],
+                                                discount: service['discount'],
+                                                image: image,
+                                                discountPrice: price,
+                                                serviceType:
+                                                    service['service_type'],
+                                              )));
+                                } else if (category == 'Pet') {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => PetCleaning(
+                                                category: category,
+                                                serviceName: name,
+                                                rating: rating.toInt(),
+                                                originalPrice:
+                                                    service['original_price'],
+                                                discount: service['discount'],
+                                                image: image,
+                                                discountPrice: price,
+                                                serviceType:
+                                                    service['service_type'],
+                                              )));
+                                } else if (category == 'Home') {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => HomeBookingPage(
+                                                category: category,
+                                                serviceName: name,
+                                                rating: rating.toInt(),
+                                                originalPrice:
+                                                    service['original_price'],
+                                                discount: service['discount'],
+                                                image: image,
+                                                discountPrice: price,
+                                                serviceType:
+                                                    service['service_type'],
+                                              )));
+                                } else {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => ExteriorBookingpage(
+                                                category: category,
+                                                serviceName: name,
+                                                rating: rating.toInt(),
+                                                originalPrice:
+                                                    service['original_price'],
+                                                discount: service['discount'],
+                                                image: image,
+                                                discountPrice: price,
+                                                serviceType:
+                                                    service['service_type'],
+                                              )));
+                                }
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFB800),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    "Book Now",
+                                    style: TextStyle(
+                                      color: Color(0xFF0F2E5A),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
         ),
       ],
+    );
+  }
+
+  Widget buildOnlineShopsTab() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. "Sadiq, still looking for these?" purple gradient box
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "${username ?? 'Sadiq'}, still looking for these?",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  height: 145,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      _buildLookingForCard("Vehicle Body Cover",
+                          "assets/image/car_clean.png", "Shop Now"),
+                      _buildLookingForCard("All Purpose Cleaner",
+                          "assets/image/Complete_Detailing.png", "Shop Now"),
+                      _buildLookingForCard("Car Shampoo",
+                          "assets/image/Exterior_wash.png", "Shop Now"),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 2. Smart TV Promo
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E8F0).withOpacity(0.6),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "55\" Ultra HD (4K) Smart TV",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "From ₹19,999*",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 8),
+                          minimumSize: const Size(60, 32),
+                        ),
+                        child: const Text("Buy",
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ),
+                const Expanded(
+                  flex: 2,
+                  child: Icon(
+                    Icons.tv_outlined,
+                    size: 80,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 3. Flash Sale Section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEA580C),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.flash_on,
+                        color: Colors.white, size: 14),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Flash Sale",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildTimerUnit("09"),
+                  const Text(" : ",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  _buildTimerUnit("59"),
+                  const Text(" : ",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  _buildTimerUnit("50"),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {},
+                    child: const Text(
+                      "SEE ALL",
+                      style: TextStyle(
+                        color: Color(0xFF7C3AED),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 180,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _buildFlashSaleCard("TRUFFLE CAKE", "₹499", "₹999",
+                        "50% OFF", "assets/image/add_image.png"),
+                    _buildFlashSaleCard("PREMIUM WATCH", "₹2,489", "₹5,000",
+                        "50% OFF", "assets/image/add_image.png"),
+                    _buildFlashSaleCard("OFFICE CHAIR", "₹4,999", "₹9,999",
+                        "50% OFF", "assets/image/add_image.png"),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // 4. Suggested For You Section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Suggested For You",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.black,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.chevron_right,
+                        color: Colors.white, size: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.82,
+                children: [
+                  _buildSuggestedCard(
+                      "FOXCARE Windshield Wash...",
+                      "₹249",
+                      "₹499",
+                      "100+ ordered this week",
+                      "assets/image/add_image.png"),
+                  _buildSuggestedCard("Premium Car Cover", "₹1,499", "₹2,999",
+                      "2,300+ ordered this week", "assets/image/car_clean.png"),
+                  _buildSuggestedCard(
+                      "SEVINCAR Multi-purpose...",
+                      "₹269",
+                      "₹499",
+                      "150+ ordered this week",
+                      "assets/image/deep_cleaning.png"),
+                  _buildSuggestedCard(
+                      "Pro Phone 13 Ultra",
+                      "₹54,999",
+                      "₹1,20,000",
+                      "10,000+ ordered this week",
+                      "assets/image/Complete_Detailing.png"),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // 5. Trending Near You Section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Trending Near You",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                      child: _buildTrendingCard("SNEAKERS", "4.8", "₹4,199",
+                          "assets/image/add_image.png")),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: _buildTrendingCard("GOLD RING", "4.9", "₹48,350",
+                          "assets/image/add_image.png")),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // 6. Special Deals for You Banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6D28D9),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Combo Sales Fest",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  "Enjoy extra 10% off on all collections using\n'OFF10' coupon code.",
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFCA8A04),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    minimumSize: const Size(60, 32),
+                  ),
+                  child: const Text("Claim now",
+                      style:
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLookingForCard(
+      String title, String imageAsset, String actionText) {
+    return Container(
+      width: 110,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                imageAsset,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.shopping_bag_outlined,
+                    color: Colors.purple,
+                    size: 30),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            actionText,
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF7C3AED),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimerUnit(String unit) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        unit,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFlashSaleCard(String title, String price, String originalPrice,
+      String badge, String imageAsset) {
+    return Container(
+      width: 140,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        imageAsset,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.cake_outlined,
+                                size: 40, color: Colors.orange),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF7C3AED),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      originalPrice,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 8,
+            left: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                badge,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestedCard(String title, String price, String originalPrice,
+      String orderText, String imageAsset) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  imageAsset,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.shopping_bag_outlined,
+                      color: Colors.blue,
+                      size: 40),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text(
+                price,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                originalPrice,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey[500],
+                  decoration: TextDecoration.lineThrough,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            orderText,
+            style: const TextStyle(
+              fontSize: 9,
+              color: Color(0xFF7C3AED),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendingCard(
+      String title, String rating, String price, String imageAsset) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    imageAsset,
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.shopping_bag,
+                        size: 50,
+                        color: Colors.purple),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.check_circle,
+                        color: Colors.green, size: 12),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber, size: 12),
+                    const SizedBox(width: 2),
+                    Text(
+                      rating,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF7C3AED),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF7C3AED),
+                        shape: BoxShape.circle,
+                      ),
+                      child:
+                          const Icon(Icons.add, color: Colors.white, size: 14),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 18,
+            right: 18,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.favorite_border,
+                  color: Colors.grey, size: 14),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

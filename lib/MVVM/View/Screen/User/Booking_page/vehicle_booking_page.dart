@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
     as CartService;
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
 import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
@@ -95,6 +96,7 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
   void initState() {
     super.initState();
     checkIfServiceInCart();
+    RecommendationController.to.trackProductView(widget.serviceId ?? widget.serviceName ?? '');
   }
 
   bool isBookingFormComplete() {
@@ -463,6 +465,7 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
                   );
 
                   setState(() => isAddedToCart = true);
+                  RecommendationController.to.trackCart(widget.serviceId ?? widget.serviceName ?? '', true);
                 },
               ),
             ),
@@ -538,6 +541,9 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
                       await FirebaseFirestore.instance
                           .collection('bookings')
                           .add(bookingData);
+                      RecommendationController.to.trackPurchase(
+                          [widget.serviceId ?? widget.serviceName ?? ''],
+                          double.tryParse(widget.discountPrice ?? '') ?? 0.0);
 
                       if (!mounted) return;
                       CustomSnackBar.show(

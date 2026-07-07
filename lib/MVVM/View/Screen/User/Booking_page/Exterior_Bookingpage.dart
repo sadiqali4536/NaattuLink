@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
     as CartService;
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
@@ -52,6 +53,7 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
   void initState() {
     super.initState();
     checkIfServiceInCart();
+    RecommendationController.to.trackProductView(widget.serviceName ?? '');
   }
 
   bool isBookingFormComplete() {
@@ -451,6 +453,7 @@ showLoadingDialog(BuildContext context) {
 
                     if (!mounted) return;
                     setState(() => isAddedToCart = true);
+                    RecommendationController.to.trackCart(widget.serviceName ?? '', true);
                     // CustomSnackBar.show(
                     // useTick: true,
                     // context: context, message: " Added to cart successfully.",color: Colors.white
@@ -538,6 +541,9 @@ final bookingData = {
     await FirebaseFirestore.instance
         .collection('bookings')
         .add(bookingData);
+    RecommendationController.to.trackPurchase(
+        [widget.serviceName ?? ''],
+        double.tryParse(widget.discountPrice ?? '') ?? 0.0);
 
     if (_isDialogShown) {
       Navigator.of(context, rootNavigator: true).pop();

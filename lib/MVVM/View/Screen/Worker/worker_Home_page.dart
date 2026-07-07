@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/Worker/Edit_address.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/Worker/check_out_page.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/Worker/worker_location_widget.dart';
 import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
@@ -416,6 +417,11 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
                         ),
                       ),
                     ),
+
+                    SizedBox(height: 24),
+
+                    // ── Business Location ────────────────────────────
+                    const WorkerLocationWidget(),
 
                     SizedBox(height: 30),
 

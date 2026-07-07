@@ -39,7 +39,7 @@ class _ServicesListState extends State<ServicesList> {
               "Workers",
               "Bus",
               "Local Ads",
-              "Emergency"
+              "Online Shops"
             ];
 
             for (var doc in allServices) {
@@ -57,6 +57,7 @@ class _ServicesListState extends State<ServicesList> {
                   'all',
                   'for you',
                   'emergency',
+                  'online shops',
                   'home',
                 }.contains(norm);
 

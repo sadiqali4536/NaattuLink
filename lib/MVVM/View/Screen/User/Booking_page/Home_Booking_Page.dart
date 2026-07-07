@@ -621,6 +621,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
     as CartService;
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
 import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
@@ -667,6 +668,7 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
   void initState() {
     super.initState();
     checkIfServiceInCart();
+    RecommendationController.to.trackProductView(widget.serviceId ?? widget.serviceName ?? '');
   }
 
   @override
@@ -852,77 +854,74 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                             Text("Home Size",
                                 style: TextStyle(
                                     fontSize: 20, fontWeight: FontWeight.w500)),
-                            Positioned(
-                              top: 330,
-                              left: 320,
-                              child: IconButton(
-                                icon: isAddedToCart
-                                    ? const Icon(Icons.check_circle,
-                                        color: gradientgreen2.c, size: 30)
-                                    : const Icon(
-                                        Icons.add_shopping_cart_outlined),
-                                onPressed: () async {
-                                  if (isAddedToCart) return;
+                            IconButton(
+                              icon: isAddedToCart
+                                  ? const Icon(Icons.check_circle,
+                                      color: gradientgreen2.c, size: 30)
+                                  : const Icon(
+                                      Icons.add_shopping_cart_outlined),
+                              onPressed: () async {
+                                if (isAddedToCart) return;
 
-                                  if (!isBookingFormComplete()) {
-                                    CustomSnackBar.show(
-                                        iconcolor: erroriconcolor,
-                                        icon: Icons.cancel,
-                                        context: context,
-                                        message:
-                                            " Please fill the booking before adding to cart.",
-                                        color: const Color.fromARGB(
-                                            255, 249, 246, 246));
-                                    return;
-                                  }
+                                if (!isBookingFormComplete()) {
+                                  CustomSnackBar.show(
+                                      iconcolor: erroriconcolor,
+                                      icon: Icons.cancel,
+                                      context: context,
+                                      message:
+                                          " Please fill the booking before adding to cart.",
+                                      color: const Color.fromARGB(
+                                          255, 249, 246, 246));
+                                  return;
+                                }
 
-                                  final userId =
-                                      FirebaseAuth.instance.currentUser?.uid;
-                                  if (userId == null) return;
+                                final userId =
+                                    FirebaseAuth.instance.currentUser?.uid;
+                                if (userId == null) return;
 
-                                  final cartRef = FirebaseFirestore.instance
-                                      .collection('carts')
-                                      .doc(userId)
-                                      .collection('cartItems');
+                                final cartRef = FirebaseFirestore.instance
+                                    .collection('carts')
+                                    .doc(userId)
+                                    .collection('cartItems');
 
-                                  final existing = await cartRef
-                                      .where('serviceName',
-                                          isEqualTo: widget.serviceName)
-                                      .where('category',
-                                          isEqualTo: widget.category)
-                                      .where('serviceType',
-                                          isEqualTo: widget.serviceType)
-                                      .limit(1)
-                                      .get();
+                                final existing = await cartRef
+                                    .where('serviceName',
+                                        isEqualTo: widget.serviceName)
+                                    .where('category',
+                                        isEqualTo: widget.category)
+                                    .where('serviceType',
+                                        isEqualTo: widget.serviceType)
+                                    .limit(1)
+                                    .get();
 
-                                  if (existing.docs.isNotEmpty) {
-                                    CustomSnackBar.show(
-                                        icon: Icons.library_add_check,
-                                        iconcolor: Colors.amberAccent,
-                                        context: context,
-                                        message: "Item already in cart",
-                                        color: Colors.white);
-                                    return;
-                                  }
+                                if (existing.docs.isNotEmpty) {
+                                  CustomSnackBar.show(
+                                      icon: Icons.library_add_check,
+                                      iconcolor: Colors.amberAccent,
+                                      context: context,
+                                      message: "Item already in cart",
+                                      color: Colors.white);
+                                  return;
+                                }
 
-                                  await CartService.addToCart(
-                                    context: context,
-                                    serviceName: widget.serviceName,
-                                    image: widget.image,
-                                    originalPrice: widget.originalPrice,
-                                    discountPrice: widget.discountPrice,
-                                    discount: widget.discount,
-                                    rating: widget.rating,
-                                    category: widget.category,
-                                    serviceType: widget.serviceType,
-                                     selectedDate: null,
-                                      selectedTime: '',
-                                       gardenSize: null,
-                                  );
+                                await CartService.addToCart(
+                                  context: context,
+                                  serviceName: widget.serviceName,
+                                  image: widget.image,
+                                  originalPrice: widget.originalPrice,
+                                  discountPrice: widget.discountPrice,
+                                  discount: widget.discount,
+                                  rating: widget.rating,
+                                  category: widget.category,
+                                  serviceType: widget.serviceType,
+                                  selectedDate: null,
+                                  selectedTime: '',
+                                  gardenSize: null,
+                                );
 
-                                  setState(() => isAddedToCart = true);
-                                },
-                              ),
+                                setState(() => isAddedToCart = true);
+                                RecommendationController.to.trackCart(widget.serviceId ?? widget.serviceName ?? '', true);
+                              },
                             ),
                           ],
                         ),
@@ -944,7 +943,6 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                             Text("Select Date",
                                 style: TextStyle(
                                     fontSize: 20, fontWeight: FontWeight.w500)),
-                            
                           ],
                         ),
                         SizedBox(
@@ -1183,7 +1181,7 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
               ),
               onPressed: () async {
                 final user = FirebaseAuth.instance.currentUser;
-                if (user == null ) return;
+                if (user == null) return;
 
                 if (!isBookingFormComplete()) {
                   showDialog(
@@ -1231,7 +1229,6 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                   return;
                 }
 
-
                 try {
                   final bookingData = {
                     'userId': user.uid,
@@ -1254,6 +1251,9 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                   await FirebaseFirestore.instance
                       .collection('bookings')
                       .add(bookingData);
+                  RecommendationController.to.trackPurchase(
+                      [widget.serviceId ?? widget.serviceName ?? ''],
+                      double.tryParse(widget.discountPrice ?? '') ?? 0.0);
                   if (!mounted) return;
                   CustomSnackBar.show(
                     useTick: true,

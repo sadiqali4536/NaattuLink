@@ -8,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/SplashScreen.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/controller/auth_controller.dart';
+import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
 import 'package:swiftclean_project/MVVM/Viewmodel/themes_bloc.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/controller/common_controller.dart';
 import 'package:swiftclean_project/firebase_options.dart';
@@ -28,6 +29,9 @@ void main() async {
 
   // Register LocationController globally before the app starts
   Get.put(LocationController(), permanent: true);
+
+  // Register RecommendationController globally
+  Get.put(RecommendationController(), permanent: true);
   runApp(MyApp());
 }
 
