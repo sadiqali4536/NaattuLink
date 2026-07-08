@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "423727833369",
+    "project_id": "swiftclean-5bfe4",
+    "storage_bucket": "swiftclean-5bfe4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:423727833369:android:796dbdb0a91801b9aea588",
+        "android_client_info": {
+          "package_name": "com.example.swift_clean"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "423727833369-0blf5ukmu5rdof5vo9gdr6kghv8p4tju.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsDLICTTLhHBETn8SPhqUUXSB29og1jrU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "423727833369-0blf5ukmu5rdof5vo9gdr6kghv8p4tju.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "423727833369-11a8jpe0u9ddq0i5dtsgi1asqe9gmdto.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ex"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:423727833369:android:8f0ea7645fafe538aea588",
+        "android_client_info": {
+          "package_name": "com.example.swiftclean_admin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "423727833369-0blf5ukmu5rdof5vo9gdr6kghv8p4tju.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsDLICTTLhHBETn8SPhqUUXSB29og1jrU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "423727833369-0blf5ukmu5rdof5vo9gdr6kghv8p4tju.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "423727833369-11a8jpe0u9ddq0i5dtsgi1asqe9gmdto.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ex"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

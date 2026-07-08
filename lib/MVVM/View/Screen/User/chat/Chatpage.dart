@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -51,7 +51,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   void _sendInitialBotGreeting() async {
     final response = "How can I help you today?";
-    final options = ["My Bookings", "Cancel Booking", "Payment", "Something Else"];
+    final options = [
+      "My Bookings",
+      "Cancel Booking",
+      "Payment",
+      "Something Else"
+    ];
 
     await FirebaseFirestore.instance
         .collection('chats')
@@ -156,10 +161,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       response = "Are you sure you want to cancel your booking?";
       options = ["Yes", "No"];
     } else if (message == "Yes" && selectedBookingId != null) {
-      verificationCode = (10000 + DateTime.now().millisecondsSinceEpoch % 90000).toString();
+      verificationCode =
+          (10000 + DateTime.now().millisecondsSinceEpoch % 90000).toString();
       waitingForCode = true;
 
-      response = "Please enter the code we sent to your email to confirm cancellation";
+      response =
+          "Please enter the code we sent to your email to confirm cancellation";
       options = null;
 
       print("DEBUG: Verification code sent to email: $verificationCode");
@@ -193,9 +200,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   String _getDateHeader(DateTime time) {
     DateTime now = DateTime.now();
     DateTime yesterday = now.subtract(const Duration(days: 1));
-    if (DateFormat('yyyy-MM-dd').format(time) == DateFormat('yyyy-MM-dd').format(now)) {
+    if (DateFormat('yyyy-MM-dd').format(time) ==
+        DateFormat('yyyy-MM-dd').format(now)) {
       return "Today";
-    } else if (DateFormat('yyyy-MM-dd').format(time) == DateFormat('yyyy-MM-dd').format(yesterday)) {
+    } else if (DateFormat('yyyy-MM-dd').format(time) ==
+        DateFormat('yyyy-MM-dd').format(yesterday)) {
       return "Yesterday";
     } else {
       return DateFormat("dd MMM yyyy").format(time);
@@ -205,14 +214,16 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   Widget _buildMessage(Map<String, dynamic> message, bool showDateHeader) {
     bool isUser = message["sender"] == "user";
     return Column(
-      crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment:
+          isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         if (showDateHeader)
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(10),
@@ -243,7 +254,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                   isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Text(message["text"],
-                    style: TextStyle(color: isUser ? Colors.white : Colors.black)),
+                    style:
+                        TextStyle(color: isUser ? Colors.white : Colors.black)),
                 const SizedBox(height: 5),
                 Text(_formattedTime(message["time"]),
                     style: TextStyle(
@@ -442,9 +454,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                     final time = (msg['time'] as Timestamp).toDate();
                     final showDateHeader = index == 0 ||
                         _getDateHeader(time) !=
-                            _getDateHeader(
-                                (docs[index - 1].data() as Map<String, dynamic>)['time'].toDate());
-                    return _buildMessage({...msg, 'time': time}, showDateHeader);
+                            _getDateHeader((docs[index - 1].data()
+                                    as Map<String, dynamic>)['time']
+                                .toDate());
+                    return _buildMessage(
+                        {...msg, 'time': time}, showDateHeader);
                   },
                 );
               },
@@ -466,7 +480,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 // import 'package:flutter/material.dart';
 // import 'package:http/http.dart' as http;
 // import 'package:intl/intl.dart';
-// import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+// import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 
 // class ChatPage extends StatefulWidget {
 //   const ChatPage({super.key});

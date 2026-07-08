@@ -5,9 +5,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import 'package:swiftclean_project/MVVM/model/models/user_model.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/Config/Toast.dart';
+import 'package:naattulink/MVVM/model/models/user_model.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Config/Toast.dart';
+
+import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 
 class FirebaseAuthServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -20,29 +22,11 @@ class FirebaseAuthServices {
       UserCredential credential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       return credential;
-    } on FirebaseAuthException catch (e) {
+    } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
       if (context.mounted) {
-        String message = "Incorrect email or password. Please try again.";
-        if (e.code == 'invalid-email') {
-          message = "Please enter a valid email address.";
-        } else if (e.code == 'user-disabled') {
-          message = "This account has been disabled. Please contact support.";
-        } else if (e.code == 'too-many-requests') {
-          message = "Too many login attempts. Please try again later.";
-        } else if (e.code == 'network-request-failed') {
-          message = "Network error. Please check your internet connection.";
-        } else if (e.message != null &&
-            e.message!.contains("supplied auth credential is incorrect")) {
-          message = "Incorrect email or password. Please try again.";
-        }
-
         toastError(message);
-      }
-    } catch (e, stackTrace) {
-      debugPrint("Generic Sign-In Error: $e");
-      debugPrint("Stack Trace: $stackTrace");
-      if (context.mounted) {
-        toastError("An unexpected login error occurred. Please try again.");
       }
     }
     return null;
@@ -76,27 +60,11 @@ class FirebaseAuthServices {
       }
 
       return user;
-    } on FirebaseAuthException catch (e) {
+    } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
       if (context.mounted) {
-        String message = "Registration failed. Please try again.";
-        if (e.code == 'email-already-in-use') {
-          message = "This email is already registered. Please sign in instead.";
-        } else if (e.code == 'weak-password') {
-          message = "Password is too weak. Please use at least 6 characters.";
-        } else if (e.code == 'invalid-email') {
-          message = "Please enter a valid email address.";
-        } else if (e.code == 'network-request-failed') {
-          message = "Network error. Please check your internet connection.";
-        }
-
         toastError(message);
-      }
-    } catch (e, stackTrace) {
-      debugPrint("Generic Registration Error: $e");
-      debugPrint("Stack Trace: $stackTrace");
-      if (context.mounted) {
-        toastError(
-            "An unexpected registration error occurred. Please try again.");
       }
     }
     return null;
@@ -161,8 +129,10 @@ class FirebaseAuthServices {
         toastSuccess("Service added to cart");
       }
     } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
       if (context.mounted) {
-        toastError("Failed to add to cart: ${e.toString()}");
+        toastError(message);
       }
     }
   }
@@ -214,8 +184,10 @@ class FirebaseAuthServices {
         throw Exception("Failed to send email");
       }
     } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
       if (context.mounted) {
-        toastError("Error: $e");
+        toastError(message);
       }
     }
   }
@@ -225,29 +197,38 @@ class FirebaseAuthServices {
     required String inputCode,
     required BuildContext context,
   }) async {
-    final user = _auth.currentUser;
-    if (user == null) return false;
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
 
-    final doc = await db.collection('bookingCancelCodes').doc(user.uid).get();
+      final doc = await db.collection('bookingCancelCodes').doc(user.uid).get();
 
-    if (!doc.exists) return false;
+      if (!doc.exists) return false;
 
-    final data = doc.data();
-    if (data == null || data['code'] != inputCode) return false;
+      final data = doc.data();
+      if (data == null || data['code'] != inputCode) return false;
 
-    final bookingId = data['bookingId'];
-    if (bookingId == null) return false;
+      final bookingId = data['bookingId'];
+      if (bookingId == null) return false;
 
-    // Delete the booking
-    await db.collection('bookings').doc(bookingId).delete();
+      // Delete the booking
+      await db.collection('bookings').doc(bookingId).delete();
 
-    // Optional: delete the code document
-    await db.collection('bookingCancelCodes').doc(user.uid).delete();
+      // Optional: delete the code document
+      await db.collection('bookingCancelCodes').doc(user.uid).delete();
 
-    if (context.mounted) {
-      toastSuccess("Booking canceled successfully.");
+      if (context.mounted) {
+        toastSuccess("Booking canceled successfully.");
+      }
+
+      return true;
+    } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
+      if (context.mounted) {
+        toastError(message);
+      }
+      return false;
     }
-
-    return true;
   }
 }

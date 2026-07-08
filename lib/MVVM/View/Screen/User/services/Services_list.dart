@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/utils/service_functions/servicecard2.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/button/Scrollable/scrollable_horizontal_buttons.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/premium_app_background.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/MVVM/utils/service_functions/servicecard2.dart';
+import 'package:naattulink/MVVM/utils/widget/button/Scrollable/scrollable_horizontal_buttons.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class ServicesList extends StatefulWidget {
   const ServicesList({super.key});

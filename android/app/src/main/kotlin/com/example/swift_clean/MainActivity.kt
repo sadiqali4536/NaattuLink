@@ -1,4 +1,4 @@
-package com.example.swiftclean_project
+package com.example.swift_clean
 
 import io.flutter.embedding.android.FlutterActivity
 

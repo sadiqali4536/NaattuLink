@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/payment_screen.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/payment_screen.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
 
 class CheckOutPage extends StatefulWidget {
   const CheckOutPage({super.key});
@@ -33,8 +33,10 @@ class _CheckOutPageState extends State<CheckOutPage> {
     if (startTime == null || endTime == null) return Duration.zero;
 
     final now = DateTime.now();
-    var start = DateTime(now.year, now.month, now.day, startTime!.hour, startTime!.minute);
-    var end = DateTime(now.year, now.month, now.day, endTime!.hour, endTime!.minute);
+    var start = DateTime(
+        now.year, now.month, now.day, startTime!.hour, startTime!.minute);
+    var end =
+        DateTime(now.year, now.month, now.day, endTime!.hour, endTime!.minute);
 
     if (end.isBefore(start)) {
       end = end.add(const Duration(days: 1));
@@ -119,7 +121,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
               height: 480,
               width: 362,
               decoration: BoxDecoration(
-                border: Border.all(color: const Color.fromARGB(255, 228, 228, 228)),
+                border:
+                    Border.all(color: const Color.fromARGB(255, 228, 228, 228)),
                 borderRadius: BorderRadius.circular(10),
                 color: Colors.white,
               ),
@@ -134,7 +137,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
                       child: Container(
                         width: 200,
                         decoration: BoxDecoration(
-                          border: Border.all(color: const Color.fromARGB(255, 202, 202, 202)),
+                          border: Border.all(
+                              color: const Color.fromARGB(255, 202, 202, 202)),
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -174,85 +178,90 @@ class _CheckOutPageState extends State<CheckOutPage> {
                     ),
                   ),
 
-           // Start Time
-                const Padding(
-                  padding: EdgeInsets.only(left: 30, top: 120),
-                   child: Text("Start Time:", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-               Padding(
-               padding: const EdgeInsets.only(top: 110, left: 130),
-               child: Material(
-                elevation: 5,
-                borderRadius: BorderRadius.circular(10),
-                 child: Container(
-                 height: 45,
-                 width: 170,
-                 decoration: BoxDecoration(
-                 color: const Color.fromARGB(255, 255, 255, 255),
-                 borderRadius: BorderRadius.circular(10),
-                 border: Border.all(color: const Color.fromARGB(255, 220, 220, 220))
-                              ),
-                              child: InkWell(
-                               onTap: () => pickTime(true),
-                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                  Text(
-                     formatTimeOfDay(startTime),
-                     style: const TextStyle(fontSize: 16),
-                    ),
-                  const Icon(Icons.access_time),
-                     ],
-                   ),
-                 ),
-                               ),
-                              ),
-               ),
-           ),
-       // End Time
-               const Padding(
-                padding: EdgeInsets.only(left: 30, top: 200),
-                 child: Text("End Time:", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-               Padding(
-                   padding: const EdgeInsets.only(top: 190, left: 130),
-                   child: Material(
-                    elevation: 5,
-                    borderRadius: BorderRadius.circular(10),
-                     child: Container(
-                     height: 45,
-                     width: 170,
-                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 255, 255, 255),
+                  // Start Time
+                  const Padding(
+                    padding: EdgeInsets.only(left: 30, top: 120),
+                    child: Text("Start Time:",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 110, left: 130),
+                    child: Material(
+                      elevation: 5,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color.fromARGB(255, 210, 210, 210))
-                     ),
-                                     child: InkWell(
-                                      onTap: () => pickTime(false),
-                                      child: Padding(
-                                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                         children: [
-                          Text(
-                             formatTimeOfDay(endTime),
-                               style: const TextStyle(fontSize: 16),
-                                 ),
-                                 const Icon(Icons.access_time),
-                               ],
-                             ),
-                           ),
-                         ),
-                       ),
-                   ),
+                      child: Container(
+                        height: 45,
+                        width: 170,
+                        decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 255, 255, 255),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color:
+                                    const Color.fromARGB(255, 220, 220, 220))),
+                        child: InkWell(
+                          onTap: () => pickTime(true),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  formatTimeOfDay(startTime),
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                const Icon(Icons.access_time),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // End Time
+                  const Padding(
+                    padding: EdgeInsets.only(left: 30, top: 200),
+                    child: Text("End Time:",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 190, left: 130),
+                    child: Material(
+                      elevation: 5,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        height: 45,
+                        width: 170,
+                        decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 255, 255, 255),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color:
+                                    const Color.fromARGB(255, 210, 210, 210))),
+                        child: InkWell(
+                          onTap: () => pickTime(false),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  formatTimeOfDay(endTime),
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                const Icon(Icons.access_time),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                   // Duration
                   Padding(
                     padding: const EdgeInsets.only(top: 270, left: 36),
                     child: const Text("Duration:",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(top: 270, left: 140),
@@ -265,7 +274,8 @@ class _CheckOutPageState extends State<CheckOutPage> {
                   const Padding(
                     padding: EdgeInsets.only(top: 270, left: 155),
                     child: Text(" hrs ",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(top: 270, left: 190),
@@ -278,18 +288,22 @@ class _CheckOutPageState extends State<CheckOutPage> {
                   const Padding(
                     padding: EdgeInsets.only(top: 270, left: 210),
                     child: Text(" mins",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
 
                   // Hourly Rate
                   const Padding(
                     padding: EdgeInsets.only(top: 305, left: 36),
                     child: Text("Hourly Rate:",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                   const Padding(
                     padding: EdgeInsets.only(top: 305, left: 139),
-                    child: Text(" ₹", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text(" ₹",
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(top: 305, left: 148),
@@ -299,7 +313,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
                             fontWeight: FontWeight.bold,
                             color: gradientgreen2.c)),
                   ),
-                 // Horizontal line
+                  // Horizontal line
                   const Padding(
                     padding: EdgeInsets.only(top: 210),
                     child: Center(
@@ -317,8 +331,10 @@ class _CheckOutPageState extends State<CheckOutPage> {
                     padding: EdgeInsets.only(top: 360, left: 100),
                     child: Text(
                       "Total Price:",
-                      style:
-                          TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black),
                     ),
                   ),
                   Padding(
@@ -340,15 +356,19 @@ class _CheckOutPageState extends State<CheckOutPage> {
                       height: 43,
                       width: 206,
                       child: ElevatedButton.icon(
-                        label: const Text("Proceed to Payment",
-                        style:TextStyle(color: Colors.white),),
+                        label: const Text(
+                          "Proceed to Payment",
+                          style: TextStyle(color: Colors.white),
+                        ),
                         onPressed: () {
                           if (startTime == null ||
                               endTime == null ||
                               duration == Duration.zero ||
                               selectedWorkType == 'Select Work Type') {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please select all required fields")),
+                              const SnackBar(
+                                  content: Text(
+                                      "Please select all required fields")),
                             );
                             return;
                           }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 
 class Custombutton extends StatelessWidget {
   final VoidCallback onpress;
@@ -25,11 +25,12 @@ class Custombutton extends StatelessWidget {
         color: color,
         gradient: color == null
             ? LinearGradient(
-                colors: gradientColors ?? [
-                  gradientgreen1.c,
-                  gradientgreen2.c,
-                  gradientgreen3.c,
-                ],
+                colors: gradientColors ??
+                    [
+                      gradientgreen1.c,
+                      gradientgreen2.c,
+                      gradientgreen3.c,
+                    ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               )

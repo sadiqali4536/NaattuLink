@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '423727833369',
     projectId: 'swiftclean-5bfe4',
     storageBucket: 'swiftclean-5bfe4.firebasestorage.app',
-    iosBundleId: 'com.example.swiftClean',
+    iosBundleId: 'com.example.NaattuLink',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '423727833369',
     projectId: 'swiftclean-5bfe4',
     storageBucket: 'swiftclean-5bfe4.firebasestorage.app',
-    iosBundleId: 'com.example.swiftClean',
+    iosBundleId: 'com.example.NaattuLink',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

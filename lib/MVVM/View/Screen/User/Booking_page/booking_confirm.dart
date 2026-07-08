@@ -2,7 +2,7 @@
 // import 'dart:ui';
 
 // import 'package:flutter/material.dart';
-// import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+// import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 
 // class BookingConfirmationModal extends StatefulWidget {
 //   final List<Map<String, dynamic>> bookedItems;
@@ -123,7 +123,7 @@
 
 // import 'dart:async';
 // import 'package:flutter/material.dart';
-// import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+// import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 
 // class BookingConfirmationModal extends StatefulWidget {
 //   final List<Map<String, dynamic>> bookedItems;
@@ -256,10 +256,9 @@
 //   }
 // }
 
-
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 
 class BookingConfirmationModal extends StatefulWidget {
   final List<Map<String, dynamic>> bookedItems;
@@ -385,7 +384,8 @@ class _BookingConfirmationModalState extends State<BookingConfirmationModal> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text("Done", style: TextStyle(color: Colors.white)),
+                child:
+                    const Text("Done", style: TextStyle(color: Colors.white)),
               ),
             ),
             const SizedBox(height: 10),

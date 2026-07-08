@@ -1,13 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class Servicecard2 extends StatelessWidget {
   final String category;
@@ -137,15 +137,18 @@ class Servicecard2 extends StatelessWidget {
               },
               child: Card(
                 elevation: 4,
-                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                margin:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Row(
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        child: item['image'] != null && item['image'].toString().startsWith('http')
+                        child: item['image'] != null &&
+                                item['image'].toString().startsWith('http')
                             ? Image.network(
                                 item['image'],
                                 height: 120,
@@ -166,14 +169,16 @@ class Servicecard2 extends StatelessWidget {
                           children: [
                             Text(
                               item["service_name"] ?? '',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 18),
                             ),
                             const SizedBox(height: 4),
                             Row(
                               children: [
                                 RatingBarIndicator(
                                   rating: (item["rating"] ?? 0).toDouble(),
-                                  itemBuilder: (_, __) => const Icon(Icons.star, color: gradientgreen2.c),
+                                  itemBuilder: (_, __) => const Icon(Icons.star,
+                                      color: gradientgreen2.c),
                                   itemCount: 5,
                                   itemSize: 20,
                                   direction: Axis.horizontal,
@@ -191,8 +196,11 @@ class Servicecard2 extends StatelessWidget {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.arrow_downward, size: 15, color: gradientgreen2.c),
-                                      Text("${item["discount"]}%", style: const TextStyle(color: gradientgreen2.c)),
+                                      const Icon(Icons.arrow_downward,
+                                          size: 15, color: gradientgreen2.c),
+                                      Text("${item["discount"]}%",
+                                          style: const TextStyle(
+                                              color: gradientgreen2.c)),
                                     ],
                                   ),
                                 if (item["original_price"] != null)
@@ -205,10 +213,15 @@ class Servicecard2 extends StatelessWidget {
                                   ),
                                 Text(
                                   "₹${formatPrice(item["price"])}",
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
                                 ),
                                 if (item["service_type"] == "Hour")
-                                  const Text("/hour", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  const Text("/hour",
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ],

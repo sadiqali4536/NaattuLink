@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/My_Address/address_page.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/formfield/customformfield2.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/My_Address/address_page.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
+import 'package:naattulink/MVVM/utils/widget/formfield/customformfield2.dart';
 
 class userEditAddress extends StatelessWidget {
   const userEditAddress({super.key});
@@ -14,11 +14,14 @@ class userEditAddress extends StatelessWidget {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20), // general horizontal padding
+          padding: const EdgeInsets.symmetric(
+              horizontal: 20), // general horizontal padding
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 10,),
+              SizedBox(
+                height: 10,
+              ),
               Row(
                 children: [
                   customBackbutton1(
@@ -29,12 +32,13 @@ class userEditAddress extends StatelessWidget {
                       );
                     },
                   ),
-                  SizedBox(width: 50,),
+                  SizedBox(
+                    width: 50,
+                  ),
                   Text(
                     "My Address",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-
                 ],
               ),
 
@@ -52,7 +56,8 @@ class userEditAddress extends StatelessWidget {
                     hight: 100,
                     color: primary.c,
                     hinttext: "Enter your Address",
-                    hintstyle: TextStyle(color: Color.fromRGBO(153, 153, 153, 1)),
+                    hintstyle:
+                        TextStyle(color: Color.fromRGBO(153, 153, 153, 1)),
                     validator: (String? value) {
                       if (value == null || value.isEmpty) {
                         return "Enter your Address";
@@ -62,7 +67,9 @@ class userEditAddress extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 30,),
+              SizedBox(
+                height: 30,
+              ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Row(

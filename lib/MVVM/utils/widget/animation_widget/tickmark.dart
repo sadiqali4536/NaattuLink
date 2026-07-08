@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 
 class Tickmark extends StatefulWidget {
   const Tickmark({super.key});
@@ -8,7 +8,8 @@ class Tickmark extends StatefulWidget {
   State<Tickmark> createState() => _TickmarkState();
 }
 
-class _TickmarkState extends State<Tickmark> with SingleTickerProviderStateMixin {
+class _TickmarkState extends State<Tickmark>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleanimation;
   late Animation<double> _opacityanimation;
@@ -26,7 +27,8 @@ class _TickmarkState extends State<Tickmark> with SingleTickerProviderStateMixin
         .chain(CurveTween(curve: Curves.easeOutBack))
         .animate(_controller);
 
-    _opacityanimation = Tween<double>(begin: 0.0, end: 1.70).animate(_controller);
+    _opacityanimation =
+        Tween<double>(begin: 0.0, end: 1.70).animate(_controller);
 
     _controller.forward();
   }

@@ -2,12 +2,12 @@
 // import 'package:firebase_auth/firebase_auth.dart';
 // import 'package:flutter/material.dart';
 // import 'package:intl/intl.dart';
-// import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart';
-// import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart' as CartService;
-// import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
-// import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-// import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-// import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
+// import 'package:naattulink/MVVM/View/Screen/User/cart/cart_service.dart';
+// import 'package:naattulink/MVVM/View/Screen/User/cart/cart_service.dart' as CartService;
+// import 'package:naattulink/MVVM/model/models/cart_model.dart';
+// import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+// import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+// import 'package:naattulink/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
 
 // class HomeBookingPage extends StatefulWidget {
 //   final String? serviceId;
@@ -619,13 +619,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
+import 'package:naattulink/MVVM/View/Screen/User/cart/cart_service.dart'
     as CartService;
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
-import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/recommendation_controller.dart';
+import 'package:naattulink/MVVM/model/models/cart_model.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
 
 class HomeBookingPage extends StatefulWidget {
   final String? serviceId;
@@ -668,7 +668,8 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
   void initState() {
     super.initState();
     checkIfServiceInCart();
-    RecommendationController.to.trackProductView(widget.serviceId ?? widget.serviceName ?? '');
+    RecommendationController.to
+        .trackProductView(widget.serviceId ?? widget.serviceName ?? '');
   }
 
   @override
@@ -920,7 +921,11 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                 );
 
                                 setState(() => isAddedToCart = true);
-                                RecommendationController.to.trackCart(widget.serviceId ?? widget.serviceName ?? '', true);
+                                RecommendationController.to.trackCart(
+                                    widget.serviceId ??
+                                        widget.serviceName ??
+                                        '',
+                                    true);
                               },
                             ),
                           ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/Authgate.dart';
+import 'package:naattulink/MVVM/View/Authentication/Authgate.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

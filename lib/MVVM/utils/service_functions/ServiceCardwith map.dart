@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/image_strings.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Constants/image_strings.dart';
 
 class ServiceCard extends StatefulWidget {
   String title;
   double rating;
   String image;
-   ServiceCard({super.key,required this.image,required this.rating,required this.title,});
+  ServiceCard({
+    super.key,
+    required this.image,
+    required this.rating,
+    required this.title,
+  });
 
   @override
   State<ServiceCard> createState() => _ServiceCardState();
 }
 
 class _ServiceCardState extends State<ServiceCard> {
-  
-
-
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -37,7 +38,8 @@ class _ServiceCardState extends State<ServiceCard> {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Image.asset(
                   widget.image,
                   height: 105,
@@ -46,7 +48,8 @@ class _ServiceCardState extends State<ServiceCard> {
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 105,
                     color: const Color(0xFFF1F5F9),
-                    child: const Icon(Icons.broken_image, size: 30, color: Colors.grey),
+                    child: const Icon(Icons.broken_image,
+                        size: 30, color: Colors.grey),
                   ),
                 ),
               ),
@@ -54,7 +57,8 @@ class _ServiceCardState extends State<ServiceCard> {
                 top: 8,
                 right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFB800), // Gold accent
                     borderRadius: BorderRadius.circular(6),
@@ -102,5 +106,3 @@ class _ServiceCardState extends State<ServiceCard> {
     );
   }
 }
-
-

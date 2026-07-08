@@ -5,13 +5,13 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import 'package:swiftclean_project/MVVM/View/Authentication/SplashScreen.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/location_controller.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/auth_controller.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
-import 'package:swiftclean_project/MVVM/Viewmodel/themes_bloc.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/common_controller.dart';
-import 'package:swiftclean_project/firebase_options.dart';
+import 'package:naattulink/MVVM/View/Authentication/SplashScreen.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/recommendation_controller.dart';
+import 'package:naattulink/MVVM/Viewmodel/themes_bloc.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/common_controller.dart';
+import 'package:naattulink/firebase_options.dart';
 
 late Size mq;
 void main() async {
@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
       child: BlocBuilder<ThemeBloc, ThemeState>(builder: (context, state) {
         return GetMaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Naattu Link',
+          title: 'NaattuLink',
           theme: ThemeData.light(),
           darkTheme: ThemeData.dark(),
           themeMode: state.themeMode,

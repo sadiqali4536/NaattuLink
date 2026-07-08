@@ -3,14 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/model/models/cart_model.dart';
+import 'package:naattulink/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
 
 class Cartservicecard extends StatefulWidget {
   final CartModel cartItem;
@@ -61,27 +61,23 @@ class _CartservicecardState extends State<Cartservicecard> {
           .delete();
 
       if (!mounted) return;
-        CustomSnackBar.show(
-                        iconcolor: erroriconcolor,
-                        icon: Icons.delete,
-                        context: context,
-                        message:
-                            "Item removed from cart",
-                        color: const Color.fromARGB(255, 249, 246, 246)
-      );
+      CustomSnackBar.show(
+          iconcolor: erroriconcolor,
+          icon: Icons.delete,
+          context: context,
+          message: "Item removed from cart",
+          color: const Color.fromARGB(255, 249, 246, 246));
 
       widget.onRemove?.call();
     } catch (e) {
       log("Error removing item: $e");
       if (!mounted) return;
       CustomSnackBar.show(
-                        iconcolor: erroriconcolor,
-                        icon: Icons.delete,
-                        context: context,
-                        message:
-                            'Failed to remove item: $e',
-                        color: const Color.fromARGB(255, 249, 246, 246)
-      );
+          iconcolor: erroriconcolor,
+          icon: Icons.delete,
+          context: context,
+          message: 'Failed to remove item: $e',
+          color: const Color.fromARGB(255, 249, 246, 246));
     }
   }
 

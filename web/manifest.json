@@ -1,6 +1,6 @@
 {
-    "name": "swiftclean_project",
-    "short_name": "swiftclean_project",
+    "name": "NaattuLink",
+    "short_name": "NaattuLink",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

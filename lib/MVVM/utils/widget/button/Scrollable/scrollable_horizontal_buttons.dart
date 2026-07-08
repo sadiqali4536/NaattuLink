@@ -1,5 +1,5 @@
 // import 'package:flutter/material.dart';
-// import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+// import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 
 // class ScrollableHorizontalButtons extends StatelessWidget {
 //   final List<String> categories;
@@ -73,7 +73,7 @@
 // }
 
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 
 class ScrollableHorizontalButtons extends StatelessWidget {
   final List<String> categories;

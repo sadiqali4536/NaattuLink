@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/Founctions/helper_functions.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/formfield/customformfield.dart';
+import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
+import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
+import 'package:naattulink/MVVM/utils/widget/formfield/customformfield.dart';
 
 class ForgetPassword extends StatefulWidget {
   const ForgetPassword({super.key});
@@ -35,19 +35,22 @@ class _ForgetPasswordState extends State<ForgetPassword> {
             Positioned(
               top: 20,
               left: 280,
-              child: Image.asset("assets/icons/logo2.png", height: 70, width: 70),
+              child:
+                  Image.asset("assets/icons/logo2.png", height: 70, width: 70),
             ),
             Positioned(
               top: 60,
               left: 260,
-              child: Image.asset("assets/icons/SWIFT.png", height: 50, width: 55),
+              child:
+                  Image.asset("assets/icons/SWIFT.png", height: 50, width: 55),
             ),
             Positioned(
               top: 60,
               left: 320,
-              child: Image.asset("assets/icons/CLEAN.png", height: 50, width: 55),
+              child:
+                  Image.asset("assets/icons/CLEAN.png", height: 50, width: 55),
             ),
-            
+
             /// Rounded Container
             Positioned(
               top: mq.height * 0.4,
@@ -62,20 +65,23 @@ class _ForgetPasswordState extends State<ForgetPassword> {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Text(
                         "Forgot Password",
-                        style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 30, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 40),
                       Padding(
                         padding: const EdgeInsets.only(right: 280),
                         child: Text(
                           "Email",
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(height: 08),
@@ -93,7 +99,8 @@ class _ForgetPasswordState extends State<ForgetPassword> {
                               if (value == null || value.isEmpty) {
                                 return "Please Enter your Email Address";
                               }
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                  .hasMatch(value)) {
                                 return "Enter a valid email address";
                               }
                               return null;
@@ -115,7 +122,8 @@ class _ForgetPasswordState extends State<ForgetPassword> {
                           child: Custombutton(
                             text: const Text(
                               "Reset Password",
-                              style: TextStyle(color: Colors.white, fontSize: 18),
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 18),
                             ),
                             onpress: () {
                               if (_formKey.currentState!.validate()) {
@@ -127,19 +135,26 @@ class _ForgetPasswordState extends State<ForgetPassword> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(top: 95,left: 35),
+                        padding: const EdgeInsets.only(top: 95, left: 35),
                         child: Row(
                           children: [
-                            Text("Remember your password?",
-                                 style: TextStyle(
-                                  fontSize: 18,
-                                 ),),
+                            Text(
+                              "Remember your password?",
+                              style: TextStyle(
+                                fontSize: 18,
+                              ),
+                            ),
                             TextButton(
-                              onPressed: () {               
-                                 HelperFunctions.navigateToScreenPop(context, LoginAndSigning());
-                                }, child: Text("Sign in",
-                                    style: TextStyle(fontSize: 18,color: gradientgreen2.c),),),
-                        
+                              onPressed: () {
+                                HelperFunctions.navigateToScreenPop(
+                                    context, LoginAndSigning());
+                              },
+                              child: Text(
+                                "Sign in",
+                                style: TextStyle(
+                                    fontSize: 18, color: gradientgreen2.c),
+                              ),
+                            ),
                           ],
                         ),
                       )

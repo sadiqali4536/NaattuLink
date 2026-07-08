@@ -3,15 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/Change_password/changepassword.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/edit_profile.dart';
-import 'package:swiftclean_project/MVVM/Viewmodel/themes_bloc.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/custom_image_banner2.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/custom_image_banner.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/premium_app_background.dart';
+import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/Change_password/changepassword.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/edit_profile.dart';
+import 'package:naattulink/MVVM/Viewmodel/themes_bloc.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/custom_image_banner2.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/custom_image_banner.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
 
 class ProfilePage extends StatefulWidget {
   String? username;

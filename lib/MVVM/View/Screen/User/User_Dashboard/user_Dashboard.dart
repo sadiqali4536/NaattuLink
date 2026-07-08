@@ -2,10 +2,10 @@ import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/cart/Cartpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Home/Homepage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/profile.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/my_bookings.dart';
+import 'package:naattulink/MVVM/View/Screen/User/cart/Cartpage.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Home/Homepage.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/profile.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/my_bookings.dart';
 
 class user_Dashboard extends StatefulWidget {
   const user_Dashboard({super.key});

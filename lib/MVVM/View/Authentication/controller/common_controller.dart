@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/current_loaction_fetch.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/onboarding/onboarding_screen.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Home/Homepage.dart';
+import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
+import 'package:naattulink/MVVM/View/Authentication/current_loaction_fetch.dart';
+import 'package:naattulink/MVVM/View/Authentication/onboarding/onboarding_screen.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Home/Homepage.dart';
 
 // import 'package:starter_project_feb/app/views/auth/login/login.dart';       // adjust path
 // import 'package:starter_project_feb/app/views/dashboard/dashboard.dart';    // adjust path

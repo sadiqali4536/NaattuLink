@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:swiftclean_project/MVVM/utils/Config/Toast.dart';
+import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 
 /// A self-contained widget that lets a worker set & save their business location.
 /// Drop this anywhere inside the Worker Dashboard / Home page.
@@ -113,14 +113,15 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
         perm = await Geolocator.requestPermission();
       }
       if (perm == LocationPermission.deniedForever) {
-        toastError('Location permission is permanently denied. Please enable it in Settings.');
+        toastError(
+            'Location permission is permanently denied. Please enable it in Settings.');
         return;
       }
 
       final pos = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-          ));
+        accuracy: LocationAccuracy.high,
+      ));
 
       final lat = pos.latitude;
       final lng = pos.longitude;
@@ -178,13 +179,15 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
 
     final parsed = _parseMapsLink(raw);
     if (parsed == null) {
-      toastError('Could not read coordinates from this link. Try a link with visible lat/lng (e.g., from Google Maps "Share > Copy Link").');
+      toastError(
+          'Could not read coordinates from this link. Try a link with visible lat/lng (e.g., from Google Maps "Share > Copy Link").');
       return;
     }
 
     final lat = parsed['lat']!;
     final lng = parsed['lng']!;
-    final mapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
+    final mapsUrl =
+        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
 
     await _saveToFirestore(
       lat: lat,
@@ -243,7 +246,8 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.location_on, color: _primaryBlue, size: 20),
+                child: const Icon(Icons.location_on,
+                    color: _primaryBlue, size: 20),
               ),
               const SizedBox(width: 10),
               const Expanded(
@@ -269,7 +273,8 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                 GestureDetector(
                   onTap: () => setState(() => _editMode = true),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(10),
@@ -278,7 +283,11 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                       children: [
                         Icon(Icons.edit_outlined, size: 13, color: _textGrey),
                         SizedBox(width: 4),
-                        Text('Edit', style: TextStyle(color: _textGrey, fontSize: 11, fontWeight: FontWeight.bold)),
+                        Text('Edit',
+                            style: TextStyle(
+                                color: _textGrey,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -319,12 +328,14 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                           const SizedBox(height: 2),
                           const Text(
                             'Tap to preview in Google Maps',
-                            style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                            style: TextStyle(
+                                color: Color(0xFF64748B), fontSize: 11),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.open_in_new, color: Color(0xFF059669), size: 16),
+                    const Icon(Icons.open_in_new,
+                        color: Color(0xFF059669), size: 16),
                   ],
                 ),
               ),
@@ -336,7 +347,10 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
             // Option 1: Paste Google Maps link
             const Text(
               'Option 1 — Paste a Google Maps link',
-              style: TextStyle(color: _primaryBlue, fontWeight: FontWeight.w600, fontSize: 12),
+              style: TextStyle(
+                  color: _primaryBlue,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12),
             ),
             const SizedBox(height: 8),
             Container(
@@ -353,10 +367,13 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                       style: const TextStyle(fontSize: 13, color: _primaryBlue),
                       decoration: const InputDecoration(
                         hintText: 'Paste Google Maps sharing link here...',
-                        hintStyle: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
+                        hintStyle:
+                            TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        prefixIcon: Icon(Icons.link_rounded, color: _textGrey, size: 18),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        prefixIcon: Icon(Icons.link_rounded,
+                            color: _textGrey, size: 18),
                       ),
                     ),
                   ),
@@ -368,7 +385,8 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
                       child: const Text(
                         'Paste',
                         style: TextStyle(
@@ -412,7 +430,8 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                     ? const SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.save_alt_rounded, size: 16),
                 label: Text(_isSaving ? 'Saving...' : 'Save Link Location'),
@@ -421,8 +440,10 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
             ),
@@ -435,7 +456,11 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                 const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('OR', style: TextStyle(color: Colors.grey.shade400, fontSize: 11, fontWeight: FontWeight.bold)),
+                  child: Text('OR',
+                      style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
                 ),
                 const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
               ],
@@ -445,7 +470,10 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
             // Option 2: Use GPS
             const Text(
               'Option 2 — Use my current GPS location',
-              style: TextStyle(color: _primaryBlue, fontWeight: FontWeight.w600, fontSize: 12),
+              style: TextStyle(
+                  color: _primaryBlue,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -456,19 +484,25 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                     ? const SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: _primaryBlue),
                       )
-                    : const Icon(Icons.my_location_rounded, size: 16, color: _primaryBlue),
+                    : const Icon(Icons.my_location_rounded,
+                        size: 16, color: _primaryBlue),
                 label: Text(
                   _isDetecting ? 'Detecting...' : 'Use My Current Location',
-                  style: const TextStyle(color: _primaryBlue, fontWeight: FontWeight.bold, fontSize: 13),
+                  style: const TextStyle(
+                      color: _primaryBlue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _accentGold,
                   foregroundColor: _primaryBlue,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -484,7 +518,8 @@ class _WorkerLocationWidgetState extends State<WorkerLocationWidget> {
                   }),
                   child: const Text(
                     'Cancel',
-                    style: TextStyle(color: _textGrey, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: _textGrey, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

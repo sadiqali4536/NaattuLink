@@ -2,14 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/Forget_password.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/Registrationpage.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/current_loaction_fetch.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/auth_controller.dart';
-import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/formfield/customformfield.dart';
+import 'package:naattulink/MVVM/View/Authentication/Forget_password.dart';
+import 'package:naattulink/MVVM/View/Authentication/Registrationpage.dart';
+import 'package:naattulink/MVVM/View/Authentication/current_loaction_fetch.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.dart';
+import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
+import 'package:naattulink/MVVM/utils/widget/formfield/customformfield.dart';
 
 class LoginAndSigning extends StatefulWidget {
   const LoginAndSigning({super.key});

@@ -4,16 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:intl/intl.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/My_Address/address_page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/loyalty_points.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/my_bookings.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/profile_page.dart';
-import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/Founctions/helper_functions.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
-import 'package:swiftclean_project/main.dart';
+import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/My_Address/address_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/loyalty_points.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/my_bookings.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/profile_page.dart';
+import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/main.dart';
 
 class Profile extends StatelessWidget {
   const Profile({super.key});

@@ -3,8 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/common_controller.dart';
+import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/common_controller.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -265,10 +265,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     setState(() {
                       _isPageAnimating = true;
                     });
-                    _pageController.nextPage(
+                    _pageController
+                        .nextPage(
                       duration: const Duration(milliseconds: 800),
                       curve: Curves.easeInOutCubic,
-                    ).then((_) {
+                    )
+                        .then((_) {
                       setState(() {
                         _isPageAnimating = false;
                       });
@@ -283,10 +285,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 setState(() {
                   _isPageAnimating = true;
                 });
-                _pageController.nextPage(
+                _pageController
+                    .nextPage(
                   duration: const Duration(milliseconds: 800),
                   curve: Curves.easeInOutCubic,
-                ).then((_) {
+                )
+                    .then((_) {
                   setState(() {
                     _isPageAnimating = false;
                   });

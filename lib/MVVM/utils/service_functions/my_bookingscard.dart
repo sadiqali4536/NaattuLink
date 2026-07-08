@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/image_strings.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Constants/image_strings.dart';
 
 class MyBookingscard extends StatelessWidget {
-   MyBookingscard({super.key});
+  MyBookingscard({super.key});
   final List<Map<String, dynamic>> service = [
     {
       "title": "Garden ",
@@ -13,10 +13,9 @@ class MyBookingscard extends StatelessWidget {
       "discount": 33,
       "old_Price": 299,
       "new_Price": 200,
-      "Hour":"/Hour",
+      "Hour": "/Hour",
       "per_hour": "(Per Hour)"
     },
-   
     {
       "title": "Pet Cleaning",
       "image": AppImages.petCleaning,
@@ -30,7 +29,7 @@ class MyBookingscard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-       backgroundColor: const Color.fromARGB(255, 238, 238, 238),
+      backgroundColor: const Color.fromARGB(255, 238, 238, 238),
       body: SafeArea(
         child: ListView.builder(
           itemCount: service.length,
@@ -42,7 +41,8 @@ class MyBookingscard extends StatelessWidget {
               child: Card(
                 color: primary.c,
                 elevation: 4,
-                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                margin:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -57,7 +57,8 @@ class MyBookingscard extends StatelessWidget {
                           height: 120,
                           width: 95.5,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
                             height: 120,
                             width: 95.5,
                             color: primary.c,
@@ -68,7 +69,9 @@ class MyBookingscard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10,),
+                      const SizedBox(
+                        width: 10,
+                      ),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,7 +97,8 @@ class MyBookingscard extends StatelessWidget {
                                 const SizedBox(width: 3),
                                 Text(
                                   item["rating"].toString(),
-                                  style: const TextStyle(color: gradientgreen2.c),
+                                  style:
+                                      const TextStyle(color: gradientgreen2.c),
                                 ),
                               ],
                             ),
@@ -128,73 +132,87 @@ class MyBookingscard extends StatelessWidget {
                                     color: Color.fromARGB(255, 10, 10, 10),
                                   ),
                                 ),
-                                const SizedBox(width:1),
-                                  Text(
-                                    item["Hour"]?.toString() ??"",
-                                    style: TextStyle(fontSize: 20,fontWeight: FontWeight.bold),
+                                const SizedBox(width: 1),
+                                Text(
+                                  item["Hour"]?.toString() ?? "",
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
                             Container(
                               height: 1,
                               width: 280,
-                              color: const Color.fromARGB(255, 200, 200, 200),),
-                            SizedBox(height: 2,),
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: primary.c,
-                                  ),
-                                  height: 30,
-                                  width: 120,
-                                  child: Row(
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 20),
-                                        child: Image.asset("assets/icons/can.png",
+                              color: const Color.fromARGB(255, 200, 200, 200),
+                            ),
+                            SizedBox(
+                              height: 2,
+                            ),
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () {},
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: primary.c,
+                                    ),
+                                    height: 30,
+                                    width: 120,
+                                    child: Row(
+                                      children: [
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(left: 20),
+                                          child: Image.asset(
+                                            "assets/icons/can.png",
+                                          ),
                                         ),
-                                      ),
-                                      SizedBox(width: 10,),
-                                      Text("Remove",
-                                      style: TextStyle(color: const Color.fromARGB(255, 0, 0, 0)),)
-                                    ],
+                                        SizedBox(
+                                          width: 10,
+                                        ),
+                                        Text(
+                                          "Remove",
+                                          style: TextStyle(
+                                              color: const Color.fromARGB(
+                                                  255, 0, 0, 0)),
+                                        )
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Container(
-                                color: const Color.fromARGB(255, 200, 200, 200),
-                                height: 32,
-                                width: 1.5,
-                              ),
-                               GestureDetector(
-                                onTap: () {
-                                  
-                                },
-                                 child: Container(
-                                  decoration: BoxDecoration(
-                                    color: primary.c,
-                                  ),
-                                  height: 30,
-                                  width: 120,
-                                  child: Row(
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 10),
-                                        child: Image.asset("assets/icons/booking.png"),
-                                      ),
-                                      SizedBox(width: 10,),
-                                      Text("Book now")
-                                    ],
+                                Container(
+                                  color:
+                                      const Color.fromARGB(255, 200, 200, 200),
+                                  height: 32,
+                                  width: 1.5,
+                                ),
+                                GestureDetector(
+                                  onTap: () {},
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: primary.c,
+                                    ),
+                                    height: 30,
+                                    width: 120,
+                                    child: Row(
+                                      children: [
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(left: 10),
+                                          child: Image.asset(
+                                              "assets/icons/booking.png"),
+                                        ),
+                                        SizedBox(
+                                          width: 10,
+                                        ),
+                                        Text("Book now")
+                                      ],
+                                    ),
                                   ),
                                 ),
-                               ),
-                            ],
-                          )
+                              ],
+                            )
                           ],
                         ),
                       ),

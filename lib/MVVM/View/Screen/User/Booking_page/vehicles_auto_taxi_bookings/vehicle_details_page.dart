@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'auto_taxi_page.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:swiftclean_project/MVVM/utils/Config/Toast.dart';
+import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 
 class VehicleDetailsPage extends StatelessWidget {
   final AutoTaxiListing listing;

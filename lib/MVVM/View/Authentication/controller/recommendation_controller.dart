@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:swiftclean_project/MVVM/model/models/product_model.dart';
+import 'package:naattulink/MVVM/model/models/product_model.dart';
 
 class RecommendationController extends GetxController {
   static RecommendationController get to => Get.find();
@@ -187,13 +187,39 @@ class RecommendationController extends GetxController {
     try {
       // 1. Fetch user activities from Firestore in parallel
       final futures = await Future.wait([
-        _firestore.collection('orders').where('userId', isEqualTo: userId).get(),
-        _firestore.collection('wishlist').doc(userId).collection('productId').get(),
-        _firestore.collection('user_search_history').doc(userId).collection('searchId').orderBy('timestamp', descending: true).limit(20).get(),
-        _firestore.collection('recently_viewed').doc(userId).collection('productId').orderBy('viewedAt', descending: true).limit(20).get(),
+        _firestore
+            .collection('orders')
+            .where('userId', isEqualTo: userId)
+            .get(),
+        _firestore
+            .collection('wishlist')
+            .doc(userId)
+            .collection('productId')
+            .get(),
+        _firestore
+            .collection('user_search_history')
+            .doc(userId)
+            .collection('searchId')
+            .orderBy('timestamp', descending: true)
+            .limit(20)
+            .get(),
+        _firestore
+            .collection('recently_viewed')
+            .doc(userId)
+            .collection('productId')
+            .orderBy('viewedAt', descending: true)
+            .limit(20)
+            .get(),
         _firestore.collection('cart').doc(userId).collection('productId').get(),
-        _firestore.collection('category_clicks').doc(userId).collection('category').get(),
-        _firestore.collection('products').limit(150).get(), // Load pool of products to rank
+        _firestore
+            .collection('category_clicks')
+            .doc(userId)
+            .collection('category')
+            .get(),
+        _firestore
+            .collection('products')
+            .limit(150)
+            .get(), // Load pool of products to rank
       ]);
 
       final ordersSnap = futures[0] as QuerySnapshot;
@@ -206,7 +232,8 @@ class RecommendationController extends GetxController {
 
       // Map products
       final allProducts = productsSnap.docs.map((doc) {
-        return ProductModel.fromFirestore(doc.id, doc.data() as Map<String, dynamic>);
+        return ProductModel.fromFirestore(
+            doc.id, doc.data() as Map<String, dynamic>);
       }).toList();
 
       if (allProducts.isEmpty) {
@@ -263,11 +290,25 @@ class RecommendationController extends GetxController {
       final relatedCategoriesFromSearch = <String>{};
       for (var keyword in searchKeywords) {
         if (keyword.contains('cake')) {
-          relatedCategoriesFromSearch.addAll(['bakery products', 'greeting cards', 'gift boxes', 'cake accessories', 'cake shops', 'homemade cakes']);
+          relatedCategoriesFromSearch.addAll([
+            'bakery products',
+            'greeting cards',
+            'gift boxes',
+            'cake accessories',
+            'cake shops',
+            'homemade cakes'
+          ]);
         } else if (keyword.contains('watch')) {
-          relatedCategoriesFromSearch.addAll(['smart watches', 'men\'s fashion', 'electronics', 'watch accessories', 'watches']);
+          relatedCategoriesFromSearch.addAll([
+            'smart watches',
+            'men\'s fashion',
+            'electronics',
+            'watch accessories',
+            'watches'
+          ]);
         } else if (keyword.contains('car') || keyword.contains('bike')) {
-          relatedCategoriesFromSearch.addAll(['used cars', 'bikes', 'spare parts', 'nearby dealers', 'cars']);
+          relatedCategoriesFromSearch.addAll(
+              ['used cars', 'bikes', 'spare parts', 'nearby dealers', 'cars']);
         }
       }
 
@@ -309,9 +350,11 @@ class RecommendationController extends GetxController {
           score += 10.0;
         }
         // Match product title / description with search keywords
-        final matchCount = searchKeywords.where((kw) =>
-            product.title.toLowerCase().contains(kw) ||
-            product.description.toLowerCase().contains(kw)).length;
+        final matchCount = searchKeywords
+            .where((kw) =>
+                product.title.toLowerCase().contains(kw) ||
+                product.description.toLowerCase().contains(kw))
+            .length;
         score += matchCount * 5.0;
 
         // 4. Recently Viewed (10% Weight)
@@ -354,50 +397,87 @@ class RecommendationController extends GetxController {
       // ── Populate the 14 sections ──
 
       // 1. Recently Viewed
-      recentlyViewed.value = allProducts.where((p) => viewedIds.contains(p.productId)).take(15).toList();
+      recentlyViewed.value = allProducts
+          .where((p) => viewedIds.contains(p.productId))
+          .take(15)
+          .toList();
 
       // 2. Based on Your Searches
-      basedOnSearches.value = allProducts.where((p) {
-        final cat = p.category.toLowerCase();
-        return searchCategories.contains(cat) || relatedCategoriesFromSearch.contains(cat);
-      }).take(15).toList();
+      basedOnSearches.value = allProducts
+          .where((p) {
+            final cat = p.category.toLowerCase();
+            return searchCategories.contains(cat) ||
+                relatedCategoriesFromSearch.contains(cat);
+          })
+          .take(15)
+          .toList();
 
       // 3. Continue Shopping (items in cart)
-      continueShopping.value = allProducts.where((p) => cartIds.contains(p.productId)).take(15).toList();
+      continueShopping.value = allProducts
+          .where((p) => cartIds.contains(p.productId))
+          .take(15)
+          .toList();
 
       // 4. Recommended for You (top ranked items, excluding cart items)
-      recommendedForYou.value = allProducts.where((p) => !cartIds.contains(p.productId)).take(20).toList();
+      recommendedForYou.value = allProducts
+          .where((p) => !cartIds.contains(p.productId))
+          .take(20)
+          .toList();
 
       // 5. Trending Near You
-      trendingNearYou.value = allProducts.where((p) => p.isTrending).take(15).toList();
+      trendingNearYou.value =
+          allProducts.where((p) => p.isTrending).take(15).toList();
 
       // 6. Homemade Cakes
-      homemadeCakes.value = allProducts.where((p) => p.category.toLowerCase() == 'homemade cakes').take(15).toList();
+      homemadeCakes.value = allProducts
+          .where((p) => p.category.toLowerCase() == 'homemade cakes')
+          .take(15)
+          .toList();
 
       // 7. Fashion Picks (Fashion & Shoes)
-      fashionPicks.value = allProducts.where((p) =>
-          p.category.toLowerCase() == 'men\'s, women\'s & kids fashion' ||
-          p.category.toLowerCase() == 'shoes & footwear').take(15).toList();
+      fashionPicks.value = allProducts
+          .where((p) =>
+              p.category.toLowerCase() == 'men\'s, women\'s & kids fashion' ||
+              p.category.toLowerCase() == 'shoes & footwear')
+          .take(15)
+          .toList();
 
       // 8. Watches
-      watches.value = allProducts.where((p) => p.category.toLowerCase() == 'watches').take(15).toList();
+      watches.value = allProducts
+          .where((p) => p.category.toLowerCase() == 'watches')
+          .take(15)
+          .toList();
 
       // 9. Electronics
-      electronics.value = allProducts.where((p) => p.category.toLowerCase() == 'electronics').take(15).toList();
+      electronics.value = allProducts
+          .where((p) => p.category.toLowerCase() == 'electronics')
+          .take(15)
+          .toList();
 
       // 10. Cars & Bikes
-      carsAndBikes.value = allProducts.where((p) =>
-          p.category.toLowerCase() == 'cars' ||
-          p.category.toLowerCase() == 'bikes').take(15).toList();
+      carsAndBikes.value = allProducts
+          .where((p) =>
+              p.category.toLowerCase() == 'cars' ||
+              p.category.toLowerCase() == 'bikes')
+          .take(15)
+          .toList();
 
       // 11. Local Businesses
-      localBusinesses.value = allProducts.where((p) => p.category.toLowerCase() == 'local businesses & services').take(15).toList();
+      localBusinesses.value = allProducts
+          .where(
+              (p) => p.category.toLowerCase() == 'local businesses & services')
+          .take(15)
+          .toList();
 
       // 12. Best Sellers
-      bestSellers.value = allProducts.where((p) => p.isBestSeller).take(15).toList();
+      bestSellers.value =
+          allProducts.where((p) => p.isBestSeller).take(15).toList();
 
       // 13. Flash Sale (e.g. top items by rating/discount or random mix)
-      flashSale.value = allProducts.where((p) => p.isBestSeller || p.isTrending).take(15).toList();
+      flashSale.value = allProducts
+          .where((p) => p.isBestSeller || p.isTrending)
+          .take(15)
+          .toList();
 
       // 14. New Arrivals
       final sortedByDate = List<ProductModel>.from(allProducts);
@@ -414,7 +494,8 @@ class RecommendationController extends GetxController {
   }
 
   // Fetch Fallback Products for Cold Start (New users or offline)
-  Future<void> _fetchColdStartProducts({List<ProductModel>? productsPool}) async {
+  Future<void> _fetchColdStartProducts(
+      {List<ProductModel>? productsPool}) async {
     try {
       List<ProductModel> pool = [];
       if (productsPool != null) {
@@ -422,7 +503,8 @@ class RecommendationController extends GetxController {
       } else {
         final snap = await _firestore.collection('products').limit(100).get();
         pool = snap.docs.map((doc) {
-          return ProductModel.fromFirestore(doc.id, doc.data() as Map<String, dynamic>);
+          return ProductModel.fromFirestore(
+              doc.id, doc.data() as Map<String, dynamic>);
         }).toList();
       }
 
@@ -437,19 +519,39 @@ class RecommendationController extends GetxController {
       // Populate cold start sections
       trendingNearYou.value = pool.where((p) => p.isTrending).take(15).toList();
       bestSellers.value = pool.where((p) => p.isBestSeller).take(15).toList();
-      newArrivals.value = List<ProductModel>.from(pool)..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      newArrivals.value = List<ProductModel>.from(pool)
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       newArrivals.value = newArrivals.take(15).toList();
 
-      homemadeCakes.value = pool.where((p) => p.category.toLowerCase() == 'homemade cakes').take(10).toList();
-      fashionPicks.value = pool.where((p) =>
-          p.category.toLowerCase() == 'men\'s, women\'s & kids fashion' ||
-          p.category.toLowerCase() == 'shoes & footwear').take(10).toList();
-      watches.value = pool.where((p) => p.category.toLowerCase() == 'watches').take(10).toList();
-      electronics.value = pool.where((p) => p.category.toLowerCase() == 'electronics').take(10).toList();
-      carsAndBikes.value = pool.where((p) =>
-          p.category.toLowerCase() == 'cars' ||
-          p.category.toLowerCase() == 'bikes').take(10).toList();
-      localBusinesses.value = pool.where((p) => p.category.toLowerCase() == 'local businesses & services').take(10).toList();
+      homemadeCakes.value = pool
+          .where((p) => p.category.toLowerCase() == 'homemade cakes')
+          .take(10)
+          .toList();
+      fashionPicks.value = pool
+          .where((p) =>
+              p.category.toLowerCase() == 'men\'s, women\'s & kids fashion' ||
+              p.category.toLowerCase() == 'shoes & footwear')
+          .take(10)
+          .toList();
+      watches.value = pool
+          .where((p) => p.category.toLowerCase() == 'watches')
+          .take(10)
+          .toList();
+      electronics.value = pool
+          .where((p) => p.category.toLowerCase() == 'electronics')
+          .take(10)
+          .toList();
+      carsAndBikes.value = pool
+          .where((p) =>
+              p.category.toLowerCase() == 'cars' ||
+              p.category.toLowerCase() == 'bikes')
+          .take(10)
+          .toList();
+      localBusinesses.value = pool
+          .where(
+              (p) => p.category.toLowerCase() == 'local businesses & services')
+          .take(10)
+          .toList();
 
       flashSale.value = pool.where((p) => p.isBestSeller).take(10).toList();
     } catch (e) {
@@ -485,25 +587,35 @@ class RecommendationController extends GetxController {
 
   void loadCachedRecommendations() {
     try {
-      final data = _storage.read<Map<String, dynamic>>('cached_recommendations');
+      final data =
+          _storage.read<Map<String, dynamic>>('cached_recommendations');
       if (data == null) return;
 
       final parseList = (List<dynamic>? list) {
         if (list == null) return <ProductModel>[];
-        return list.map((e) => ProductModel.fromFirestore('', e as Map<String, dynamic>)).toList();
+        return list
+            .map((e) =>
+                ProductModel.fromFirestore('', e as Map<String, dynamic>))
+            .toList();
       };
 
-      recentlyViewed.value = parseList(data['recentlyViewed'] as List<dynamic>?);
-      basedOnSearches.value = parseList(data['basedOnSearches'] as List<dynamic>?);
-      continueShopping.value = parseList(data['continueShopping'] as List<dynamic>?);
-      recommendedForYou.value = parseList(data['recommendedForYou'] as List<dynamic>?);
-      trendingNearYou.value = parseList(data['trendingNearYou'] as List<dynamic>?);
+      recentlyViewed.value =
+          parseList(data['recentlyViewed'] as List<dynamic>?);
+      basedOnSearches.value =
+          parseList(data['basedOnSearches'] as List<dynamic>?);
+      continueShopping.value =
+          parseList(data['continueShopping'] as List<dynamic>?);
+      recommendedForYou.value =
+          parseList(data['recommendedForYou'] as List<dynamic>?);
+      trendingNearYou.value =
+          parseList(data['trendingNearYou'] as List<dynamic>?);
       homemadeCakes.value = parseList(data['homemadeCakes'] as List<dynamic>?);
       fashionPicks.value = parseList(data['fashionPicks'] as List<dynamic>?);
       watches.value = parseList(data['watches'] as List<dynamic>?);
       electronics.value = parseList(data['electronics'] as List<dynamic>?);
       carsAndBikes.value = parseList(data['carsAndBikes'] as List<dynamic>?);
-      localBusinesses.value = parseList(data['localBusinesses'] as List<dynamic>?);
+      localBusinesses.value =
+          parseList(data['localBusinesses'] as List<dynamic>?);
       bestSellers.value = parseList(data['bestSellers'] as List<dynamic>?);
       flashSale.value = parseList(data['flashSale'] as List<dynamic>?);
       newArrivals.value = parseList(data['newArrivals'] as List<dynamic>?);

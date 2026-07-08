@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/sizes_double.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/Constants/sizes_double.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -12,9 +12,11 @@ class ChangePasswordPage extends StatefulWidget {
 
 class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController currentPasswordController = TextEditingController();
+  final TextEditingController currentPasswordController =
+      TextEditingController();
   final TextEditingController newPasswordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   bool _isObscureCurrent = true;
   bool _isObscureNew = true;
@@ -22,12 +24,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   void _handleChangePassword() {
     if (_formKey.currentState!.validate()) {
-    
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Password changed successfully!")),
       );
 
-      Navigator.pop(context); 
+      Navigator.pop(context);
     }
   }
 
@@ -36,54 +37,54 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(60), 
-        child: AppBar(
-          automaticallyImplyLeading: false,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-                    Color.fromARGB(255, 102, 214, 10),
-                    Color.fromARGB(255, 113, 191, 4),
-                    Color.fromARGB(255, 26, 159, 6),
-          ],
-          ),
-          borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-          )
-          ),
-          ),
-          title: Padding(
-                  padding: EdgeInsets.only(top: 10),
-                  child: Row(
-                    children: [
-          customBackbutton1(
-            onpress: (){
-              Navigator.pop(context);
-            }),
-          Padding(
-            padding: const EdgeInsets.only(left: 50),
-            child: Text(
-              'Change Password',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+          preferredSize: Size.fromHeight(60),
+          child: AppBar(
+            automaticallyImplyLeading: false,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color.fromARGB(255, 102, 214, 10),
+                      Color.fromARGB(255, 113, 191, 4),
+                      Color.fromARGB(255, 26, 159, 6),
                     ],
                   ),
-                ),
-        )),
-      body: SingleChildScrollView( 
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  )),
+            ),
+            title: Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Row(
+                children: [
+                  customBackbutton1(onpress: () {
+                    Navigator.pop(context);
+                  }),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 50),
+                    child: Text(
+                      'Change Password',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
               // Current Password
-              SizedBox(height: 60,),
+              SizedBox(
+                height: 60,
+              ),
               Material(
                 elevation: 3,
                 borderRadius: BorderRadius.circular(15),
@@ -96,14 +97,17 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(color: formfield.c),
                       borderRadius: BorderRadius.circular(15),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                       borderSide: BorderSide(color: formfield.c),
-                       borderRadius: BorderRadius.circular(15),),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: formfield.c),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
                     labelText: 'Current Password',
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isObscureCurrent ? Icons.visibility_off : Icons.visibility,
+                        _isObscureCurrent
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -112,8 +116,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       },
                     ),
                   ),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Enter your current password' : null,
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Enter your current password'
+                      : null,
                 ),
               ),
               const SizedBox(height: 20),
@@ -128,10 +133,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   decoration: InputDecoration(
                     fillColor: Colors.white,
                     filled: true,
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: formfield.c),
-                        borderRadius: BorderRadius.circular(15),
-                        ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: formfield.c),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
                     labelText: 'New Password',
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -166,14 +171,16 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   decoration: InputDecoration(
                     fillColor: Colors.white,
                     filled: true,
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: formfield.c),
-                        borderRadius: BorderRadius.circular(15),
-                        ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: formfield.c),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
                     labelText: 'Confirm Password',
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isObscureConfirm ? Icons.visibility_off : Icons.visibility,
+                        _isObscureConfirm
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {

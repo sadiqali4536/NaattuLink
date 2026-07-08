@@ -3,11 +3,11 @@
 // import 'package:flutter/foundation.dart';
 // import 'package:flutter/material.dart';
 // import 'package:get/get_navigation/src/extension_navigation.dart';
-// import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
-// import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-// import 'package:swiftclean_project/MVVM/utils/service_functions/cartservicecard.dart';
-// import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
-// import 'package:swiftclean_project/MVVM/utils/service_functions/servicecard2.dart';
+// import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
+// import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+// import 'package:naattulink/MVVM/utils/service_functions/cartservicecard.dart';
+// import 'package:naattulink/MVVM/model/models/cart_model.dart';
+// import 'package:naattulink/MVVM/utils/service_functions/servicecard2.dart';
 
 // class CartPage extends StatefulWidget {
 //   String? serviceName;
@@ -501,12 +501,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/service_functions/cartservicecard.dart';
-import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
-import 'package:swiftclean_project/MVVM/utils/service_functions/servicecard2.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/service_functions/cartservicecard.dart';
+import 'package:naattulink/MVVM/model/models/cart_model.dart';
+import 'package:naattulink/MVVM/utils/service_functions/servicecard2.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class CartPage extends StatefulWidget {
   String? serviceName;
@@ -537,7 +537,6 @@ class CartPage extends StatefulWidget {
 class _CartPageState extends State<CartPage> {
   bool isExpanded = false;
   bool _isDialogShown = false;
-  
 
   void showLoadingDialog(BuildContext context) {
     if (_isDialogShown) return;

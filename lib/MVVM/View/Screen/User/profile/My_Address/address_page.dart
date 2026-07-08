@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile/My_Address/User_edit_address.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/card/addresscard.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/My_Address/User_edit_address.dart';
+import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/card/addresscard.dart';
 
 class AddressPage extends StatelessWidget {
   const AddressPage({super.key});

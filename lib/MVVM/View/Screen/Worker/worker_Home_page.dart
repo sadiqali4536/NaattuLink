@@ -5,15 +5,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/Edit_address.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/check_out_page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/worker_location_widget.dart';
-import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
-import 'package:swiftclean_project/main.dart';
+import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Edit_address.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/check_out_page.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/worker_location_widget.dart';
+import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/main.dart';
 
 class WorkerHomePage extends StatefulWidget {
   const WorkerHomePage({super.key});

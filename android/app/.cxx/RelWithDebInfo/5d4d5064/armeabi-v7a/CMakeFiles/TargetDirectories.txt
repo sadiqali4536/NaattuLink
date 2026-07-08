@@ -1,2 +1,2 @@
-D:/main project/SwiftClean/swiftclean_project/android/app/.cxx/RelWithDebInfo/5d4d5064/armeabi-v7a/CMakeFiles/edit_cache.dir
-D:/main project/SwiftClean/swiftclean_project/android/app/.cxx/RelWithDebInfo/5d4d5064/armeabi-v7a/CMakeFiles/rebuild_cache.dir
+D:/main project/NaattuLink/NaattuLink/android/app/.cxx/RelWithDebInfo/5d4d5064/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/main project/NaattuLink/NaattuLink/android/app/.cxx/RelWithDebInfo/5d4d5064/armeabi-v7a/CMakeFiles/rebuild_cache.dir

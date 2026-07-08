@@ -5,23 +5,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:swiftclean_project/MVVM/utils/Config/Toast.dart';
+import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/worker_bookings/worker_details_page.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/location_controller.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
-import 'package:swiftclean_project/MVVM/model/models/product_model.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/service_functions/ServiceCardwith map.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/button/Scrollable/scrollable_horizontal_buttons.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/premium_app_background.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/worker_bookings/worker_details_page.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/recommendation_controller.dart';
+import 'package:naattulink/MVVM/model/models/product_model.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/service_functions/ServiceCardwith map.dart';
+import 'package:naattulink/MVVM/utils/widget/button/Scrollable/scrollable_horizontal_buttons.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({Key? key}) : super(key: key);
@@ -455,63 +455,100 @@ class HomepageState extends State<Homepage> {
                     children: [
                       Column(
                         children: [
-                          const SizedBox(height: 340),
+                          const SizedBox(height: 300),
                           if (_searchController.text.isEmpty) ...[
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 400),
-                              child: snapshot.connectionState ==
-                                      ConnectionState.waiting
-                                  ? const CarouselSkeleton(
-                                      key: ValueKey('carousel_loading'))
-                                  : Column(
-                                      key: const ValueKey('carousel_loaded'),
-                                      children: [
-                                        CarouselSlider(
-                                          items: [
-                                            buildPromoCard(
-                                                "assets/image/add_image.png",
-                                                "Grand Kerala Festival\nUp to 60% Off"),
-                                            buildPromoCard(
-                                                "assets/image/add_image.png",
-                                                "20% OFF Interior Cleaning"),
-                                          ],
-                                          options: CarouselOptions(
-                                              autoPlay: true,
-                                              enlargeCenterPage: false,
-                                              aspectRatio: 2.1,
-                                              viewportFraction: 1,
-                                              onPageChanged: (index, reason) {
-                                                setState(() {
-                                                  activeBannerIndex = index;
-                                                });
-                                              }),
+                            StreamBuilder<QuerySnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('banners')
+                                  .where('isActive', isEqualTo: true)
+                                  .orderBy('createdAt', descending: false)
+                                  .snapshots(),
+                              builder: (context, bannerSnap) {
+                                // While loading banners show skeleton
+                                if (bannerSnap.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const CarouselSkeleton(
+                                      key: ValueKey('carousel_loading'));
+                                }
+
+                                final bannerDocs =
+                                    bannerSnap.data?.docs ?? [];
+
+                                // Fallback: no banners from admin → show placeholder
+                                final bannerItems = bannerDocs.isEmpty
+                                    ? [
+                                        buildPromoCard(
+                                          imageUrl: '',
+                                          title: '',
+                                        )
+                                      ]
+                                    : bannerDocs.map((doc) {
+                                        final data = doc.data()
+                                            as Map<String, dynamic>;
+                                        return buildPromoCard(
+                                          imageUrl:
+                                              data['imageUrl'] ?? '',
+                                          title: data['title'] ?? '',
+                                        );
+                                      }).toList();
+
+                                final bannerCount = bannerItems.length;
+
+                                return AnimatedSwitcher(
+                                  duration:
+                                      const Duration(milliseconds: 400),
+                                  child: Column(
+                                    key: const ValueKey(
+                                        'carousel_loaded'),
+                                    children: [
+                                      CarouselSlider(
+                                        items: bannerItems,
+                                        options: CarouselOptions(
+                                          autoPlay: bannerCount > 1,
+                                          enlargeCenterPage: false,
+                                          aspectRatio: 2.1,
+                                          viewportFraction: 1,
+                                          onPageChanged:
+                                              (index, reason) {
+                                            setState(() {
+                                              activeBannerIndex = index;
+                                            });
+                                          },
                                         ),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: List.generate(2, (index) {
-                                            return Container(
-                                              width: activeBannerIndex == index
-                                                  ? 15
-                                                  : 6,
-                                              height: 6,
-                                              margin:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 3),
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(3),
-                                                color: activeBannerIndex ==
-                                                        index
-                                                    ? const Color(0xFFFFB800)
-                                                    : Colors.grey[300],
-                                              ),
-                                            );
-                                          }),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: List.generate(
+                                            bannerCount, (index) {
+                                          return AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 250),
+                                            width:
+                                                activeBannerIndex == index
+                                                    ? 15
+                                                    : 6,
+                                            height: 6,
+                                            margin:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 3),
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(3),
+                                              color:
+                                                  activeBannerIndex == index
+                                                      ? const Color(
+                                                          0xFFFFB800)
+                                                      : Colors.grey[300],
+                                            ),
+                                          );
+                                        }),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ],
                           const SizedBox(height: 20),
@@ -569,7 +606,7 @@ class HomepageState extends State<Homepage> {
                         ],
                       ),
                       Container(
-                        height: 270,
+                        height: 290,
                         width: double.infinity,
                         decoration: const BoxDecoration(
                           color: Color(0xFF0F2E5A), // Premium navy color
@@ -856,83 +893,94 @@ class HomepageState extends State<Homepage> {
     );
   }
 
-  Widget buildPromoCard(String imagePath, String title) {
+  /// Builds a promotional banner card.
+  /// [imageUrl] — network URL from Firestore; falls back to asset placeholder if empty.
+  /// [title]    — optional overlay text set by the admin.
+  Widget buildPromoCard({
+    required String imageUrl,
+    String title = '',
+  }) {
+    final bool isNetwork = imageUrl.isNotEmpty;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: Stack(
+          fit: StackFit.expand,
           children: <Widget>[
-            Image.asset(imagePath, fit: BoxFit.cover, width: double.infinity),
-            // Semi-transparent gradient overlay to ensure text readability
+            // ── Banner image (network or local placeholder) ──
+            if (isNetwork)
+              Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: const Color(0xFF1E1E1E),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFFFFB800),
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (_, __, ___) => Image.asset(
+                  'assets/image/add_image.png',
+                  fit: BoxFit.cover,
+                ),
+              )
+            else
+              Image.asset(
+                'assets/image/add_image.png',
+                fit: BoxFit.cover,
+              ),
+            // ── Gradient overlay ──
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.black.withOpacity(0.65),
-                      Colors.black.withOpacity(0.1),
+                      Colors.black.withOpacity(0.70),
+                      Colors.black.withOpacity(0.30),
+                      Colors.transparent,
                     ],
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
+                    stops: const [0.0, 0.55, 1.0],
                   ),
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(18.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    "Celebrate with local favorites and deals",
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11.0,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color:
-                          const Color(0xFFFFB800), // Gold/Yellow Explore button
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: const Text(
-                      "Explore Now",
-                      style: TextStyle(
-                        color: Color(0xFF0F2E5A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
+            // ── Title overlay (only if admin set a title) ──
+            if (title.isNotEmpty)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                    height: 1.3,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black54,
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
           ],
         ),
       ),

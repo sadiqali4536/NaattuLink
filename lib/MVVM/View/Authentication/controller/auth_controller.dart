@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/current_loaction_fetch.dart';
-import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
-import 'package:swiftclean_project/MVVM/utils/Config/Toast.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
+import 'package:naattulink/MVVM/View/Authentication/current_loaction_fetch.dart';
+import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
+import 'package:naattulink/MVVM/utils/Config/Toast.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
+
+import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 
 class AuthController extends GetxController {
   static AuthController get to => Get.find<AuthController>();
@@ -56,9 +58,10 @@ class AuthController extends GetxController {
           }
         }
       }
-    } catch (e, stackTrace) {
-      debugPrint("AuthController Login Error: $e\n$stackTrace");
-      toastError("Login Failed: ${e.toString()}");
+    } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
+      toastError(message);
     } finally {
       _isLoading.value = false;
     }
@@ -101,9 +104,10 @@ class AuthController extends GetxController {
       } else {
         toastError(message);
       }
-    } catch (e, stackTrace) {
-      debugPrint("AuthController Google Sign-In Error: $e\n$stackTrace");
-      toastError("Google Sign-In Failed: ${e.toString()}");
+    } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
+      toastError(message);
     } finally {
       _isLoading.value = false;
     }
@@ -136,9 +140,10 @@ class AuthController extends GetxController {
         toastSuccess("User registered successfully");
         Get.offAll(() => const FindingLocationPage());
       }
-    } catch (e, stackTrace) {
-      debugPrint("AuthController User Registration Error: $e\n$stackTrace");
-      toastError("Something went wrong. Please try again.");
+    } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
+      toastError(message);
     } finally {
       _isLoading.value = false;
     }
@@ -188,15 +193,22 @@ class AuthController extends GetxController {
             "Worker registered successfully. Awaiting admin approval.");
         Get.offAll(() => const WorkerDashboard());
       }
-    } catch (e, stackTrace) {
-      debugPrint("AuthController Worker Registration Error: $e\n$stackTrace");
-      toastError("Something went wrong. Please try again.");
+    } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
+      toastError(message);
     } finally {
       _isLoading.value = false;
     }
   }
 
   Future<void> logout(BuildContext context) async {
-    await _authServices.signOut(context);
+    try {
+      await _authServices.signOut(context);
+    } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint(message);
+      toastError(message);
+    }
   }
 }

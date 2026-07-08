@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
+import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
 
 class LoyaltyPoints extends StatelessWidget {
   const LoyaltyPoints({super.key});

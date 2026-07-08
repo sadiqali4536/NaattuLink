@@ -6,14 +6,14 @@
     [
       "C:\\Users\\sadiq\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
       "-C",
-      "D:\\main project\\SwiftClean\\swiftclean_project\\android\\app\\.cxx\\Debug\\4n6n5i6o\\x86",
+      "D:\\main project\\NaattuLink\\NaattuLink\\android\\app\\.cxx\\Debug\\4n6n5i6o\\x86",
       "clean"
     ]
   ],
   "buildTargetsCommandComponents": [
     "C:\\Users\\sadiq\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
     "-C",
-    "D:\\main project\\SwiftClean\\swiftclean_project\\android\\app\\.cxx\\Debug\\4n6n5i6o\\x86",
+    "D:\\main project\\NaattuLink\\NaattuLink\\android\\app\\.cxx\\Debug\\4n6n5i6o\\x86",
     "{LIST_OF_TARGETS_TO_BUILD}"
   ],
   "libraries": {}

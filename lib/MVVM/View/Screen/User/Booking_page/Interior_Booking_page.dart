@@ -2,15 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
+import 'package:naattulink/MVVM/View/Screen/User/cart/cart_service.dart';
+import 'package:naattulink/MVVM/View/Screen/User/cart/cart_service.dart'
     as CartService;
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
-import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/recommendation_controller.dart';
+import 'package:naattulink/MVVM/model/models/cart_model.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
 
 class InteriorBookingPage extends StatefulWidget {
   final String? serviceId;
@@ -57,40 +57,39 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
     super.initState();
     checkIfServiceInCart();
     fetchServicePrice();
-    RecommendationController.to.trackProductView(widget.serviceId ?? widget.serviceName ?? '');
+    RecommendationController.to
+        .trackProductView(widget.serviceId ?? widget.serviceName ?? '');
   }
 
- bool isBookingFormComplete() {
-  if (widget.serviceName == null ||
-      widget.category == null ||
-      widget.serviceType == null ||
-      widget.discountPrice == null ||
-      selectedRoom == 'No Room' || 
-      count <= 0 ||
-      hour < 1 ||
-      hour > 12 ||
-      minute < 0 ||
-      minute > 59 ||
-      meridiem.isEmpty) {
-    return false;
+  bool isBookingFormComplete() {
+    if (widget.serviceName == null ||
+        widget.category == null ||
+        widget.serviceType == null ||
+        widget.discountPrice == null ||
+        selectedRoom == 'No Room' ||
+        count <= 0 ||
+        hour < 1 ||
+        hour > 12 ||
+        minute < 0 ||
+        minute > 59 ||
+        meridiem.isEmpty) {
+      return false;
+    }
+
+    int convertedHour = hour;
+    if (meridiem == 'PM' && hour != 12) convertedHour += 12;
+    if (meridiem == 'AM' && hour == 12) convertedHour = 0;
+
+    DateTime selectedDateTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      convertedHour,
+      minute,
+    );
+
+    return selectedDateTime.isAfter(DateTime.now());
   }
-
-  int convertedHour = hour;
-  if (meridiem == 'PM' && hour != 12) convertedHour += 12;
-  if (meridiem == 'AM' && hour == 12) convertedHour = 0;
-
-  DateTime selectedDateTime = DateTime(
-    selectedDate.year,
-    selectedDate.month,
-    selectedDate.day,
-    convertedHour,
-    minute,
-  );
-
-  return selectedDateTime.isAfter(DateTime.now());
-}
-
-
 
   Future<void> checkIfServiceInCart() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -255,68 +254,66 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
   }
 
   Future<void> bookNow() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  if (!isBookingFormComplete()) {
-    CustomSnackBar.show(
-      icon: Icons.cancel,
-      iconcolor: Colors.red,
-      context: context,
-      message: "Please fill all fields correctly before booking.",
-      color: Colors.white,
-    );
-    return;
+    if (!isBookingFormComplete()) {
+      CustomSnackBar.show(
+        icon: Icons.cancel,
+        iconcolor: Colors.red,
+        context: context,
+        message: "Please fill all fields correctly before booking.",
+        color: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      final bookingData = {
+        'userId': user.uid,
+        'service_id': widget.serviceId ?? '',
+        'service_name': widget.serviceName ?? '',
+        'image': widget.image ?? '',
+        'original_price': widget.originalPrice ?? '',
+        'price': widget.discountPrice ?? '',
+        'discount': widget.discount ?? '',
+        'rating': widget.rating ?? 0,
+        'category': widget.category ?? '',
+        'service_type': widget.serviceType ?? '',
+        'room_name': selectedRoom,
+        'scheduledDate': DateFormat('yyyy-MM-dd').format(selectedDate),
+        'scheduledTime': formattedTime,
+        'squareFeet': count.toString(),
+        'bookingType': 'Interior',
+        'status': 'booked',
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      await FirebaseFirestore.instance.collection('bookings').add(bookingData);
+      RecommendationController.to.trackPurchase(
+          [widget.serviceId ?? widget.serviceName ?? ''],
+          double.tryParse(widget.discountPrice ?? '') ?? 0.0);
+
+      if (!mounted) return;
+
+      CustomSnackBar.show(
+        useTick: true,
+        context: context,
+        message:
+            "Booking request for ${widget.serviceName ?? ''} submitted successfully.",
+        color: Colors.white,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      CustomSnackBar.show(
+        icon: Icons.error,
+        iconcolor: Colors.red,
+        context: context,
+        message: "Failed to book. Please try again.",
+        color: Colors.white,
+      );
+    }
   }
-
-  try {
-    final bookingData = {
-      'userId': user.uid,
-      'service_id': widget.serviceId ?? '',
-      'service_name': widget.serviceName ?? '',
-      'image': widget.image ?? '',
-      'original_price': widget.originalPrice ?? '',
-      'price': widget.discountPrice ?? '',
-      'discount': widget.discount ?? '',
-      'rating': widget.rating ?? 0,
-      'category': widget.category ?? '',
-      'service_type': widget.serviceType ?? '',
-      'room_name': selectedRoom,
-      'scheduledDate': DateFormat('yyyy-MM-dd').format(selectedDate),
-      'scheduledTime': formattedTime,
-      'squareFeet': count.toString(),
-      'bookingType': 'Interior',
-      'status': 'booked',
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-
-    await FirebaseFirestore.instance
-        .collection('bookings')
-        .add(bookingData);
-    RecommendationController.to.trackPurchase(
-        [widget.serviceId ?? widget.serviceName ?? ''],
-        double.tryParse(widget.discountPrice ?? '') ?? 0.0);
-
-    if (!mounted) return;
-
-    CustomSnackBar.show(
-      useTick: true,
-      context: context,
-      message: "Booking request for ${widget.serviceName ?? ''} submitted successfully.",
-      color: Colors.white,
-    );
-  } catch (e) {
-    if (!mounted) return;
-    CustomSnackBar.show(
-      icon: Icons.error,
-      iconcolor: Colors.red,
-      context: context,
-      message: "Failed to book. Please try again.",
-      color: Colors.white,
-    );
-  }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -587,11 +584,12 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
                     count: count,
                     selectedDate: selectedDate,
                     selectedTime: formattedTime,
-                     gardenSize: null,
+                    gardenSize: null,
                   );
 
                   setState(() => isAddedToCart = true);
-                  RecommendationController.to.trackCart(widget.serviceId ?? widget.serviceName ?? '', true);
+                  RecommendationController.to.trackCart(
+                      widget.serviceId ?? widget.serviceName ?? '', true);
                 },
               ),
             ),
@@ -693,38 +691,36 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
     );
   }
 
-
-Widget _buildAMPMButton(String value) {
-  return _buildSelectableButton(
-    value: value,
-    selectedValue: meridiem,
-    onTap: () => toggleMeridiem(value),
-    width: 60, // smaller width for AM/PM
-  );
-}
-
+  Widget _buildAMPMButton(String value) {
+    return _buildSelectableButton(
+      value: value,
+      selectedValue: meridiem,
+      onTap: () => toggleMeridiem(value),
+      width: 60, // smaller width for AM/PM
+    );
+  }
 
   Widget _buildSelectableButton({
-  required String value,
-  required String selectedValue,
-  required VoidCallback onTap,
-  double width = 100,
-}) {
-  final isSelected = value == selectedValue;
+    required String value,
+    required String selectedValue,
+    required VoidCallback onTap,
+    double width = 100,
+  }) {
+    final isSelected = value == selectedValue;
 
-  return Padding(
-    padding: const EdgeInsets.only(right: 10),
-    child: TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        backgroundColor: isSelected ? gradientgreen2.c : Color(0xFFE7E7E7),
-        foregroundColor: isSelected ? Colors.white : Colors.black,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        minimumSize: Size(width, 44),
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          backgroundColor: isSelected ? gradientgreen2.c : Color(0xFFE7E7E7),
+          foregroundColor: isSelected ? Colors.white : Colors.black,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          minimumSize: Size(width, 44),
+        ),
+        child: Text(value, style: const TextStyle(fontSize: 18)),
       ),
-      child: Text(value, style: const TextStyle(fontSize: 18)),
-    ),
-  );
-}
-
+    );
+  }
 }

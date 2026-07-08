@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/animation_widget/tickmark.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
+import 'package:naattulink/MVVM/model/models/cart_model.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/animation_widget/tickmark.dart';
+import 'package:naattulink/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
 
 Future<void> addToCart({
   required BuildContext context,
@@ -15,12 +15,13 @@ Future<void> addToCart({
   required String? discount,
   required int? rating,
   required String? category,
-  required String? serviceType, 
-   String? selectedRoom,
-    int? count,
-     DateTime? selectedDate,
-     String? selectedTime,
-     String? gardenSize, Map<String, Object?>? extraDetails, 
+  required String? serviceType,
+  String? selectedRoom,
+  int? count,
+  DateTime? selectedDate,
+  String? selectedTime,
+  String? gardenSize,
+  Map<String, Object?>? extraDetails,
 }) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
@@ -58,19 +59,20 @@ Future<void> addToCart({
 
     if (context.mounted) {
       CustomSnackBar.show(
-        useTick: true,
-        context: context,
-         message: "Added to cart successfully!",color: Colors.white);
-      
+          useTick: true,
+          context: context,
+          message: "Added to cart successfully!",
+          color: Colors.white);
     }
   } catch (e) {
     debugPrint('Add to cart failed: $e');
     if (context.mounted) {
       CustomSnackBar.show(
-        icon: Icons.cancel,
-        iconcolor: erroriconcolor,
-        context: context,
-         message: "Failed to add to cart: ${e.toString()}",color: Colors.white);
+          icon: Icons.cancel,
+          iconcolor: erroriconcolor,
+          context: context,
+          message: "Failed to add to cart: ${e.toString()}",
+          color: Colors.white);
     }
   }
 }

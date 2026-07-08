@@ -15,7 +15,8 @@ class LocalStorage {
   }
 
   static String getAndroidURL() {
-    return _storage.read('android_url') ?? 'https://play.google.com/store/apps/details?id=com.example.swiftclean_project';
+    return _storage.read('android_url') ??
+        'https://play.google.com/store/apps/details?id=com.example.NaattuLink';
   }
 }
 

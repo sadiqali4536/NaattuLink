@@ -2,13 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
+import 'package:naattulink/MVVM/View/Screen/User/cart/cart_service.dart'
     as CartService;
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/recommendation_controller.dart';
-import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/recommendation_controller.dart';
+import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
 
 class ExteriorBookingpage extends StatefulWidget {
   String? serviceName;
@@ -22,20 +22,18 @@ class ExteriorBookingpage extends StatefulWidget {
   DateTime? selectedDate;
   String? selectedTime;
 
-
-  ExteriorBookingpage({
-    super.key,
-    this.serviceName,
-    this.image,
-    this.originalPrice,
-    this.discountPrice,
-    this.discount,
-    this.rating,
-    this.category,
-    this.serviceType,
-    this.selectedDate,
-    this.selectedTime
-  });
+  ExteriorBookingpage(
+      {super.key,
+      this.serviceName,
+      this.image,
+      this.originalPrice,
+      this.discountPrice,
+      this.discount,
+      this.rating,
+      this.category,
+      this.serviceType,
+      this.selectedDate,
+      this.selectedTime});
 
   @override
   State<ExteriorBookingpage> createState() => _ExteriorBookingpageState();
@@ -107,19 +105,18 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
     }
   }
 
-bool _isDialogShown = false;
+  bool _isDialogShown = false;
 
-showLoadingDialog(BuildContext context) {
-  _isDialogShown = true;
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const Center(
-      child: CircularProgressIndicator(),
-    ),
-  );
-}
-
+  showLoadingDialog(BuildContext context) {
+    _isDialogShown = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
 
   List<DateTime> getWeekDates() {
     final today = DateTime.now();
@@ -224,7 +221,6 @@ showLoadingDialog(BuildContext context) {
                             Text("Select Date",
                                 style: TextStyle(
                                     fontSize: 20, fontWeight: FontWeight.w500)),
-                           
                           ],
                         ),
                         SizedBox(
@@ -427,12 +423,14 @@ showLoadingDialog(BuildContext context) {
 
                     if (!isBookingFormComplete()) {
                       CustomSnackBar.show(
-                    iconcolor: erroriconcolor,
-                    icon: Icons.cancel,
-                    context: context, message: " Please fill the booking before adding to cart.",color:const Color.fromARGB(255, 249, 246, 246)
-                    );
-                    return;
-                }
+                          iconcolor: erroriconcolor,
+                          icon: Icons.cancel,
+                          context: context,
+                          message:
+                              " Please fill the booking before adding to cart.",
+                          color: const Color.fromARGB(255, 249, 246, 246));
+                      return;
+                    }
 
                     final userId = FirebaseAuth.instance.currentUser?.uid;
                     if (userId == null) return;
@@ -446,14 +444,15 @@ showLoadingDialog(BuildContext context) {
                       discount: widget.discount,
                       rating: widget.rating,
                       category: widget.category,
-                      serviceType: widget.serviceType, 
+                      serviceType: widget.serviceType,
                       selectedDate: null,
-                       selectedTime: '',
+                      selectedTime: '',
                     );
 
                     if (!mounted) return;
                     setState(() => isAddedToCart = true);
-                    RecommendationController.to.trackCart(widget.serviceName ?? '', true);
+                    RecommendationController.to
+                        .trackCart(widget.serviceName ?? '', true);
                     // CustomSnackBar.show(
                     // useTick: true,
                     // context: context, message: " Added to cart successfully.",color: Colors.white
@@ -487,103 +486,105 @@ showLoadingDialog(BuildContext context) {
               style: ElevatedButton.styleFrom(
                   backgroundColor: gradientgreen2.c,
                   minimumSize: Size(160, 57)),
-             onPressed: () async {
- String selectedTime = '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $meridiem';
-  if (selectedDate == null || selectedTime == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Colors.white,
-        content: Text(
-          "📅 Please select a date and time before booking.",
-          style: TextStyle(color: Colors.black),
-        ),
-      ),
-    );
-    return;
-  }
+              onPressed: () async {
+                String selectedTime =
+                    '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $meridiem';
+                if (selectedDate == null || selectedTime == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Colors.white,
+                      content: Text(
+                        "📅 Please select a date and time before booking.",
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                  );
+                  return;
+                }
 
-  showLoadingDialog(context);
+                showLoadingDialog(context);
 
-  try {
-     final userId = FirebaseAuth.instance.currentUser?.uid;
-if (userId == null) return;
+                try {
+                  final userId = FirebaseAuth.instance.currentUser?.uid;
+                  if (userId == null) return;
 
 // Fetch user details from Firestore
-final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-final userData = userDoc.data();
+                  final userDoc = await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(userId)
+                      .get();
+                  final userData = userDoc.data();
 
-final bookingData = {
-  'userId': userId,
-  'serviceTitle': widget.serviceName ?? '',
-  'image': widget.image ?? '',
-  'originalPrice': widget.originalPrice ?? '',
-  'discountPrice': widget.discountPrice ?? '',
-  'discount': widget.discount ?? '',
-  'rating': widget.rating ?? 0,
-  'category': 'Exterior',
-  'serviceType': widget.serviceType ?? '',
-  'bookingType': 'Exterior',
-  'status': 'pending',
-  'workerId': null,
-  'workerName': null,
-  'createdAt': FieldValue.serverTimestamp(),
-  'selectedDate': selectedDate,
-  'selectedTime': selectedTime,
-  'gardenSize': _currentSliderValue.toStringAsFixed(0),
-  
-  //  user details
-  'bookedUserName': userData?['username'] ?? '',
-  'bookedUserPhone': userData?['phone'] ?? '',
-  'bookedUserAddress': userData?['address'] ?? '',
-};
+                  final bookingData = {
+                    'userId': userId,
+                    'serviceTitle': widget.serviceName ?? '',
+                    'image': widget.image ?? '',
+                    'originalPrice': widget.originalPrice ?? '',
+                    'discountPrice': widget.discountPrice ?? '',
+                    'discount': widget.discount ?? '',
+                    'rating': widget.rating ?? 0,
+                    'category': 'Exterior',
+                    'serviceType': widget.serviceType ?? '',
+                    'bookingType': 'Exterior',
+                    'status': 'pending',
+                    'workerId': null,
+                    'workerName': null,
+                    'createdAt': FieldValue.serverTimestamp(),
+                    'selectedDate': selectedDate,
+                    'selectedTime': selectedTime,
+                    'gardenSize': _currentSliderValue.toStringAsFixed(0),
 
+                    //  user details
+                    'bookedUserName': userData?['username'] ?? '',
+                    'bookedUserPhone': userData?['phone'] ?? '',
+                    'bookedUserAddress': userData?['address'] ?? '',
+                  };
 
-    await FirebaseFirestore.instance
-        .collection('bookings')
-        .add(bookingData);
-    RecommendationController.to.trackPurchase(
-        [widget.serviceName ?? ''],
-        double.tryParse(widget.discountPrice ?? '') ?? 0.0);
+                  await FirebaseFirestore.instance
+                      .collection('bookings')
+                      .add(bookingData);
+                  RecommendationController.to.trackPurchase(
+                      [widget.serviceName ?? ''],
+                      double.tryParse(widget.discountPrice ?? '') ?? 0.0);
 
-    if (_isDialogShown) {
-      Navigator.of(context, rootNavigator: true).pop();
-      _isDialogShown = false;
-    }
+                  if (_isDialogShown) {
+                    Navigator.of(context, rootNavigator: true).pop();
+                    _isDialogShown = false;
+                  }
 
-    await Future.delayed(const Duration(milliseconds: 300));
+                  await Future.delayed(const Duration(milliseconds: 300));
 
-    if (context.mounted) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        isDismissible: false,
-        enableDrag: false,
-        backgroundColor: Colors.transparent,
-        builder: (_) => BookingConfirmationModal(
-          bookedItems: [bookingData],
-          onDonePressed: () {
-            Navigator.of(context).pop(); 
-          },
-        ),
-      );
-    }
-  } catch (e) {
-    if (_isDialogShown) {
-      Navigator.of(context, rootNavigator: true).pop();
-      _isDialogShown = false;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Color.fromARGB(255, 204, 175, 175),
-        content: Text(
-          "⚠️ Failed to book exterior service.",
-          style: TextStyle(color: Colors.black),
-        ),
-      ),
-    );
-  }
-},
-
+                  if (context.mounted) {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      isDismissible: false,
+                      enableDrag: false,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => BookingConfirmationModal(
+                        bookedItems: [bookingData],
+                        onDonePressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (_isDialogShown) {
+                    Navigator.of(context, rootNavigator: true).pop();
+                    _isDialogShown = false;
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Color.fromARGB(255, 204, 175, 175),
+                      content: Text(
+                        "⚠️ Failed to book exterior service.",
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                  );
+                }
+              },
               child: Text("Book Now",
                   style: TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold)),

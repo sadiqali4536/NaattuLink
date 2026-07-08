@@ -1,6 +1,6 @@
 import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/animation_widget/tickmark.dart';
+import 'package:naattulink/MVVM/utils/widget/animation_widget/tickmark.dart';
 
 class CustomSnackBar {
   static void show({
@@ -8,7 +8,7 @@ class CustomSnackBar {
     required String message,
     Color color = Colors.black,
     Color iconcolor = Colors.black,
-    Widget? leadingWidget, 
+    Widget? leadingWidget,
     IconData icon = Icons.info_outline,
     bool useTick = false,
   }) {
@@ -16,7 +16,7 @@ class CustomSnackBar {
       Flushbar(
         messageText: Text(
           message,
-          style: const TextStyle(color:Colors.black, fontSize: 15),
+          style: const TextStyle(color: Colors.black, fontSize: 15),
         ),
         icon: leadingWidget ??
             (useTick

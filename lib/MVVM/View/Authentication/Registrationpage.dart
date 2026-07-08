@@ -2,8 +2,8 @@
 // // import 'package:firebase_auth/firebase_auth.dart';
 // // import 'package:flutter/material.dart';
 // // import 'package:get/get.dart';
-// // import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
-// // import 'package:swiftclean_project/MVVM/utils/widget/button/dropdown/custdropdown.dart';
+// // import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
+// // import 'package:naattulink/MVVM/utils/widget/button/dropdown/custdropdown.dart';
 
 // // class Registrationpage extends StatefulWidget {
 // //   const Registrationpage({super.key});
@@ -744,8 +744,8 @@
 // import 'package:firebase_auth/firebase_auth.dart';
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
-// import 'package:swiftclean_project/MVVM/utils/widget/button/dropdown/custdropdown.dart';
+// import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
+// import 'package:naattulink/MVVM/utils/widget/button/dropdown/custdropdown.dart';
 
 // class Registrationpage extends StatefulWidget {
 //   const Registrationpage({super.key});
@@ -1500,9 +1500,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/controller/auth_controller.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/button/custombutton.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/button/dropdown/custdropdown.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.dart';
+import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
+import 'package:naattulink/MVVM/utils/widget/button/dropdown/custdropdown.dart';
 
 class Registrationpage extends StatefulWidget {
   const Registrationpage({super.key});
