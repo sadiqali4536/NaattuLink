@@ -106,7 +106,7 @@ class HeaderSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShimmerEffect(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
             // Circular profile

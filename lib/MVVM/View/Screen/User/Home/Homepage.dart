@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
@@ -48,6 +49,7 @@ class HomepageState extends State<Homepage> {
   String _sortBy = 'None';
   late TextEditingController _searchController;
   Stream<QuerySnapshot>? _servicesStream;
+  Stream<QuerySnapshot>? _advertisementsStream;
 
   // Bus tab state variables
   String selectedBusFilter = "All Types";
@@ -96,6 +98,10 @@ class HomepageState extends State<Homepage> {
     loadUsername();
     _servicesStream =
         FirebaseFirestore.instance.collection('services').snapshots();
+    _advertisementsStream = FirebaseFirestore.instance
+        .collection('advertisements')
+        .where('isActive', isEqualTo: true)
+        .snapshots();
 
     // Initialize saved routes from Hive
     _routesBox = Hive.box('saved_routes_box');
@@ -455,14 +461,10 @@ class HomepageState extends State<Homepage> {
                     children: [
                       Column(
                         children: [
-                          const SizedBox(height: 300),
+                          const SizedBox(height: 290),
                           if (_searchController.text.isEmpty) ...[
                             StreamBuilder<QuerySnapshot>(
-                              stream: FirebaseFirestore.instance
-                                  .collection('banners')
-                                  .where('isActive', isEqualTo: true)
-                                  .orderBy('createdAt', descending: false)
-                                  .snapshots(),
+                              stream: _advertisementsStream,
                               builder: (context, bannerSnap) {
                                 // While loading banners show skeleton
                                 if (bannerSnap.connectionState ==
@@ -471,87 +473,160 @@ class HomepageState extends State<Homepage> {
                                       key: ValueKey('carousel_loading'));
                                 }
 
-                                final bannerDocs =
-                                    bannerSnap.data?.docs ?? [];
+                                final bannerDocs = bannerSnap.data?.docs ?? [];
+
+                                // In-memory filter and sort to avoid composite index requirements
+                                final now = DateTime.now();
+                                final filteredDocs = bannerDocs.where((doc) {
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+
+                                  // Filter by category position: "Home -> $selectedCategory"
+                                  final position = data['bannerPosition'] ?? '';
+                                  if (position != 'Home -> $selectedCategory') {
+                                    return false;
+                                  }
+
+                                  // Filter by dates
+                                  final startTimestamp =
+                                      data['startDate'] as Timestamp?;
+                                  final endTimestamp =
+                                      data['endDate'] as Timestamp?;
+                                  if (startTimestamp != null &&
+                                      startTimestamp.toDate().isAfter(now)) {
+                                    return false;
+                                  }
+                                  if (endTimestamp != null &&
+                                      endTimestamp.toDate().isBefore(now)) {
+                                    return false;
+                                  }
+
+                                  return true;
+                                }).toList();
+
+                                // Sort in-memory: priority descending, then createdAt descending
+                                filteredDocs.sort((a, b) {
+                                  final dataA =
+                                      a.data() as Map<String, dynamic>;
+                                  final dataB =
+                                      b.data() as Map<String, dynamic>;
+
+                                  final priorityA = dataA['priority'] ?? 0;
+                                  final priorityB = dataB['priority'] ?? 0;
+                                  if (priorityA != priorityB) {
+                                    return (priorityB as num)
+                                        .compareTo(priorityA as num);
+                                  }
+
+                                  final aTime =
+                                      dataA['createdAt'] as Timestamp?;
+                                  final bTime =
+                                      dataB['createdAt'] as Timestamp?;
+                                  if (aTime == null && bTime == null) return 0;
+                                  if (aTime == null) return 1;
+                                  if (bTime == null) return -1;
+                                  return bTime.compareTo(aTime);
+                                });
 
                                 // Fallback: no banners from admin → show placeholder
-                                final bannerItems = bannerDocs.isEmpty
+                                final bannerItems = filteredDocs.isEmpty
                                     ? [
                                         buildPromoCard(
                                           imageUrl: '',
                                           title: '',
                                         )
                                       ]
-                                    : bannerDocs.map((doc) {
-                                        final data = doc.data()
-                                            as Map<String, dynamic>;
+                                    : filteredDocs.map((doc) {
+                                        final data =
+                                            doc.data() as Map<String, dynamic>;
                                         return buildPromoCard(
-                                          imageUrl:
-                                              data['imageUrl'] ?? '',
-                                          title: data['title'] ?? '',
+                                          imageUrl: data['imageUrl'] ?? '',
+                                          onTap: () async {
+                                            final action =
+                                                data['bannerAction'] ??
+                                                    data['buttonAction'] ??
+                                                    '';
+                                            final value = data['actionValue'] ??
+                                                data['website'] ??
+                                                '';
+                                            if (action == 'Open URL' &&
+                                                value.toString().isNotEmpty) {
+                                              final uri = Uri.tryParse(
+                                                  value.toString());
+                                              if (uri != null) {
+                                                try {
+                                                  await launchUrl(uri,
+                                                      mode: LaunchMode
+                                                          .externalApplication);
+                                                } catch (e) {
+                                                  debugPrint(
+                                                      'Error launching URL: $e');
+                                                }
+                                              }
+                                            }
+                                          },
                                         );
                                       }).toList();
 
                                 final bannerCount = bannerItems.length;
 
+                                int localActiveIndex = 0;
                                 return AnimatedSwitcher(
-                                  duration:
-                                      const Duration(milliseconds: 400),
-                                  child: Column(
-                                    key: const ValueKey(
-                                        'carousel_loaded'),
-                                    children: [
-                                      CarouselSlider(
-                                        items: bannerItems,
-                                        options: CarouselOptions(
-                                          autoPlay: bannerCount > 1,
-                                          enlargeCenterPage: false,
-                                          aspectRatio: 2.1,
-                                          viewportFraction: 1,
-                                          onPageChanged:
-                                              (index, reason) {
-                                            setState(() {
-                                              activeBannerIndex = index;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: List.generate(
-                                            bannerCount, (index) {
-                                          return AnimatedContainer(
-                                            duration: const Duration(
-                                                milliseconds: 250),
-                                            width:
-                                                activeBannerIndex == index
+                                  duration: const Duration(milliseconds: 400),
+                                  child: StatefulBuilder(
+                                    key: const ValueKey('carousel_loaded'),
+                                    builder: (context, setLocalState) {
+                                      return Column(
+                                        children: [
+                                          CarouselSlider(
+                                            items: bannerItems,
+                                            options: CarouselOptions(
+                                              autoPlay: bannerCount > 1,
+                                              enlargeCenterPage: false,
+                                              aspectRatio: 1.8,
+                                              viewportFraction: 1,
+                                              onPageChanged: (index, reason) {
+                                                setLocalState(() {
+                                                  localActiveIndex = index;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: List.generate(bannerCount,
+                                                (index) {
+                                              return AnimatedContainer(
+                                                duration: const Duration(
+                                                    milliseconds: 250),
+                                                width: localActiveIndex == index
                                                     ? 15
                                                     : 6,
-                                            height: 6,
-                                            margin:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 3),
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(3),
-                                              color:
-                                                  activeBannerIndex == index
-                                                      ? const Color(
-                                                          0xFFFFB800)
+                                                height: 6,
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 3),
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(3),
+                                                  color: localActiveIndex ==
+                                                          index
+                                                      ? const Color(0xFFFFB800)
                                                       : Colors.grey[300],
-                                            ),
-                                          );
-                                        }),
-                                      ),
-                                    ],
+                                                ),
+                                              );
+                                            }),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   ),
                                 );
                               },
                             ),
                           ],
-                          const SizedBox(height: 20),
                           if (selectedCategory == "For You" &&
                               _searchController.text.isEmpty)
                             AnimatedSwitcher(
@@ -606,7 +681,7 @@ class HomepageState extends State<Homepage> {
                         ],
                       ),
                       Container(
-                        height: 290,
+                        height: 280,
                         width: double.infinity,
                         decoration: const BoxDecoration(
                           color: Color(0xFF0F2E5A), // Premium navy color
@@ -620,149 +695,154 @@ class HomepageState extends State<Homepage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                child: username == null
-                                    ? const HeaderSkeleton(
-                                        key: ValueKey('header_loading'))
-                                    : Padding(
-                                        key: const ValueKey('header_loaded'),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 20),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                    color: Colors.white,
-                                                    width: 1.5),
-                                              ),
-                                              child: CircleAvatar(
-                                                radius: 20,
-                                                backgroundColor: const Color(
-                                                    0xFFFFB800), // Gold accent
-                                                child: Text(
-                                                  username != null &&
-                                                          username!.isNotEmpty
-                                                      ? username![0]
-                                                          .toUpperCase()
-                                                      : 'U',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 16,
-                                                  ),
+                              SizedBox(
+                                height: 48,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: username == null
+                                      ? const HeaderSkeleton(
+                                          key: ValueKey('header_loading'))
+                                      : Padding(
+                                          key: const ValueKey('header_loaded'),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                      color: Colors.white,
+                                                      width: 1.5),
                                                 ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    username ?? 'Hello!',
+                                                child: CircleAvatar(
+                                                  radius: 20,
+                                                  backgroundColor: const Color(
+                                                      0xFFFFB800), // Gold accent
+                                                  child: Text(
+                                                    username != null &&
+                                                            username!.isNotEmpty
+                                                        ? username![0]
+                                                            .toUpperCase()
+                                                        : 'U',
                                                     style: const TextStyle(
                                                       color: Colors.white,
-                                                      fontSize: 16,
                                                       fontWeight:
                                                           FontWeight.bold,
+                                                      fontSize: 16,
                                                     ),
                                                   ),
-                                                  const SizedBox(height: 2),
-                                                  Obx(() {
-                                                    final loc =
-                                                        LocationController
-                                                            .to
-                                                            .currentLocation
-                                                            .value;
-                                                    if (loc.isEmpty)
-                                                      return const SizedBox
-                                                          .shrink();
-                                                    return Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        const Icon(
-                                                            Icons
-                                                                .location_on_outlined,
-                                                            color:
-                                                                Colors.white70,
-                                                            size: 12),
-                                                        const SizedBox(
-                                                            width: 4),
-                                                        Flexible(
-                                                          child: Text(
-                                                            loc,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                            style:
-                                                                const TextStyle(
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      username ?? 'Hello!',
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Obx(() {
+                                                      final loc =
+                                                          LocationController
+                                                              .to
+                                                              .currentLocation
+                                                              .value;
+                                                      if (loc.isEmpty)
+                                                        return const SizedBox
+                                                            .shrink();
+                                                      return Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          const Icon(
+                                                              Icons
+                                                                  .location_on_outlined,
                                                               color: Colors
                                                                   .white70,
-                                                              fontSize: 11,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
+                                                              size: 12),
+                                                          const SizedBox(
+                                                              width: 4),
+                                                          Flexible(
+                                                            child: Text(
+                                                              loc,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style:
+                                                                  const TextStyle(
+                                                                color: Colors
+                                                                    .white70,
+                                                                fontSize: 11,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500,
+                                                              ),
                                                             ),
                                                           ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 2),
-                                                        const Icon(
-                                                            Icons
-                                                                .keyboard_arrow_down,
-                                                            color:
-                                                                Colors.white70,
-                                                            size: 12),
-                                                      ],
-                                                    );
-                                                  }),
-                                                ],
-                                              ),
-                                            ),
-                                            Stack(
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(
-                                                      Icons
-                                                          .notifications_none_outlined,
-                                                      color: Colors.white),
-                                                  onPressed: () {},
+                                                          const SizedBox(
+                                                              width: 2),
+                                                          const Icon(
+                                                              Icons
+                                                                  .keyboard_arrow_down,
+                                                              color: Colors
+                                                                  .white70,
+                                                              size: 12),
+                                                        ],
+                                                      );
+                                                    }),
+                                                  ],
                                                 ),
-                                                if (notificationCount > 0)
-                                                  Positioned(
-                                                    right: 8,
-                                                    top: 8,
-                                                    child: Container(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              4),
-                                                      decoration:
-                                                          const BoxDecoration(
-                                                        color: Colors.red,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                      constraints:
-                                                          const BoxConstraints(
-                                                        minWidth: 8,
-                                                        minHeight: 8,
+                                              ),
+                                              Stack(
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(
+                                                        Icons
+                                                            .notifications_none_outlined,
+                                                        color: Colors.white),
+                                                    onPressed: () {},
+                                                  ),
+                                                  if (notificationCount > 0)
+                                                    Positioned(
+                                                      right: 8,
+                                                      top: 8,
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(4),
+                                                        decoration:
+                                                            const BoxDecoration(
+                                                          color: Colors.red,
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
+                                                        constraints:
+                                                            const BoxConstraints(
+                                                          minWidth: 8,
+                                                          minHeight: 8,
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                              ],
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.menu,
-                                                  color: Colors.white),
-                                              onPressed: () {},
-                                            ),
-                                          ],
+                                                ],
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.menu,
+                                                    color: Colors.white),
+                                                onPressed: () {},
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
+                                ),
                               ),
                               const SizedBox(height: 12),
                               // Search field with integrated filter and mic buttons inside
@@ -852,31 +932,36 @@ class HomepageState extends State<Homepage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 23),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                child: snapshot.connectionState ==
-                                        ConnectionState.waiting
-                                    ? const CategoryRowSkeleton(
-                                        key: ValueKey('category_loading'))
-                                    : ScrollableHorizontalButtons(
-                                        key: const ValueKey('category_loaded'),
-                                        categories: currentCategoryList,
-                                        selectedIndex: selectedCategoryIndex,
-                                        onSelected: (index) {
-                                          setState(() {
-                                            selectedCategoryIndex = index;
-                                            _clearBusSearch();
-                                          });
-                                          if (index <
-                                              currentCategoryList.length) {
-                                            RecommendationController.to
-                                                .trackCategoryClick(
-                                                    currentCategoryList[index]);
-                                          }
-                                        },
-                                        isDark: true,
-                                      ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                height: 80,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: snapshot.connectionState ==
+                                          ConnectionState.waiting
+                                      ? const CategoryRowSkeleton(
+                                          key: ValueKey('category_loading'))
+                                      : ScrollableHorizontalButtons(
+                                          key:
+                                              const ValueKey('category_loaded'),
+                                          categories: currentCategoryList,
+                                          selectedIndex: selectedCategoryIndex,
+                                          onSelected: (index) {
+                                            setState(() {
+                                              selectedCategoryIndex = index;
+                                              _clearBusSearch();
+                                            });
+                                            if (index <
+                                                currentCategoryList.length) {
+                                              RecommendationController.to
+                                                  .trackCategoryClick(
+                                                      currentCategoryList[
+                                                          index]);
+                                            }
+                                          },
+                                          isDark: true,
+                                        ),
+                                ),
                               ),
                             ],
                           ),
@@ -899,89 +984,93 @@ class HomepageState extends State<Homepage> {
   Widget buildPromoCard({
     required String imageUrl,
     String title = '',
+    VoidCallback? onTap,
   }) {
     final bool isNetwork = imageUrl.isNotEmpty;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            // ── Banner image (network or local placeholder) ──
-            if (isNetwork)
-              Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                loadingBuilder: (_, child, progress) {
-                  if (progress == null) return child;
-                  return Container(
-                    color: const Color(0xFF1E1E1E),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFFFFB800),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              // ── Banner image (network or local placeholder) ──
+              if (isNetwork)
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (_, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      color: const Color(0xFF1E1E1E),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFFFB800),
+                        ),
                       ),
-                    ),
-                  );
-                },
-                errorBuilder: (_, __, ___) => Image.asset(
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    'assets/image/add_image.png',
+                    fit: BoxFit.cover,
+                  ),
+                )
+              else
+                Image.asset(
                   'assets/image/add_image.png',
                   fit: BoxFit.cover,
                 ),
-              )
-            else
-              Image.asset(
-                'assets/image/add_image.png',
-                fit: BoxFit.cover,
-              ),
-            // ── Gradient overlay ──
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withOpacity(0.70),
-                      Colors.black.withOpacity(0.30),
-                      Colors.transparent,
-                    ],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    stops: const [0.0, 0.55, 1.0],
+              // ── Gradient overlay ──
+              // Positioned.fill(
+              //   child: Container(
+              //     decoration: BoxDecoration(
+              //       gradient: LinearGradient(
+              //         colors: [
+              //           Colors.black.withOpacity(0.70),
+              //           Colors.black.withOpacity(0.30),
+              //           Colors.transparent,
+              //         ],
+              //         begin: Alignment.bottomCenter,
+              //         end: Alignment.topCenter,
+              //         stops: const [0.0, 0.55, 1.0],
+              //       ),
+              //     ),
+              //   ),
+              // ),
+              // ── Title overlay (only if admin set a title) ──
+              if (title.isNotEmpty)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                      height: 1.3,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black54,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-            // ── Title overlay (only if admin set a title) ──
-            if (title.isNotEmpty)
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                    height: 1.3,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black54,
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
