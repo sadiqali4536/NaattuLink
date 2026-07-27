@@ -161,6 +161,90 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
     );
   }
 
+  Future<void> _deleteAccount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final isEmailUser = user.providerData.any((p) => p.providerId == 'password');
+
+      if (isEmailUser) {
+        final password = await _showPasswordPromptDialog();
+        if (password == null || password.isEmpty) return; // User cancelled
+
+        final cred = EmailAuthProvider.credential(
+          email: user.email!,
+          password: password,
+        );
+        await user.reauthenticateWithCredential(cred);
+      }
+
+      // Delete workers/{uid}
+      await FirebaseFirestore.instance
+          .collection('workers')
+          .doc(user.uid)
+          .delete();
+
+      // Delete users/{uid} (just in case they have a user doc too)
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .delete();
+
+      // Delete Firebase Auth user
+      await user.delete();
+
+      if (!mounted) return;
+      Get.offAll(() => LoginAndSigning());
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting account: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<String?> _showPasswordPromptDialog() async {
+    final passwordController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Deletion'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Please enter your password to confirm account deletion:'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, passwordController.text),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -478,7 +562,10 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
                               builder: (BuildContext context) {
                                 return _buildConfirmationDialog(
                                     "Are you sure to delete your account?",
-                                    () {});
+                                    () {
+                                      Navigator.pop(context);
+                                      _deleteAccount();
+                                    });
                               });
                         },
                         child: Container(

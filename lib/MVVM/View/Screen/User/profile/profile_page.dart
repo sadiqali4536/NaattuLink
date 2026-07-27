@@ -36,37 +36,85 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isNotificationOn = true;
 
   Future<void> _deleteAccount() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-      if (user != null) {
-        final userpass = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
+    try {
+      final isEmailUser = user.providerData.any((p) => p.providerId == 'password');
+
+      if (isEmailUser) {
+        final password = await _showPasswordPromptDialog();
+        if (password == null || password.isEmpty) return; // User cancelled
+
         final cred = EmailAuthProvider.credential(
           email: user.email!,
-          password: userpass['password'],
+          password: password,
         );
-
         await user.reauthenticateWithCredential(cred);
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .delete();
-        await user.delete();
-
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => LoginAndSigning()),
-          (route) => false,
-        );
       }
+
+      // Delete Firestore document first
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .delete();
+
+      // Delete Firebase Auth user
+      await user.delete();
+
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginAndSigning()),
+        (route) => false,
+      );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error deleting account: ${e.toString()}')),
       );
     }
+  }
+
+  Future<String?> _showPasswordPromptDialog() async {
+    final passwordController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Deletion'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Please enter your password to confirm account deletion:'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, passwordController.text),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

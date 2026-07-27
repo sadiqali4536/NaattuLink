@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/current_loaction_fetch.dart';
+import 'package:naattulink/MVVM/View/Authentication/worker_verification_waiting_screen.dart';
 import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
@@ -49,6 +50,7 @@ class AuthController extends GetxController {
             } else if (isVerified == 0) {
               toastInfo(
                   'Your profile is currently under review by the admin. Please wait a moment.');
+              Get.offAll(() => const WorkerVerificationWaitingScreen());
             } else {
               toastWarning(
                   'Unknown verification status. Please contact support.');
@@ -156,6 +158,9 @@ class AuthController extends GetxController {
     required String email,
     required String password,
     required String category,
+    required String location,
+    required String experience,
+    required String about,
   }) async {
     _isLoading.value = true;
     try {
@@ -167,13 +172,18 @@ class AuthController extends GetxController {
             .collection("workers")
             .doc(user.uid)
             .set({
+          // Key fields at top
+          "created_at": FieldValue.serverTimestamp(),
+          "location": location,
+          "experience": experience,
+          "about": about,
+          // Core fields
           "username": username,
           "phone": phone,
           "email": email,
           "role": "worker",
           "category": category,
           "profile_img": "",
-          "created_at": FieldValue.serverTimestamp(),
           "updated_at": FieldValue.serverTimestamp(),
           "status": "pending",
           "services": [],
@@ -191,7 +201,7 @@ class AuthController extends GetxController {
 
         toastSuccess(
             "Worker registered successfully. Awaiting admin approval.");
-        Get.offAll(() => const WorkerDashboard());
+        Get.offAll(() => const WorkerVerificationWaitingScreen());
       }
     } catch (e) {
       final message = FirebaseErrorHandler.getReadableErrorMessage(e);
