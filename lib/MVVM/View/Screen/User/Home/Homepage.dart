@@ -23,6 +23,7 @@ import 'package:naattulink/MVVM/utils/service_functions/ServiceCardwith map.dart
 import 'package:naattulink/MVVM/utils/widget/button/Scrollable/scrollable_horizontal_buttons.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Home/notifications_page.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({Key? key}) : super(key: key);
@@ -50,6 +51,7 @@ class HomepageState extends State<Homepage> {
   late TextEditingController _searchController;
   Stream<QuerySnapshot>? _servicesStream;
   Stream<QuerySnapshot>? _advertisementsStream;
+  Stream<QuerySnapshot>? _notificationsStream;
 
   // Bus tab state variables
   String selectedBusFilter = "All Types";
@@ -102,6 +104,8 @@ class HomepageState extends State<Homepage> {
         .collection('advertisements')
         .where('isActive', isEqualTo: true)
         .snapshots();
+    _notificationsStream =
+        FirebaseFirestore.instance.collection('notifications').snapshots();
 
     // Initialize saved routes from Hive
     _routesBox = Hive.box('saved_routes_box');
@@ -802,37 +806,99 @@ class HomepageState extends State<Homepage> {
                                                   ],
                                                 ),
                                               ),
-                                              Stack(
-                                                children: [
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                        Icons
-                                                            .notifications_none_outlined,
-                                                        color: Colors.white),
-                                                    onPressed: () {},
-                                                  ),
-                                                  if (notificationCount > 0)
-                                                    Positioned(
-                                                      right: 8,
-                                                      top: 8,
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(4),
-                                                        decoration:
-                                                            const BoxDecoration(
-                                                          color: Colors.red,
-                                                          shape:
-                                                              BoxShape.circle,
-                                                        ),
-                                                        constraints:
-                                                            const BoxConstraints(
-                                                          minWidth: 8,
-                                                          minHeight: 8,
-                                                        ),
+                                              StreamBuilder<QuerySnapshot>(
+                                                stream: _notificationsStream,
+                                                builder: (context, snapshot) {
+                                                  int unreadCount = 0;
+                                                  if (snapshot.hasData) {
+                                                    final lastRead = Hive.box(
+                                                            'saved_routes_box')
+                                                        .get(
+                                                            'last_notification_read_time',
+                                                            defaultValue:
+                                                                0) as int;
+                                                    for (var doc in snapshot
+                                                        .data!.docs) {
+                                                      final data = doc.data()
+                                                          as Map<String,
+                                                              dynamic>?;
+                                                      if (data != null &&
+                                                          data['created_at'] !=
+                                                              null) {
+                                                        final timestamp =
+                                                            data['created_at']
+                                                                as Timestamp;
+                                                        if (timestamp
+                                                                .millisecondsSinceEpoch >
+                                                            lastRead) {
+                                                          unreadCount++;
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                  return Stack(
+                                                    children: [
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                            Icons
+                                                                .notifications_none_outlined,
+                                                            color:
+                                                                Colors.white),
+                                                        onPressed: () {
+                                                          Hive.box('saved_routes_box').put(
+                                                              'last_notification_read_time',
+                                                              DateTime.now()
+                                                                  .millisecondsSinceEpoch);
+                                                          setState(
+                                                              () {}); // to instantly clear the badge before stream re-emits
+                                                          Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                  builder: (_) =>
+                                                                      const NotificationsPage()));
+                                                        },
                                                       ),
-                                                    ),
-                                                ],
+                                                      if (unreadCount > 0)
+                                                        Positioned(
+                                                          right: 8,
+                                                          top: 8,
+                                                          child: Container(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(4),
+                                                            decoration:
+                                                                const BoxDecoration(
+                                                              color: Colors.red,
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                            ),
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                              minWidth: 16,
+                                                              minHeight: 16,
+                                                            ),
+                                                            child: Center(
+                                                              child: Text(
+                                                                unreadCount > 9
+                                                                    ? '9+'
+                                                                    : unreadCount
+                                                                        .toString(),
+                                                                style:
+                                                                    const TextStyle(
+                                                                  color: Colors
+                                                                      .white,
+                                                                  fontSize: 10,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  );
+                                                },
                                               ),
                                               IconButton(
                                                 icon: const Icon(Icons.menu,
