@@ -4,6 +4,7 @@ import 'package:naattulink/MVVM/utils/service_functions/servicecard2.dart';
 import 'package:naattulink/MVVM/utils/widget/button/Scrollable/scrollable_horizontal_buttons.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/MVVM/utils/service_functions/workercardlist.dart';
 
 class ServicesList extends StatefulWidget {
   const ServicesList({super.key});
@@ -113,27 +114,34 @@ class _ServicesListState extends State<ServicesList> {
               );
             } else {
               final display = currentCategoryList[selectedCategoryIndex];
-              final String categoryName;
-              if (display == "For You") {
-                categoryName = "All";
-              } else if (display == "Workers") {
-                categoryName = "Exterior";
-              } else if (display == "Bus") {
-                categoryName = "Interior";
-              } else if (display == "Local Ads") {
-                categoryName = "Vehicle";
-              } else {
-                categoryName = display;
-              }
-
-              listContent = Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: 110),
-                  child: Servicecard2(
-                    category: categoryName,
+              if (display == "Workers") {
+                listContent = const Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.only(bottom: 110),
+                    child: WorkerCardList(),
                   ),
-                ),
-              );
+                );
+              } else {
+                final String categoryName;
+                if (display == "For You") {
+                  categoryName = "All";
+                } else if (display == "Bus") {
+                  categoryName = "Interior";
+                } else if (display == "Local Ads") {
+                  categoryName = "Vehicle";
+                } else {
+                  categoryName = display;
+                }
+
+                listContent = Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 110),
+                    child: Servicecard2(
+                      category: categoryName,
+                    ),
+                  ),
+                );
+              }
             }
 
             return Column(

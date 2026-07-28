@@ -9,6 +9,7 @@ import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'vehicle_details_page.dart';
 import 'agency_packages_page.dart';
 import 'vehicle_map_view.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ─────────────────────────────────────────────────
 // Model
@@ -172,22 +173,23 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
   double _userLng = 75.7804;
   bool _locationLoading = true;
   String _locationName = 'Detecting location...';
+  bool _isLoadingListings = true;
 
   // Live simulation timer
   Timer? _liveUpdateTimer;
   final Random _rng = Random();
 
   // ─── Listings ───────────────────────────────────
-  late List<AutoTaxiListing> _allListings;
+  List<AutoTaxiListing> _allListings = [];
 
   @override
   void initState() {
     super.initState();
-    _allListings = _buildListings();
     _initLocation();
+    _fetchListingsFromFirestore();
     // Simulate live vehicle movement every 5 seconds
     _liveUpdateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) setState(() => _driftVehicles());
+      if (mounted && _allListings.isNotEmpty) setState(() => _driftVehicles());
     });
   }
 
@@ -197,203 +199,96 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
     super.dispose();
   }
 
-  List<AutoTaxiListing> _buildListings() => [
-        AutoTaxiListing(
-          name: "Pradeep Kumar",
-          type: "Auto",
-          isAgency: false,
-          rating: "4.9",
-          experienceOrVehicles: "12 years Exp.",
-          subtitle: "Verified Driver",
-          status: "Available",
-          vehicleDetails: "Bajaj RE Auto",
-          regNo: "KL 11 U 1122",
-          location: "Calicut Main Stand",
-          phone: "tel:+919876543210",
-          imageUrl: "assets/image/auto_icon.png",
-          seating: "3 Passengers",
-          acStatus: "Non-AC",
-          luggage: "1 Small Bag",
-          minCharge: "30",
-          aboutDriver:
-              "Pradeep is a highly experienced driver from Kozhikode with 12 years of service. Known for his punctuality and polite behavior.",
-          quoteText:
-              "കൃത്യസമയത്തു സുരക്ഷിതമായി യാത്രക്കാരെ എത്തിക്കുക എന്നതാണ് എന്റെ ദൗത്യം.",
-          latitude: 11.2621,
-          longitude: 75.7803,
-          completedTrips: 1820,
-          isOnline: true,
-          farePerKm: 12,
-          isVerified: true,
-        ),
-        AutoTaxiListing(
-          name: "Malabar Travels",
-          type: "4-Wheel Taxi",
-          isAgency: true,
-          rating: "4.8 (1.2k)",
-          experienceOrVehicles: "15+ Vehicles",
-          subtitle: "Premium Agency",
-          status: "Open Now",
-          vehicleDetails: "Bus, Van, Taxi",
-          regNo: "Fleet",
-          location: "Link Road, Kozhikode",
-          phone: "tel:+919876543211",
-          imageUrl: "assets/image/agency_icon.png",
-          seating: "4-7 Passengers",
-          acStatus: "AC / Non-AC",
-          luggage: "Medium / Large",
-          minCharge: "150",
-          aboutDriver:
-              "Malabar Travels is a premium travel agency operating in Calicut with a fleet of modern, well-maintained vehicles.",
-          quoteText:
-              "നിങ്ങളുടെ യാത്ര സുരക്ഷിതവും സുഖകരവുമാക്കുക എന്നതാണ് ഞങ്ങളുടെ ലക്ഷ്യം.",
-          latitude: 11.2504,
-          longitude: 75.7831,
-          completedTrips: 4200,
-          isOnline: true,
-          farePerKm: 14,
-          isVerified: true,
-        ),
-        AutoTaxiListing(
-          name: "Shaji K.P.",
-          type: "4-Wheel Taxi",
-          isAgency: false,
-          rating: "4.9 (230)",
-          experienceOrVehicles: "8 Years Exp.",
-          subtitle: "Verified Driver",
-          status: "On Trip",
-          vehicleDetails: "Maruti Dzire",
-          regNo: "KL 11 V 5678",
-          location: "Thalayadukkar Center",
-          phone: "tel:+919876543212",
-          imageUrl: "assets/image/taxi_car.png",
-          seating: "4 Passengers",
-          acStatus: "AC",
-          luggage: "2 Bags",
-          minCharge: "50",
-          aboutDriver:
-              "Shaji is a polite, professional taxi driver based in Thalayadukkar with 8 years of accident-free driving experience.",
-          quoteText:
-              "വിശ്വസ്തതയും സുരക്ഷിതത്വവുമാണ് എന്റെ സേവനത്തിന്റെ പ്രത്യേകത.",
-          latitude: 11.5173,
-          longitude: 75.8920,
-          completedTrips: 940,
-          isOnline: true,
-          farePerKm: 16,
-          isVerified: true,
-        ),
-        AutoTaxiListing(
-          name: "Raman E.",
-          type: "Auto",
-          isAgency: false,
-          rating: "4.7 (88)",
-          experienceOrVehicles: "15 years Exp.",
-          subtitle: "Verified Driver",
-          status: "Available",
-          vehicleDetails: "Ape City Auto",
-          regNo: "KL 11 W 9012",
-          location: "Thalayad Bus Stand",
-          phone: "tel:+919876543213",
-          imageUrl: "assets/image/auto_icon.png",
-          seating: "3 Passengers",
-          acStatus: "Non-AC",
-          luggage: "1 Small Bag",
-          minCharge: "30",
-          aboutDriver:
-              "Raman has been driving autos in Calicut region for 15 years. Familiar with all local routes and shortcut ways to avoid traffic.",
-          quoteText:
-              "സദാസമയവും സുരക്ഷിതവും വേഗതയേറിയതുമായ സേവനം നൽകാൻ ഞാൻ തയ്യാറാണ്.",
-          latitude: 11.5150,
-          longitude: 75.8950,
-          completedTrips: 670,
-          isOnline: true,
-          farePerKm: 11,
-          isVerified: true,
-        ),
-        AutoTaxiListing(
-          name: "Calicut Wheels Van Services",
-          type: "Van",
-          isAgency: true,
-          rating: "4.6 (410)",
-          experienceOrVehicles: "6 Vehicles",
-          subtitle: "Premium Agency",
-          status: "Open Now",
-          vehicleDetails: "Force Traveller, Winger",
-          regNo: "Fleet",
-          location: "Calicut Railway Station",
-          phone: "tel:+919876543214",
-          imageUrl: "assets/image/agency_icon.png",
-          seating: "12-17 Passengers",
-          acStatus: "AC Available",
-          luggage: "Large Capacity",
-          minCharge: "350",
-          aboutDriver:
-              "Specialized van and traveler services for large groups, tours, pilgrimages, and wedding functions in Calicut.",
-          quoteText: "ഗ്രൂപ്പ് യാത്രകൾ കൂടുതൽ മനോഹരവും സുരക്ഷിതവുമാക്കുന്നു.",
-          latitude: 11.2451,
-          longitude: 75.7769,
-          completedTrips: 1560,
-          isOnline: true,
-          farePerKm: 22,
-          isVerified: true,
-        ),
-        AutoTaxiListing(
-          name: "Fathima Noor",
-          type: "4-Wheel Taxi",
-          isAgency: false,
-          rating: "4.8 (512)",
-          experienceOrVehicles: "6 Years Exp.",
-          subtitle: "Women Driver · Verified",
-          status: "Available",
-          vehicleDetails: "Hyundai i10",
-          regNo: "KL 11 Z 3344",
-          location: "Mavoor Road, Calicut",
-          phone: "tel:+919876543215",
-          imageUrl: "assets/image/taxi_car.png",
-          seating: "4 Passengers",
-          acStatus: "AC",
-          luggage: "2 Bags",
-          minCharge: "50",
-          aboutDriver:
-              "Fathima is a certified women driver offering safe, comfortable rides particularly preferred by solo women travellers. 6 years of experience.",
-          quoteText: "സ്ത്രീകൾക്ക് സുരക്ഷിതമായ യാത്ര ഉറപ്പ് നൽകുന്നു.",
-          latitude: 11.2648,
-          longitude: 75.7866,
-          completedTrips: 1120,
-          isOnline: true,
-          isWomenDriver: true,
-          farePerKm: 14,
-          isVerified: true,
-        ),
-        AutoTaxiListing(
-          name: "EcoRide Auto",
-          type: "Auto",
-          isAgency: false,
-          rating: "4.6 (290)",
-          experienceOrVehicles: "4 Years Exp.",
-          subtitle: "Electric Vehicle · Verified",
-          status: "Available",
-          vehicleDetails: "Mahindra e-Alfa Mini",
-          regNo: "KL 11 EA 7890",
-          location: "Calicut Beach Road",
-          phone: "tel:+919876543216",
-          imageUrl: "assets/image/auto_icon.png",
-          seating: "3 Passengers",
-          acStatus: "Non-AC",
-          luggage: "1 Small Bag",
-          minCharge: "25",
-          aboutDriver:
-              "EcoRide operates eco-friendly electric auto rickshaws in Calicut city. Zero emissions, lower fares, and smooth rides.",
-          quoteText: "ഭൂമിക്കു നന്മ ചെയ്‌ത്‌ യാത്ര ചെയ്യൂ.",
-          latitude: 11.2582,
-          longitude: 75.7754,
-          completedTrips: 380,
-          isElectric: true,
-          isOnline: true,
-          farePerKm: 9,
-          isVerified: true,
-        ),
-      ];
+  Future<void> _fetchListingsFromFirestore() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('transports')
+          .where('transport_category', isEqualTo: 'Taxi')
+          .get();
+
+      final List<AutoTaxiListing> fetchedListings = [];
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+
+        // Extracting rating info safely
+        final rawRating = data['ratings'] ?? 0;
+        final totalReviews = data['total_reviews'] ?? 0;
+        final ratingStr = "$rawRating ($totalReviews)";
+
+        final isAc = data['air_conditioning'] == true ||
+            data['air_conditioning'] == "true";
+        final isVerifiedFlag =
+            data['isVerified'] == 1 || data['isVerified'] == true;
+
+        String mainStand = data['main_stand'] ?? "Kozhikode";
+        double lat = 11.2588; // Default Kozhikode
+        double lng = 75.7804;
+
+        try {
+          List<Location> locations =
+              await locationFromAddress("$mainStand, Kerala, India");
+          if (locations.isNotEmpty) {
+            lat = locations.first.latitude;
+            lng = locations.first.longitude;
+          }
+        } catch (e) {
+          debugPrint("Geocoding failed for $mainStand: $e");
+          // Add slight random offset if geocoding fails so they don't all stack on map
+          lat += (_rng.nextDouble() - 0.5) * 0.05;
+          lng += (_rng.nextDouble() - 0.5) * 0.05;
+        }
+
+        fetchedListings.add(
+          AutoTaxiListing(
+            name: data['username'] ?? "Unknown",
+            type: data['vehicle_category'] ?? "Taxi",
+            isAgency: false, // You can map this if needed
+            rating: ratingStr,
+            experienceOrVehicles: data['role_with_vehicle'] ?? "Driver",
+            subtitle: "Verified Driver", // Adjust based on logic
+            status: (data['status'] == 'active' || data['status'] == 'approved')
+                ? "Available"
+                : "Available", // Simplified status logic
+            vehicleDetails: data['vehicle_model'] ?? "Vehicle",
+            regNo: data['reg_number'] ?? "N/A",
+            location: mainStand,
+            phone: "tel:${data['phone'] ?? ''}",
+            imageUrl: data['profile_img']?.isNotEmpty == true
+                ? data['profile_img']
+                : "assets/image/taxi_car.png",
+            seating: "${data['seating_capacity'] ?? '4'} Passengers",
+            acStatus: isAc ? "AC" : "Non-AC",
+            luggage: data['luggage_capacity'] ?? "Standard",
+            minCharge: (data['min_charge'] ?? '0').toString(),
+            aboutDriver: "Driver registered via NaattuLink.",
+            quoteText: "സുരക്ഷിതമായ യാത്ര ഉറപ്പ് നൽകുന്നു.",
+            latitude: lat,
+            longitude: lng,
+            completedTrips: 0,
+            isOnline: true,
+            farePerKm:
+                int.tryParse(data['min_charge']?.toString() ?? '15') ?? 15,
+            isVerified: isVerifiedFlag,
+          ),
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _allListings = fetchedListings;
+          _isLoadingListings = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching taxi listings: $e");
+      if (mounted) {
+        setState(() {
+          _isLoadingListings = false;
+        });
+      }
+    }
+  }
 
   // Simulates small GPS drift for live vehicle movement
   void _driftVehicles() {
@@ -482,6 +377,27 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
   // ─── Filtered + Ranked list ───────────────────────
   List<AutoTaxiListing> get _rankedListings {
     List<AutoTaxiListing> result = _allListings.where((item) {
+      // Show ONLY data that matches the user's current location strictly (String match)
+      final locParts = _locationName.split(',');
+      final userLocality = locParts.first.trim().toLowerCase();
+      final userCity =
+          locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
+
+      final itemLoc = item.location.toLowerCase();
+      // Enforce strict location filtering based on current location
+      // Allow fallback if both are empty (which shouldn't happen unless loading)
+      if (userLocality.isNotEmpty || userCity.isNotEmpty) {
+        if (!itemLoc.contains(userLocality) &&
+            (userCity.isEmpty || !itemLoc.contains(userCity))) {
+          // Additional fallback: checking if item distance is within 5km for strictly nearby stands
+          // if they used a different spellings.
+          final dist = item.distanceFrom(_userLat, _userLng);
+          if (dist > 5.0) {
+            return false;
+          }
+        }
+      }
+
       // Radius filter
       final dist = item.distanceFrom(_userLat, _userLng);
       if (searchRadiusKm >= 99) {
@@ -497,6 +413,12 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
         return false;
 
       // Smart filter
+      if (selectedSmartFilter == 'My Location') {
+        if (!itemLoc.contains(userLocality) &&
+            (userCity.isEmpty || !itemLoc.contains(userCity))) {
+          return false;
+        }
+      }
       if (selectedSmartFilter == 'AC Only' && !item.acStatus.contains('AC'))
         return false;
       if (selectedSmartFilter == 'Electric' && !item.isElectric) return false;
@@ -557,15 +479,21 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
           _buildTypeFilterChips(),
           _buildListHeaderAndViewToggle(),
           Expanded(
-            child: showMapView
-                ? VehicleMapView(
-                    listings: _rankedListings,
-                    userLat: _userLat,
-                    userLng: _userLng,
-                    onCallTap: _makeCall,
-                    onDetailsTap: (item) => _openDetails(item),
+            child: _isLoadingListings
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF0F2E5A),
+                    ),
                   )
-                : _buildListView(),
+                : showMapView
+                    ? VehicleMapView(
+                        listings: _rankedListings,
+                        userLat: _userLat,
+                        userLng: _userLng,
+                        onCallTap: _makeCall,
+                        onDetailsTap: (item) => _openDetails(item),
+                      )
+                    : _buildListView(),
           ),
         ],
       ),
@@ -713,6 +641,7 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
   Widget _buildSmartFilterChips() {
     const filters = [
       'Nearest',
+      'My Location',
       'Highest Rated',
       'Lowest Fare',
       'AC Only',
