@@ -8,13 +8,16 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/worker_bookings/worker_details_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/healthcare_bookings/clinics_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/services/service_details_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/helpline_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/tuition_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/food_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/internet_cafe_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pickup_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/jcbs_page.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/recommendation_controller.dart';
 import 'package:naattulink/MVVM/model/models/product_model.dart';
@@ -34,8 +37,9 @@ class Homepage extends StatefulWidget {
 
 // Public so user_Dashboard can call resetToForYou() via GlobalKey
 class HomepageState extends State<Homepage> {
-  final NotchBottomBarController _controller =
-      NotchBottomBarController(index: 0);
+  final NotchBottomBarController _controller = NotchBottomBarController(
+    index: 0,
+  );
 
   int? _safeRating(dynamic rating) {
     if (rating is num) return rating.toInt();
@@ -86,7 +90,7 @@ class HomepageState extends State<Homepage> {
     "Workers",
     "Bus",
     "Local Ads",
-    "Online Shops"
+    "Online Shops",
   ];
 
   String get selectedCategory => categoryList[selectedCategoryIndex];
@@ -214,7 +218,7 @@ class HomepageState extends State<Homepage> {
               "Workers",
               "Bus",
               "Local Ads",
-              "Online Shops"
+              "Online Shops",
             ];
             for (var doc in allServices) {
               final data = doc.data() as Map<String, dynamic>;
@@ -279,183 +283,18 @@ class HomepageState extends State<Homepage> {
             }).toList();
 
             if (_sortBy == 'A-Z') {
-              filtered.sort((a, b) => (a['service_name'] ?? '')
-                  .toString()
-                  .compareTo((b['service_name'] ?? '').toString()));
+              filtered.sort(
+                (a, b) => (a['service_name'] ?? '').toString().compareTo(
+                      (b['service_name'] ?? '').toString(),
+                    ),
+              );
             } else if (_sortBy == 'Rating') {
               filtered.sort(
-                  (a, b) => (b['rating'] ?? 0).compareTo((a['rating'] ?? 0)));
+                (a, b) => (b['rating'] ?? 0).compareTo((a['rating'] ?? 0)),
+              );
             }
 
             // Render appropriate content in the services grid area
-            Widget servicesContent;
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              servicesContent = ShimmerEffect(
-                child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 12.0,
-                    mainAxisSpacing: 12.0,
-                    mainAxisExtent: 155,
-                    childAspectRatio: 0.8,
-                  ),
-                  itemCount: 6,
-                  itemBuilder: (_, __) {
-                    return const SkeletonPlaceholder(
-                        width: 90, height: 140, borderRadius: 16);
-                  },
-                ),
-              );
-            } else if (snapshot.hasError) {
-              servicesContent = SizedBox(
-                height: 150,
-                child: Center(child: Text('Error: ${snapshot.error}')),
-              );
-            } else if (filtered.isEmpty) {
-              servicesContent = const SizedBox(
-                height: 150,
-                child: Center(child: Text('No services found')),
-              );
-            } else {
-              servicesContent = GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 12.0,
-                  mainAxisSpacing: 12.0,
-                  mainAxisExtent: 155,
-                  childAspectRatio: 0.8,
-                ),
-                itemCount: filtered.length,
-                itemBuilder: (_, index) {
-                  return GestureDetector(
-                    onTap: () {
-                      final category = filtered[index]['category'];
-                      if (category == 'Exterior') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => ExteriorBookingpage(
-                                      category: filtered[index]['category'],
-                                      serviceName: filtered[index]
-                                          ['service_name'],
-                                      rating: _safeRating(
-                                          filtered[index]['rating']),
-                                      originalPrice: filtered[index]
-                                          ['original_price'],
-                                      discount: filtered[index]['discount'],
-                                      image: filtered[index]['image'],
-                                      discountPrice: filtered[index]['price'],
-                                      serviceType: filtered[index]
-                                          ['service_type'],
-                                    )));
-                      } else if (category == 'Interior') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => InteriorBookingPage(
-                                      category: filtered[index]['category'],
-                                      serviceName: filtered[index]
-                                          ['service_name'],
-                                      rating: _safeRating(
-                                          filtered[index]['rating']),
-                                      originalPrice: filtered[index]
-                                          ['original_price'],
-                                      discount: filtered[index]['discount'],
-                                      image: filtered[index]['image'],
-                                      discountPrice: filtered[index]['price'],
-                                      serviceType: filtered[index]
-                                          ['service_type'],
-                                    )));
-                      } else if (category == 'Vehicle') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => VehicleBookingPage(
-                                      category: filtered[index]['category'],
-                                      serviceName: filtered[index]
-                                          ['service_name'],
-                                      rating: _safeRating(
-                                          filtered[index]['rating']),
-                                      originalPrice: filtered[index]
-                                          ['original_price'],
-                                      discount: filtered[index]['discount'],
-                                      image: filtered[index]['image'],
-                                      discountPrice: filtered[index]['price'],
-                                      serviceType: filtered[index]
-                                          ['service_type'],
-                                    )));
-                      } else if (category == 'Pet') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => PetCleaning(
-                                      category: filtered[index]['category'],
-                                      serviceName: filtered[index]
-                                          ['service_name'],
-                                      rating: _safeRating(
-                                          filtered[index]['rating']),
-                                      originalPrice: filtered[index]
-                                          ['original_price'],
-                                      discount: filtered[index]['discount'],
-                                      image: filtered[index]['image'],
-                                      discountPrice: filtered[index]['price'],
-                                      serviceType: filtered[index]
-                                          ['service_type'],
-                                    )));
-                      } else if (category == 'Home') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => HomeBookingPage(
-                                      category: filtered[index]['category'],
-                                      serviceName: filtered[index]
-                                          ['service_name'],
-                                      rating: _safeRating(
-                                          filtered[index]['rating']),
-                                      originalPrice: filtered[index]
-                                          ['original_price'],
-                                      discount: filtered[index]['discount'],
-                                      image: filtered[index]['image'],
-                                      discountPrice: filtered[index]['price'],
-                                      serviceType: filtered[index]
-                                          ['service_type'],
-                                    )));
-                      } else {
-                        // Fallback booking page for any other dynamic/emergency category
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => ExteriorBookingpage(
-                                      category: filtered[index]['category'],
-                                      serviceName: filtered[index]
-                                          ['service_name'],
-                                      rating: _safeRating(
-                                          filtered[index]['rating']),
-                                      originalPrice: filtered[index]
-                                          ['original_price'],
-                                      discount: filtered[index]['discount'],
-                                      image: filtered[index]['image'],
-                                      discountPrice: filtered[index]['price'],
-                                      serviceType: filtered[index]
-                                          ['service_type'],
-                                    )));
-                      }
-                    },
-                    child: ServiceCard(
-                      image: filtered[index]['image'] ?? '',
-                      rating: (filtered[index]['rating'] ?? 0).toDouble(),
-                      title: (filtered[index]['service_name'] ?? '')
-                          .toString()
-                          .toUpperCase(),
-                    ),
-                  );
-                },
-              );
-            }
 
             return SingleChildScrollView(
               controller: _homeScrollController,
@@ -474,7 +313,8 @@ class HomepageState extends State<Homepage> {
                                 if (bannerSnap.connectionState ==
                                     ConnectionState.waiting) {
                                   return const CarouselSkeleton(
-                                      key: ValueKey('carousel_loading'));
+                                    key: ValueKey('carousel_loading'),
+                                  );
                                 }
 
                                 final bannerDocs = bannerSnap.data?.docs ?? [];
@@ -518,8 +358,9 @@ class HomepageState extends State<Homepage> {
                                   final priorityA = dataA['priority'] ?? 0;
                                   final priorityB = dataB['priority'] ?? 0;
                                   if (priorityA != priorityB) {
-                                    return (priorityB as num)
-                                        .compareTo(priorityA as num);
+                                    return (priorityB as num).compareTo(
+                                      priorityA as num,
+                                    );
                                   }
 
                                   final aTime =
@@ -534,12 +375,7 @@ class HomepageState extends State<Homepage> {
 
                                 // Fallback: no banners from admin → show placeholder
                                 final bannerItems = filteredDocs.isEmpty
-                                    ? [
-                                        buildPromoCard(
-                                          imageUrl: '',
-                                          title: '',
-                                        )
-                                      ]
+                                    ? [buildPromoCard(imageUrl: '', title: '')]
                                     : filteredDocs.map((doc) {
                                         final data =
                                             doc.data() as Map<String, dynamic>;
@@ -556,15 +392,19 @@ class HomepageState extends State<Homepage> {
                                             if (action == 'Open URL' &&
                                                 value.toString().isNotEmpty) {
                                               final uri = Uri.tryParse(
-                                                  value.toString());
+                                                value.toString(),
+                                              );
                                               if (uri != null) {
                                                 try {
-                                                  await launchUrl(uri,
-                                                      mode: LaunchMode
-                                                          .externalApplication);
+                                                  await launchUrl(
+                                                    uri,
+                                                    mode: LaunchMode
+                                                        .externalApplication,
+                                                  );
                                                 } catch (e) {
                                                   debugPrint(
-                                                      'Error launching URL: $e');
+                                                    'Error launching URL: $e',
+                                                  );
                                                 }
                                               }
                                             }
@@ -600,28 +440,37 @@ class HomepageState extends State<Homepage> {
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
-                                            children: List.generate(bannerCount,
-                                                (index) {
-                                              return AnimatedContainer(
-                                                duration: const Duration(
-                                                    milliseconds: 250),
-                                                width: localActiveIndex == index
-                                                    ? 15
-                                                    : 6,
-                                                height: 6,
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 3),
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(3),
-                                                  color: localActiveIndex ==
-                                                          index
-                                                      ? const Color(0xFFFFB800)
-                                                      : Colors.grey[300],
-                                                ),
-                                              );
-                                            }),
+                                            children: List.generate(
+                                              bannerCount,
+                                              (index) {
+                                                return AnimatedContainer(
+                                                  duration: const Duration(
+                                                    milliseconds: 250,
+                                                  ),
+                                                  width:
+                                                      localActiveIndex == index
+                                                          ? 15
+                                                          : 6,
+                                                  height: 6,
+                                                  margin: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 3,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      3,
+                                                    ),
+                                                    color: localActiveIndex ==
+                                                            index
+                                                        ? const Color(
+                                                            0xFFFFB800,
+                                                          )
+                                                        : Colors.grey[300],
+                                                  ),
+                                                );
+                                              },
+                                            ),
                                           ),
                                         ],
                                       );
@@ -653,14 +502,17 @@ class HomepageState extends State<Homepage> {
                                         TrustSectionSkeleton(),
                                       ],
                                     )
-                                  : buildForYouDashboard(filtered,
-                                      key: const ValueKey('loaded_dashboard')),
+                                  : buildForYouDashboard(
+                                      filtered,
+                                      key: const ValueKey('loaded_dashboard'),
+                                    ),
                             )
                           else if (selectedCategory == "Workers" &&
                               _searchController.text.isEmpty)
                             Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
                               child: snapshot.connectionState ==
                                       ConnectionState.waiting
                                   ? const ServiceCardListSkeleton()
@@ -676,12 +528,7 @@ class HomepageState extends State<Homepage> {
                               _searchController.text.isEmpty)
                             buildOnlineShopsTab()
                           else
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              child: servicesContent,
-                            ),
-                          const SizedBox(height: 130), // bottom bar spacing
+                            const SizedBox(height: 130), // bottom bar spacing
                         ],
                       ),
                       Container(
@@ -705,24 +552,28 @@ class HomepageState extends State<Homepage> {
                                   duration: const Duration(milliseconds: 300),
                                   child: username == null
                                       ? const HeaderSkeleton(
-                                          key: ValueKey('header_loading'))
+                                          key: ValueKey('header_loading'),
+                                        )
                                       : Padding(
                                           key: const ValueKey('header_loaded'),
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 20),
+                                            horizontal: 20,
+                                          ),
                                           child: Row(
                                             children: [
                                               Container(
                                                 decoration: BoxDecoration(
                                                   shape: BoxShape.circle,
                                                   border: Border.all(
-                                                      color: Colors.white,
-                                                      width: 1.5),
+                                                    color: Colors.white,
+                                                    width: 1.5,
+                                                  ),
                                                 ),
                                                 child: CircleAvatar(
                                                   radius: 20,
                                                   backgroundColor: const Color(
-                                                      0xFFFFB800), // Gold accent
+                                                    0xFFFFB800,
+                                                  ), // Gold accent
                                                   child: Text(
                                                     username != null &&
                                                             username!.isNotEmpty
@@ -768,13 +619,15 @@ class HomepageState extends State<Homepage> {
                                                             MainAxisSize.min,
                                                         children: [
                                                           const Icon(
-                                                              Icons
-                                                                  .location_on_outlined,
-                                                              color: Colors
-                                                                  .white70,
-                                                              size: 12),
+                                                            Icons
+                                                                .location_on_outlined,
+                                                            color:
+                                                                Colors.white70,
+                                                            size: 12,
+                                                          ),
                                                           const SizedBox(
-                                                              width: 4),
+                                                            width: 4,
+                                                          ),
                                                           Flexible(
                                                             child: Text(
                                                               loc,
@@ -793,13 +646,15 @@ class HomepageState extends State<Homepage> {
                                                             ),
                                                           ),
                                                           const SizedBox(
-                                                              width: 2),
+                                                            width: 2,
+                                                          ),
                                                           const Icon(
-                                                              Icons
-                                                                  .keyboard_arrow_down,
-                                                              color: Colors
-                                                                  .white70,
-                                                              size: 12),
+                                                            Icons
+                                                                .keyboard_arrow_down,
+                                                            color:
+                                                                Colors.white70,
+                                                            size: 12,
+                                                          ),
                                                         ],
                                                       );
                                                     }),
@@ -812,11 +667,11 @@ class HomepageState extends State<Homepage> {
                                                   int unreadCount = 0;
                                                   if (snapshot.hasData) {
                                                     final lastRead = Hive.box(
-                                                            'saved_routes_box')
-                                                        .get(
-                                                            'last_notification_read_time',
-                                                            defaultValue:
-                                                                0) as int;
+                                                      'saved_routes_box',
+                                                    ).get(
+                                                      'last_notification_read_time',
+                                                      defaultValue: 0,
+                                                    ) as int;
                                                     for (var doc in snapshot
                                                         .data!.docs) {
                                                       final data = doc.data()
@@ -840,22 +695,28 @@ class HomepageState extends State<Homepage> {
                                                     children: [
                                                       IconButton(
                                                         icon: const Icon(
-                                                            Icons
-                                                                .notifications_none_outlined,
-                                                            color:
-                                                                Colors.white),
+                                                          Icons
+                                                              .notifications_none_outlined,
+                                                          color: Colors.white,
+                                                        ),
                                                         onPressed: () {
-                                                          Hive.box('saved_routes_box').put(
-                                                              'last_notification_read_time',
-                                                              DateTime.now()
-                                                                  .millisecondsSinceEpoch);
+                                                          Hive.box(
+                                                            'saved_routes_box',
+                                                          ).put(
+                                                            'last_notification_read_time',
+                                                            DateTime.now()
+                                                                .millisecondsSinceEpoch,
+                                                          );
                                                           setState(
-                                                              () {}); // to instantly clear the badge before stream re-emits
+                                                            () {},
+                                                          ); // to instantly clear the badge before stream re-emits
                                                           Navigator.push(
-                                                              context,
-                                                              MaterialPageRoute(
-                                                                  builder: (_) =>
-                                                                      const NotificationsPage()));
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (_) =>
+                                                                  const NotificationsPage(),
+                                                            ),
+                                                          );
                                                         },
                                                       ),
                                                       if (unreadCount > 0)
@@ -865,7 +726,9 @@ class HomepageState extends State<Homepage> {
                                                           child: Container(
                                                             padding:
                                                                 const EdgeInsets
-                                                                    .all(4),
+                                                                    .all(
+                                                              4,
+                                                            ),
                                                             decoration:
                                                                 const BoxDecoration(
                                                               color: Colors.red,
@@ -901,8 +764,10 @@ class HomepageState extends State<Homepage> {
                                                 },
                                               ),
                                               IconButton(
-                                                icon: const Icon(Icons.menu,
-                                                    color: Colors.white),
+                                                icon: const Icon(
+                                                  Icons.menu,
+                                                  color: Colors.white,
+                                                ),
                                                 onPressed: () {},
                                               ),
                                             ],
@@ -913,8 +778,9 @@ class HomepageState extends State<Homepage> {
                               const SizedBox(height: 12),
                               // Search field with integrated filter and mic buttons inside
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: Colors.white,
@@ -932,15 +798,18 @@ class HomepageState extends State<Homepage> {
                                     onChanged: (value) =>
                                         setState(() => searchQuery = value),
                                     onFieldSubmitted: (value) {
-                                      RecommendationController.to
-                                          .trackSearch(value, 'Other');
+                                      RecommendationController.to.trackSearch(
+                                        value,
+                                        'Other',
+                                      );
                                     },
                                     decoration: InputDecoration(
                                       hintText:
                                           "Search for workers, services...",
                                       hintStyle: const TextStyle(
-                                          color: Color(0xFF94A3B8),
-                                          fontSize: 13),
+                                        color: Color(0xFF94A3B8),
+                                        fontSize: 13,
+                                      ),
                                       prefixIcon: Padding(
                                         padding: const EdgeInsets.all(12.0),
                                         child: Image.asset(
@@ -966,8 +835,10 @@ class HomepageState extends State<Homepage> {
                                                   const RoundedRectangleBorder(
                                                 borderRadius:
                                                     BorderRadius.vertical(
-                                                        top: Radius.circular(
-                                                            20)),
+                                                  top: Radius.circular(
+                                                    20,
+                                                  ),
+                                                ),
                                               ),
                                               builder: (context) =>
                                                   buildFilterSheet(),
@@ -980,8 +851,9 @@ class HomepageState extends State<Homepage> {
                                           ),
                                           const SizedBox(width: 8),
                                           const Padding(
-                                            padding:
-                                                EdgeInsets.only(right: 14.0),
+                                            padding: EdgeInsets.only(
+                                              right: 14.0,
+                                            ),
                                             child: Icon(
                                               Icons.mic_none_outlined,
                                               color: Color(0xFF64748B),
@@ -993,7 +865,8 @@ class HomepageState extends State<Homepage> {
                                       border: InputBorder.none,
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                              vertical: 14),
+                                        vertical: 14,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1006,10 +879,12 @@ class HomepageState extends State<Homepage> {
                                   child: snapshot.connectionState ==
                                           ConnectionState.waiting
                                       ? const CategoryRowSkeleton(
-                                          key: ValueKey('category_loading'))
+                                          key: ValueKey('category_loading'),
+                                        )
                                       : ScrollableHorizontalButtons(
-                                          key:
-                                              const ValueKey('category_loaded'),
+                                          key: const ValueKey(
+                                            'category_loaded',
+                                          ),
                                           categories: currentCategoryList,
                                           selectedIndex: selectedCategoryIndex,
                                           onSelected: (index) {
@@ -1021,8 +896,8 @@ class HomepageState extends State<Homepage> {
                                                 currentCategoryList.length) {
                                               RecommendationController.to
                                                   .trackCategoryClick(
-                                                      currentCategoryList[
-                                                          index]);
+                                                currentCategoryList[index],
+                                              );
                                             }
                                           },
                                           isDark: true,
@@ -1057,9 +932,7 @@ class HomepageState extends State<Homepage> {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Stack(
@@ -1088,10 +961,7 @@ class HomepageState extends State<Homepage> {
                   ),
                 )
               else
-                Image.asset(
-                  'assets/image/add_image.png',
-                  fit: BoxFit.cover,
-                ),
+                Image.asset('assets/image/add_image.png', fit: BoxFit.cover),
               // ── Gradient overlay ──
               // Positioned.fill(
               //   child: Container(
@@ -1148,8 +1018,10 @@ class HomepageState extends State<Homepage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Filter Services',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Filter Services',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1180,10 +1052,7 @@ class HomepageState extends State<Homepage> {
               DropdownButton<String>(
                 value: _sortBy,
                 items: ['None', 'A-Z', 'Rating'].map((e) {
-                  return DropdownMenuItem<String>(
-                    value: e,
-                    child: Text(e),
-                  );
+                  return DropdownMenuItem<String>(value: e, child: Text(e));
                 }).toList(),
                 onChanged: (value) {
                   if (value != null) {
@@ -1224,16 +1093,22 @@ class HomepageState extends State<Homepage> {
       // Helper widget for horizontal expert services carousel
       Widget buildExpertServicesCarousel(List<dynamic> rawServices) {
         final expertServices = rawServices.where((doc) {
-          final category = (doc['category'] ?? '').toString();
-          return category == 'Exterior';
+          final category = (doc['category'] ?? '').toString().toLowerCase();
+          return category == 'exterior' ||
+              category == 'plumber' ||
+              category == 'electrician' ||
+              category == 'carpenter' ||
+              category == 'painter';
         }).toList();
 
         if (expertServices.isEmpty) return const SizedBox.shrink();
 
         // Sort by rating to show the highest rated ones first
-        expertServices.sort((a, b) => (b['rating'] ?? 0.0)
-            .toDouble()
-            .compareTo((a['rating'] ?? 0.0).toDouble()));
+        expertServices.sort(
+          (a, b) => (b['rating'] ?? 0.0).toDouble().compareTo(
+                (a['rating'] ?? 0.0).toDouble(),
+              ),
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1270,6 +1145,13 @@ class HomepageState extends State<Homepage> {
                       setState(() {
                         selectedCategoryIndex = 1; // Switch to Workers tab
                       });
+                      if (_homeScrollController.hasClients) {
+                        _homeScrollController.animateTo(
+                          0,
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeInOut,
+                        );
+                      }
                     },
                     child: const Padding(
                       padding: EdgeInsets.only(top: 4),
@@ -1295,42 +1177,50 @@ class HomepageState extends State<Homepage> {
                 itemCount: expertServices.length,
                 itemBuilder: (context, index) {
                   final service = expertServices[index];
-                  final name = service['service_name'] ?? '';
-                  final category = service['category'] ?? '';
-                  final rating = (service['rating'] ?? 0.0).toDouble();
-                  final price = service['price'] ?? 0;
-                  final image = service['image'] ?? '';
+                  final data = service.data() as Map<String, dynamic>? ?? {};
+                  final name = data['service_name'] ?? '';
+                  final category = data['category'] ?? '';
+                  final rating = (data['rating'] ?? 0.0).toDouble();
+                  final price = data['price'] ?? 0;
+                  final image = data['image'] ?? '';
 
                   return GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => WorkerDetailsPage(
+                          builder: (context) => ServiceDetailsPage(
                             category: category,
                             serviceName: name,
                             rating: rating,
-                            originalPrice: service['original_price'] ?? 0,
-                            discount: service['discount'] ?? 0,
+                            originalPrice: data['original_price'] ?? 0,
+                            discount: data['discount'] ?? 0,
                             image: image,
                             discountPrice: price,
-                            serviceType: service['service_type'],
+                            serviceType: data['service_type'],
                             businessLat:
-                                (service['businessLat'] as num?)?.toDouble(),
+                                (data['businessLat'] as num?)?.toDouble(),
                             businessLng:
-                                (service['businessLng'] as num?)?.toDouble(),
-                            businessAddress:
-                                service['businessAddress'] as String?,
-                            businessMapsUrl:
-                                service['businessMapsUrl'] as String?,
+                                (data['businessLng'] as num?)?.toDouble(),
+                            businessAddress: data['businessAddress'] as String?,
+                            businessMapsUrl: data['businessMapsUrl'] as String?,
+                            serviceId: service.id,
+                            providerId: data['providerId']?.toString() ?? data['uid']?.toString() ?? 'Unknown',
+                            providerName: data['providerName']?.toString() ?? data['workerName']?.toString() ?? 'Unknown',
+                            providerPhone: data['providerPhone']?.toString() ?? data['phone']?.toString() ?? '',
+                            serviceDescription: data['description']?.toString() ?? data['about']?.toString() ?? '',
+                            estimatedDuration: data['duration']?.toString() ?? '1 hr',
                           ),
                         ),
                       );
                     },
                     child: Container(
                       width: 140,
-                      margin:
-                          const EdgeInsets.only(right: 14, bottom: 6, top: 4),
+                      margin: const EdgeInsets.only(
+                        right: 14,
+                        bottom: 6,
+                        top: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
@@ -1350,7 +1240,8 @@ class HomepageState extends State<Homepage> {
                             children: [
                               ClipRRect(
                                 borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(20)),
+                                  top: Radius.circular(20),
+                                ),
                                 child: image.startsWith('http')
                                     ? Image.network(
                                         image,
@@ -1362,11 +1253,14 @@ class HomepageState extends State<Homepage> {
                                                 Container(
                                           height: 95,
                                           width: double.infinity,
-                                          color: const Color(0xFFF1F5F9),
+                                          color: const Color(
+                                            0xFFF1F5F9,
+                                          ),
                                           child: const Icon(
-                                              Icons.image_outlined,
-                                              size: 24,
-                                              color: Colors.grey),
+                                            Icons.image_outlined,
+                                            size: 24,
+                                            color: Colors.grey,
+                                          ),
                                         ),
                                       )
                                     : Image.asset(
@@ -1379,11 +1273,14 @@ class HomepageState extends State<Homepage> {
                                                 Container(
                                           height: 95,
                                           width: double.infinity,
-                                          color: const Color(0xFFF1F5F9),
+                                          color: const Color(
+                                            0xFFF1F5F9,
+                                          ),
                                           child: const Icon(
-                                              Icons.image_outlined,
-                                              size: 24,
-                                              color: Colors.grey),
+                                            Icons.image_outlined,
+                                            size: 24,
+                                            color: Colors.grey,
+                                          ),
                                         ),
                                       ),
                               ),
@@ -1392,7 +1289,9 @@ class HomepageState extends State<Homepage> {
                                 right: 8,
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFFFB800),
                                     borderRadius: BorderRadius.circular(20),
@@ -1400,8 +1299,11 @@ class HomepageState extends State<Homepage> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.star,
-                                          size: 11, color: Color(0xFF0F2E5A)),
+                                      const Icon(
+                                        Icons.star,
+                                        size: 11,
+                                        color: Color(0xFF0F2E5A),
+                                      ),
                                       const SizedBox(width: 2.5),
                                       Text(
                                         rating.toString(),
@@ -1419,7 +1321,9 @@ class HomepageState extends State<Homepage> {
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -1471,362 +1375,39 @@ class HomepageState extends State<Homepage> {
       }
 
       // Reusable widget for horizontal product carousels
-      Widget buildHorizontalCarousel(
-          String title, List<ProductModel> products) {
-        if (products.isEmpty) return const SizedBox.shrink();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F2E5A),
-                    ),
-                  ),
-                  const Text(
-                    "View All",
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F2E5A),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 185,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  final product = products[index];
-                  return GestureDetector(
-                    onTap: () {
-                      // Track view
-                      recController.trackProductView(product.productId);
-                      // Open appropriate page based on category
-                      final category = product.category;
-                      if (category == 'Exterior' || category == 'Workers') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => ExteriorBookingpage(
-                                      category: product.category,
-                                      serviceName: product.title,
-                                      rating: product.rating.toInt(),
-                                      originalPrice: (product.price * 1.5)
-                                          .toStringAsFixed(0),
-                                      discount: "33% OFF",
-                                      image: product.image,
-                                      discountPrice:
-                                          product.price.toStringAsFixed(0),
-                                      serviceType: product.subCategory,
-                                    )));
-                      } else if (category == 'Interior' || category == 'Bus') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => InteriorBookingPage(
-                                      category: product.category,
-                                      serviceName: product.title,
-                                      rating: product.rating.toInt(),
-                                      originalPrice: (product.price * 1.5)
-                                          .toStringAsFixed(0),
-                                      discount: "33% OFF",
-                                      image: product.image,
-                                      discountPrice:
-                                          product.price.toStringAsFixed(0),
-                                      serviceType: product.subCategory,
-                                    )));
-                      } else if (category == 'Vehicle' ||
-                          category == 'Local Ads') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => VehicleBookingPage(
-                                      category: product.category,
-                                      serviceName: product.title,
-                                      rating: product.rating.toInt(),
-                                      originalPrice: (product.price * 1.5)
-                                          .toStringAsFixed(0),
-                                      discount: "33% OFF",
-                                      image: product.image,
-                                      discountPrice:
-                                          product.price.toStringAsFixed(0),
-                                      serviceType: product.subCategory,
-                                    )));
-                      } else if (category == 'Pet') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => PetCleaning(
-                                      category: product.category,
-                                      serviceName: product.title,
-                                      rating: product.rating.toInt(),
-                                      originalPrice: (product.price * 1.5)
-                                          .toStringAsFixed(0),
-                                      discount: "33% OFF",
-                                      image: product.image,
-                                      discountPrice:
-                                          product.price.toStringAsFixed(0),
-                                      serviceType: product.subCategory,
-                                    )));
-                      } else if (category == 'Home') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => HomeBookingPage(
-                                      category: product.category,
-                                      serviceName: product.title,
-                                      rating: product.rating.toInt(),
-                                      originalPrice: (product.price * 1.5)
-                                          .toStringAsFixed(0),
-                                      discount: "33% OFF",
-                                      image: product.image,
-                                      discountPrice:
-                                          product.price.toStringAsFixed(0),
-                                      serviceType: product.subCategory,
-                                    )));
-                      }
-                    },
-                    child: Container(
-                      width: 140,
-                      margin:
-                          const EdgeInsets.only(right: 14, bottom: 6, top: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(20)),
-                                child: product.image.startsWith('http')
-                                    ? Image.network(
-                                        product.image,
-                                        height: 95,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                Container(
-                                          height: 95,
-                                          width: double.infinity,
-                                          color: const Color(0xFFF1F5F9),
-                                          child: const Icon(
-                                              Icons.image_outlined,
-                                              size: 24,
-                                              color: Colors.grey),
-                                        ),
-                                      )
-                                    : Image.asset(
-                                        product.image,
-                                        height: 95,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                Container(
-                                          height: 95,
-                                          width: double.infinity,
-                                          color: const Color(0xFFF1F5F9),
-                                          child: const Icon(
-                                              Icons.image_outlined,
-                                              size: 24,
-                                              color: Colors.grey),
-                                        ),
-                                      ),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFB800),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.star,
-                                          size: 11, color: Color(0xFF0F2E5A)),
-                                      const SizedBox(width: 2.5),
-                                      Text(
-                                        product.rating.toString(),
-                                        style: const TextStyle(
-                                          color: Color(0xFF0F2E5A),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0F2E5A),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text:
-                                            "₹${product.price.toStringAsFixed(0)} ",
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF0F2E5A),
-                                        ),
-                                      ),
-                                      const TextSpan(
-                                        text: "onwards",
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Color(0xFF64748B),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        );
-      }
 
       return RefreshIndicator(
         onRefresh: () => recController.fetchRecommendations(),
         child: ListView(
           shrinkWrap: true,
-          physics: const ClampingScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           children: [
-            // Expert Services (matching ExpertServicesSkeleton)
             buildExpertServicesCarousel(services),
 
-            // 1. Recently Viewed
-            buildHorizontalCarousel(
-                "Recently Viewed", recController.recentlyViewed),
-
-            // 2. Based on Your Searches
-            buildHorizontalCarousel(
-                "Based on Your Searches", recController.basedOnSearches),
-
-            // 3. Continue Shopping
-            buildHorizontalCarousel(
-                "Continue Shopping", recController.continueShopping),
-
-            // 4. Recommended for You
-            buildHorizontalCarousel(
-                "Recommended for You", recController.recommendedForYou),
-
-            // 5. Trending Near You
-            buildHorizontalCarousel(
-                "Trending Near You", recController.trendingNearYou),
-
-            // 6. Homemade Cakes
-            buildHorizontalCarousel(
-                "Homemade Cakes", recController.homemadeCakes),
-
-            // 7. Fashion Picks
-            buildHorizontalCarousel(
-                "Fashion Picks", recController.fashionPicks),
-
-            // 8. Watches
-            buildHorizontalCarousel("Watches", recController.watches),
-
-            // 9. Electronics
-            buildHorizontalCarousel("Electronics", recController.electronics),
-
-            // 10. Cars & Bikes
-            buildHorizontalCarousel("Cars & Bikes", recController.carsAndBikes),
-
-            // 11. Local Businesses
-            buildHorizontalCarousel(
-                "Local Businesses", recController.localBusinesses),
-
-            // 12. Best Sellers
-            buildHorizontalCarousel("Best Sellers", recController.bestSellers),
-
-            // 13. Flash Sale
-            buildHorizontalCarousel("Flash Sale", recController.flashSale),
-
-            // 14. New Arrivals
-            buildHorizontalCarousel("New Arrivals", recController.newArrivals),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: const Text(
-                "City Essentials",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F2E5A),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: const Color(0xFFF1F5F9)),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const Text(
+                      "City Essentials",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F2E5A),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -1839,7 +1420,8 @@ class HomepageState extends State<Homepage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const AutoTaxiPage()),
+                                builder: (_) => const AutoTaxiPage(),
+                              ),
                             );
                           },
                         ),
@@ -1849,13 +1431,12 @@ class HomepageState extends State<Homepage> {
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
-                            int emgIndex = categoryList.indexOf("Online Shops");
-                            if (emgIndex != -1) {
-                              setState(() {
-                                selectedCategoryIndex = emgIndex;
-                                _clearBusSearch();
-                              });
-                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ClinicsPage(),
+                              ),
+                            );
                           },
                         ),
                         buildEssentialItem(
@@ -1864,13 +1445,12 @@ class HomepageState extends State<Homepage> {
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
-                            int emgIndex = categoryList.indexOf("Online Shops");
-                            if (emgIndex != -1) {
-                              setState(() {
-                                selectedCategoryIndex = emgIndex;
-                                _clearBusSearch();
-                              });
-                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HelplinePage(),
+                              ),
+                            );
                           },
                         ),
                       ],
@@ -1885,10 +1465,12 @@ class HomepageState extends State<Homepage> {
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
-                            setState(() {
-                              searchQuery = "Tuition";
-                              _searchController.text = "Tuition";
-                            });
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TuitionPage(),
+                              ),
+                            );
                           },
                         ),
                         buildEssentialItem(
@@ -1897,10 +1479,12 @@ class HomepageState extends State<Homepage> {
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
-                            setState(() {
-                              searchQuery = "Food";
-                              _searchController.text = "Food";
-                            });
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const FoodPage(),
+                              ),
+                            );
                           },
                         ),
                         buildEssentialItem(
@@ -1909,10 +1493,12 @@ class HomepageState extends State<Homepage> {
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
-                            setState(() {
-                              searchQuery = "Internet Cafe";
-                              _searchController.text = "Internet Cafe";
-                            });
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const InternetCafePage(),
+                              ),
+                            );
                           },
                         ),
                       ],
@@ -1927,26 +1513,31 @@ class HomepageState extends State<Homepage> {
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
-                            setState(() {
-                              searchQuery = "Pickup";
-                              _searchController.text = "Pickup";
-                            });
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PickupPage(),
+                              ),
+                            );
                           },
                         ),
                         buildEssentialItem(
-                          icon: Icons.engineering_outlined,
+                          imagePath: 'assets/icons/jcb.png',
                           label: "JCBs",
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
-                            setState(() {
-                              searchQuery = "JCB";
-                              _searchController.text = "JCB";
-                            });
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const JcbsPage(),
+                              ),
+                            );
                           },
                         ),
                         const Expanded(
-                            child: SizedBox()), // Placeholder for alignment
+                          child: SizedBox(),
+                        ), // Placeholder for alignment
                       ],
                     ),
                   ],
@@ -1970,8 +1561,10 @@ class HomepageState extends State<Homepage> {
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFB800),
                       borderRadius: BorderRadius.circular(20),
@@ -2092,7 +1685,8 @@ class HomepageState extends State<Homepage> {
   }
 
   Widget buildEssentialItem({
-    required IconData icon,
+    IconData? icon,
+    String? imagePath,
     required String label,
     required Color bgColor,
     required Color iconColor,
@@ -2106,11 +1700,17 @@ class HomepageState extends State<Homepage> {
             Container(
               height: 48,
               width: 48,
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: BoxShape.circle,
+              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+              child: Center(
+                child: imagePath != null
+                    ? Image.asset(
+                        imagePath,
+                        color: iconColor,
+                        width: 22,
+                        height: 22,
+                      )
+                    : Icon(icon, color: iconColor, size: 22),
               ),
-              child: Icon(icon, color: iconColor, size: 22),
             ),
             const SizedBox(height: 8),
             Text(
@@ -2159,8 +1759,9 @@ class HomepageState extends State<Homepage> {
           Stack(
             children: [
               ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
                 child: image.startsWith('http')
                     ? Image.network(
                         image,
@@ -2171,8 +1772,11 @@ class HomepageState extends State<Homepage> {
                           height: 115,
                           width: double.infinity,
                           color: const Color(0xFFF1F5F9),
-                          child: const Icon(Icons.image_outlined,
-                              size: 28, color: Colors.grey),
+                          child: const Icon(
+                            Icons.image_outlined,
+                            size: 28,
+                            color: Colors.grey,
+                          ),
                         ),
                       )
                     : Image.asset(
@@ -2184,8 +1788,11 @@ class HomepageState extends State<Homepage> {
                           height: 115,
                           width: double.infinity,
                           color: const Color(0xFFF1F5F9),
-                          child: const Icon(Icons.image_outlined,
-                              size: 28, color: Colors.grey),
+                          child: const Icon(
+                            Icons.image_outlined,
+                            size: 28,
+                            color: Colors.grey,
+                          ),
                         ),
                       ),
               ),
@@ -2193,8 +1800,10 @@ class HomepageState extends State<Homepage> {
                 top: 8,
                 left: 8,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: discountColor,
                     borderRadius: BorderRadius.circular(6),
@@ -2301,18 +1910,17 @@ class HomepageState extends State<Homepage> {
             const SizedBox(height: 2),
             Text(
               location,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 10,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 10),
             ),
             const Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -2327,8 +1935,10 @@ class HomepageState extends State<Homepage> {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFB800),
                     borderRadius: BorderRadius.circular(12),
@@ -2370,8 +1980,11 @@ class HomepageState extends State<Homepage> {
                     width: 50,
                     height: 50,
                     color: Colors.black12,
-                    child: const Icon(Icons.image_outlined,
-                        size: 20, color: Colors.grey),
+                    child: const Icon(
+                      Icons.image_outlined,
+                      size: 20,
+                      color: Colors.grey,
+                    ),
                   ),
                 )
               : Image.asset(
@@ -2383,8 +1996,11 @@ class HomepageState extends State<Homepage> {
                     width: 50,
                     height: 50,
                     color: Colors.black12,
-                    child: const Icon(Icons.image_outlined,
-                        size: 20, color: Colors.grey),
+                    child: const Icon(
+                      Icons.image_outlined,
+                      size: 20,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
         ),
@@ -2407,10 +2023,7 @@ class HomepageState extends State<Homepage> {
               const SizedBox(height: 4),
               Text(
                 timeAndSource,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Color(0xFF64748B),
-                ),
+                style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
               ),
             ],
           ),
@@ -2439,10 +2052,7 @@ class HomepageState extends State<Homepage> {
         const SizedBox(height: 2),
         Text(
           subtitle,
-          style: const TextStyle(
-            fontSize: 9,
-            color: Color(0xFF64748B),
-          ),
+          style: const TextStyle(fontSize: 9, color: Color(0xFF64748B)),
         ),
       ],
     );
@@ -2463,10 +2073,7 @@ class HomepageState extends State<Homepage> {
         const SizedBox(height: 2),
         Text(
           "Find the right expert for your task",
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
         GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
@@ -2475,7 +2082,7 @@ class HomepageState extends State<Homepage> {
             crossAxisCount: 2,
             crossAxisSpacing: 14.0,
             mainAxisSpacing: 14.0,
-            mainAxisExtent: 245,
+            mainAxisExtent: 260,
           ),
           itemCount: filtered.length,
           itemBuilder: (context, index) {
@@ -2491,7 +2098,7 @@ class HomepageState extends State<Homepage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => WorkerDetailsPage(
+                    builder: (context) => ServiceDetailsPage(
                       category: category,
                       serviceName: name,
                       rating: rating,
@@ -2504,6 +2111,12 @@ class HomepageState extends State<Homepage> {
                       businessLng: (service['businessLng'] as num?)?.toDouble(),
                       businessAddress: service['businessAddress'] as String?,
                       businessMapsUrl: service['businessMapsUrl'] as String?,
+                      serviceId: service['id']?.toString() ?? service['serviceId']?.toString() ?? 'Unknown',
+                      providerId: service['providerId']?.toString() ?? service['uid']?.toString() ?? 'Unknown',
+                      providerName: service['providerName']?.toString() ?? service['workerName']?.toString() ?? 'Unknown',
+                      providerPhone: service['providerPhone']?.toString() ?? service['phone']?.toString() ?? '',
+                      serviceDescription: service['description']?.toString() ?? service['about']?.toString() ?? '',
+                      estimatedDuration: service['duration']?.toString() ?? '1 hr',
                     ),
                   ),
                 );
@@ -2529,7 +2142,7 @@ class HomepageState extends State<Homepage> {
                         topLeft: Radius.circular(20),
                         topRight: Radius.circular(20),
                       ),
-                      child: image.isNotEmpty
+                      child: image.startsWith('http')
                           ? Image.network(
                               image,
                               height: 110,
@@ -2541,183 +2154,102 @@ class HomepageState extends State<Homepage> {
                                 width: double.infinity,
                                 color: Colors.grey[200],
                                 alignment: Alignment.center,
-                                child: const Icon(Icons.image_not_supported,
-                                    color: Colors.grey),
+                                child: const Icon(
+                                  Icons.image_not_supported,
+                                  color: Colors.grey,
+                                ),
                               ),
                             )
-                          : Container(
-                              height: 110,
-                              width: double.infinity,
-                              color: Colors.grey[200],
-                              alignment: Alignment.center,
-                              child:
-                                  const Icon(Icons.image, color: Colors.grey),
-                            ),
+                          : image.isNotEmpty
+                              ? Image.asset(
+                                  image,
+                                  height: 110,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                    height: 110,
+                                    width: double.infinity,
+                                    color: Colors.grey[200],
+                                    alignment: Alignment.center,
+                                    child: const Icon(
+                                      Icons.image,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                )
+                              : Container(
+                                  height: 110,
+                                  width: double.infinity,
+                                  color: Colors.grey[200],
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.image,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                     ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
+                    Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F2E5A),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                size: 12,
+                                color: Color(0xFFFFB800),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                rating.toString(),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F2E5A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Starts from ₹$price",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFB800),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              "Book Now",
+                              style: TextStyle(
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF0F2E5A),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.star,
-                                    color: Color(0xFFFFB800), size: 14),
-                                const SizedBox(width: 4),
-                                Text(
-                                  rating.toStringAsFixed(1),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Starts from ₹$price",
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[800],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: () {
-                                if (category == 'Interior') {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => InteriorBookingPage(
-                                                category: category,
-                                                serviceName: name,
-                                                rating: rating.toInt(),
-                                                originalPrice:
-                                                    service['original_price'],
-                                                discount: service['discount'],
-                                                image: image,
-                                                discountPrice: price,
-                                                serviceType:
-                                                    service['service_type'],
-                                              )));
-                                } else if (category == 'Exterior') {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => ExteriorBookingpage(
-                                                category: category,
-                                                serviceName: name,
-                                                rating: rating.toInt(),
-                                                originalPrice:
-                                                    service['original_price'],
-                                                discount: service['discount'],
-                                                image: image,
-                                                discountPrice: price,
-                                                serviceType:
-                                                    service['service_type'],
-                                              )));
-                                } else if (category == 'Vehicle') {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => VehicleBookingPage(
-                                                category: category,
-                                                serviceName: name,
-                                                rating: rating.toInt(),
-                                                originalPrice:
-                                                    service['original_price'],
-                                                discount: service['discount'],
-                                                image: image,
-                                                discountPrice: price,
-                                                serviceType:
-                                                    service['service_type'],
-                                              )));
-                                } else if (category == 'Pet') {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => PetCleaning(
-                                                category: category,
-                                                serviceName: name,
-                                                rating: rating.toInt(),
-                                                originalPrice:
-                                                    service['original_price'],
-                                                discount: service['discount'],
-                                                image: image,
-                                                discountPrice: price,
-                                                serviceType:
-                                                    service['service_type'],
-                                              )));
-                                } else if (category == 'Home') {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => HomeBookingPage(
-                                                category: category,
-                                                serviceName: name,
-                                                rating: rating.toInt(),
-                                                originalPrice:
-                                                    service['original_price'],
-                                                discount: service['discount'],
-                                                image: image,
-                                                discountPrice: price,
-                                                serviceType:
-                                                    service['service_type'],
-                                              )));
-                                } else {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => ExteriorBookingpage(
-                                                category: category,
-                                                serviceName: name,
-                                                rating: rating.toInt(),
-                                                originalPrice:
-                                                    service['original_price'],
-                                                discount: service['discount'],
-                                                image: image,
-                                                discountPrice: price,
-                                                serviceType:
-                                                    service['service_type'],
-                                              )));
-                                }
-                              },
-                              child: Container(
-                                width: double.infinity,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFB800),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    "Book Now",
-                                    style: TextStyle(
-                                      color: Color(0xFF0F2E5A),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -2765,12 +2297,21 @@ class HomepageState extends State<Homepage> {
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     children: [
-                      _buildLookingForCard("Vehicle Body Cover",
-                          "assets/image/car_clean.png", "Shop Now"),
-                      _buildLookingForCard("All Purpose Cleaner",
-                          "assets/image/Complete_Detailing.png", "Shop Now"),
-                      _buildLookingForCard("Car Shampoo",
-                          "assets/image/Exterior_wash.png", "Shop Now"),
+                      _buildLookingForCard(
+                        "Vehicle Body Cover",
+                        "assets/image/car_clean.png",
+                        "Shop Now",
+                      ),
+                      _buildLookingForCard(
+                        "All Purpose Cleaner",
+                        "assets/image/Complete_Detailing.png",
+                        "Shop Now",
+                      ),
+                      _buildLookingForCard(
+                        "Car Shampoo",
+                        "assets/image/Exterior_wash.png",
+                        "Shop Now",
+                      ),
                     ],
                   ),
                 ),
@@ -2821,12 +2362,18 @@ class HomepageState extends State<Homepage> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 8),
+                            horizontal: 24,
+                            vertical: 8,
+                          ),
                           minimumSize: const Size(60, 32),
                         ),
-                        child: const Text("Buy",
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          "Buy",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -2856,8 +2403,11 @@ class HomepageState extends State<Homepage> {
                       color: Color(0xFFEA580C),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.flash_on,
-                        color: Colors.white, size: 14),
+                    child: const Icon(
+                      Icons.flash_on,
+                      color: Colors.white,
+                      size: 14,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   const Text(
@@ -2870,11 +2420,15 @@ class HomepageState extends State<Homepage> {
                   ),
                   const SizedBox(width: 12),
                   _buildTimerUnit("09"),
-                  const Text(" : ",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    " : ",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   _buildTimerUnit("59"),
-                  const Text(" : ",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    " : ",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   _buildTimerUnit("50"),
                   const Spacer(),
                   TextButton(
@@ -2896,12 +2450,27 @@ class HomepageState extends State<Homepage> {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    _buildFlashSaleCard("TRUFFLE CAKE", "₹499", "₹999",
-                        "50% OFF", "assets/image/add_image.png"),
-                    _buildFlashSaleCard("PREMIUM WATCH", "₹2,489", "₹5,000",
-                        "50% OFF", "assets/image/add_image.png"),
-                    _buildFlashSaleCard("OFFICE CHAIR", "₹4,999", "₹9,999",
-                        "50% OFF", "assets/image/add_image.png"),
+                    _buildFlashSaleCard(
+                      "TRUFFLE CAKE",
+                      "₹499",
+                      "₹999",
+                      "50% OFF",
+                      "assets/image/add_image.png",
+                    ),
+                    _buildFlashSaleCard(
+                      "PREMIUM WATCH",
+                      "₹2,489",
+                      "₹5,000",
+                      "50% OFF",
+                      "assets/image/add_image.png",
+                    ),
+                    _buildFlashSaleCard(
+                      "OFFICE CHAIR",
+                      "₹4,999",
+                      "₹9,999",
+                      "50% OFF",
+                      "assets/image/add_image.png",
+                    ),
                   ],
                 ),
               ),
@@ -2930,8 +2499,11 @@ class HomepageState extends State<Homepage> {
                       color: Colors.black,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.chevron_right,
-                        color: Colors.white, size: 16),
+                    child: const Icon(
+                      Icons.chevron_right,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
                 ],
               ),
@@ -2945,25 +2517,33 @@ class HomepageState extends State<Homepage> {
                 childAspectRatio: 0.82,
                 children: [
                   _buildSuggestedCard(
-                      "FOXCARE Windshield Wash...",
-                      "₹249",
-                      "₹499",
-                      "100+ ordered this week",
-                      "assets/image/add_image.png"),
-                  _buildSuggestedCard("Premium Car Cover", "₹1,499", "₹2,999",
-                      "2,300+ ordered this week", "assets/image/car_clean.png"),
+                    "FOXCARE Windshield Wash...",
+                    "₹249",
+                    "₹499",
+                    "100+ ordered this week",
+                    "assets/image/add_image.png",
+                  ),
                   _buildSuggestedCard(
-                      "SEVINCAR Multi-purpose...",
-                      "₹269",
-                      "₹499",
-                      "150+ ordered this week",
-                      "assets/image/deep_cleaning.png"),
+                    "Premium Car Cover",
+                    "₹1,499",
+                    "₹2,999",
+                    "2,300+ ordered this week",
+                    "assets/image/car_clean.png",
+                  ),
                   _buildSuggestedCard(
-                      "Pro Phone 13 Ultra",
-                      "₹54,999",
-                      "₹1,20,000",
-                      "10,000+ ordered this week",
-                      "assets/image/Complete_Detailing.png"),
+                    "SEVINCAR Multi-purpose...",
+                    "₹269",
+                    "₹499",
+                    "150+ ordered this week",
+                    "assets/image/deep_cleaning.png",
+                  ),
+                  _buildSuggestedCard(
+                    "Pro Phone 13 Ultra",
+                    "₹54,999",
+                    "₹1,20,000",
+                    "10,000+ ordered this week",
+                    "assets/image/Complete_Detailing.png",
+                  ),
                 ],
               ),
             ],
@@ -2986,12 +2566,22 @@ class HomepageState extends State<Homepage> {
               Row(
                 children: [
                   Expanded(
-                      child: _buildTrendingCard("SNEAKERS", "4.8", "₹4,199",
-                          "assets/image/add_image.png")),
+                    child: _buildTrendingCard(
+                      "SNEAKERS",
+                      "4.8",
+                      "₹4,199",
+                      "assets/image/add_image.png",
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
-                      child: _buildTrendingCard("GOLD RING", "4.9", "₹48,350",
-                          "assets/image/add_image.png")),
+                    child: _buildTrendingCard(
+                      "GOLD RING",
+                      "4.9",
+                      "₹48,350",
+                      "assets/image/add_image.png",
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -3020,10 +2610,7 @@ class HomepageState extends State<Homepage> {
                 const SizedBox(height: 6),
                 const Text(
                   "Enjoy extra 10% off on all collections using\n'OFF10' coupon code.",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 11),
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton(
@@ -3034,13 +2621,16 @@ class HomepageState extends State<Homepage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     minimumSize: const Size(60, 32),
                   ),
-                  child: const Text("Claim now",
-                      style:
-                          TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    "Claim now",
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
@@ -3051,7 +2641,10 @@ class HomepageState extends State<Homepage> {
   }
 
   Widget _buildLookingForCard(
-      String title, String imageAsset, String actionText) {
+    String title,
+    String imageAsset,
+    String actionText,
+  ) {
     return Container(
       width: 110,
       margin: const EdgeInsets.only(right: 12),
@@ -3077,9 +2670,10 @@ class HomepageState extends State<Homepage> {
                 imageAsset,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.shopping_bag_outlined,
-                    color: Colors.purple,
-                    size: 30),
+                  Icons.shopping_bag_outlined,
+                  color: Colors.purple,
+                  size: 30,
+                ),
               ),
             ),
           ),
@@ -3127,8 +2721,13 @@ class HomepageState extends State<Homepage> {
     );
   }
 
-  Widget _buildFlashSaleCard(String title, String price, String originalPrice,
-      String badge, String imageAsset) {
+  Widget _buildFlashSaleCard(
+    String title,
+    String price,
+    String originalPrice,
+    String badge,
+    String imageAsset,
+  ) {
     return Container(
       width: 140,
       margin: const EdgeInsets.only(right: 12),
@@ -3157,8 +2756,11 @@ class HomepageState extends State<Homepage> {
                         imageAsset,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.cake_outlined,
-                                size: 40, color: Colors.orange),
+                            const Icon(
+                          Icons.cake_outlined,
+                          size: 40,
+                          color: Colors.orange,
+                        ),
                       ),
                     ),
                   ),
@@ -3223,8 +2825,13 @@ class HomepageState extends State<Homepage> {
     );
   }
 
-  Widget _buildSuggestedCard(String title, String price, String originalPrice,
-      String orderText, String imageAsset) {
+  Widget _buildSuggestedCard(
+    String title,
+    String price,
+    String originalPrice,
+    String orderText,
+    String imageAsset,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
@@ -3248,9 +2855,10 @@ class HomepageState extends State<Homepage> {
                   imageAsset,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.shopping_bag_outlined,
-                      color: Colors.blue,
-                      size: 40),
+                    Icons.shopping_bag_outlined,
+                    color: Colors.blue,
+                    size: 40,
+                  ),
                 ),
               ),
             ),
@@ -3303,7 +2911,11 @@ class HomepageState extends State<Homepage> {
   }
 
   Widget _buildTrendingCard(
-      String title, String rating, String price, String imageAsset) {
+    String title,
+    String rating,
+    String price,
+    String imageAsset,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -3332,9 +2944,10 @@ class HomepageState extends State<Homepage> {
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.shopping_bag,
-                        size: 50,
-                        color: Colors.purple),
+                      Icons.shopping_bag,
+                      size: 50,
+                      color: Colors.purple,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -3349,8 +2962,11 @@ class HomepageState extends State<Homepage> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(Icons.check_circle,
-                        color: Colors.green, size: 12),
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 12,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -3386,8 +3002,11 @@ class HomepageState extends State<Homepage> {
                         color: Color(0xFF7C3AED),
                         shape: BoxShape.circle,
                       ),
-                      child:
-                          const Icon(Icons.add, color: Colors.white, size: 14),
+                      child: const Icon(
+                        Icons.add,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -3403,8 +3022,11 @@ class HomepageState extends State<Homepage> {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.favorite_border,
-                  color: Colors.grey, size: 14),
+              child: const Icon(
+                Icons.favorite_border,
+                color: Colors.grey,
+                size: 14,
+              ),
             ),
           ),
         ],
@@ -3427,7 +3049,7 @@ class HomepageState extends State<Homepage> {
           {
             "name": "Thalayad Junction",
             "status": "On Time",
-            "statusColor": const Color(0xFF10B981)
+            "statusColor": const Color(0xFF10B981),
           },
         ],
         "frequency": "Every 15 mins",
@@ -3448,7 +3070,7 @@ class HomepageState extends State<Homepage> {
           {
             "name": "Thalayad Junction",
             "status": "On Time",
-            "statusColor": const Color(0xFF10B981)
+            "statusColor": const Color(0xFF10B981),
           },
         ],
         "frequency": "Daily Service",
@@ -3468,7 +3090,7 @@ class HomepageState extends State<Homepage> {
           {
             "name": "Thalayad Entry",
             "status": "On Time",
-            "statusColor": const Color(0xFF10B981)
+            "statusColor": const Color(0xFF10B981),
           },
         ],
         "frequency": "Daily Service",
@@ -3488,7 +3110,7 @@ class HomepageState extends State<Homepage> {
           {
             "name": "Thalayad Entry",
             "status": "Delayed 5m",
-            "statusColor": const Color(0xFFF59E0B)
+            "statusColor": const Color(0xFFF59E0B),
           },
         ],
         "frequency": "Daily Service",
@@ -3505,7 +3127,7 @@ class HomepageState extends State<Homepage> {
         "via": "Via Panangad",
         "infoBox": {
           "title": "Arriving in 12 mins",
-          "subtitle": "FREQUENCY\n30 min gaps"
+          "subtitle": "FREQUENCY\n30 min gaps",
         },
         "frequency": "Tracked Live",
         "isKsrtc": false,
@@ -3523,7 +3145,7 @@ class HomepageState extends State<Homepage> {
           {
             "name": "Thalayad Junction",
             "status": "Delayed 10m",
-            "statusColor": const Color(0xFFF59E0B)
+            "statusColor": const Color(0xFFF59E0B),
           },
         ],
         "frequency": "Daily Service",
@@ -3542,7 +3164,7 @@ class HomepageState extends State<Homepage> {
           {
             "name": "Thalayad Junction",
             "status": "On Time",
-            "statusColor": const Color(0xFF10B981)
+            "statusColor": const Color(0xFF10B981),
           },
         ],
         "frequency": "Daily Service",
@@ -3561,7 +3183,7 @@ class HomepageState extends State<Homepage> {
           {
             "name": "Thalayad Entry",
             "status": "On Time",
-            "statusColor": const Color(0xFF10B981)
+            "statusColor": const Color(0xFF10B981),
           },
         ],
         "frequency": "Daily Service",
@@ -3581,7 +3203,7 @@ class HomepageState extends State<Homepage> {
           {
             "name": "Thalayad Junction",
             "status": "On Time",
-            "statusColor": const Color(0xFF10B981)
+            "statusColor": const Color(0xFF10B981),
           },
         ],
         "frequency": "Daily Service",
@@ -3600,12 +3222,12 @@ class HomepageState extends State<Homepage> {
           {
             "name": "Thalayad Entry",
             "status": "On Time",
-            "statusColor": const Color(0xFF10B981)
+            "statusColor": const Color(0xFF10B981),
           },
         ],
         "frequency": "Daily Service",
         "isKsrtc": true,
-      }
+      },
     ];
 
     final filteredSchedules = allBusSchedules.where((bus) {
@@ -3627,9 +3249,11 @@ class HomepageState extends State<Homepage> {
     final currentTo = _toBusController.text.trim().toLowerCase();
     final isCurrentRouteSaved = currentFrom.isNotEmpty &&
         currentTo.isNotEmpty &&
-        _savedRoutes.any((route) =>
-            route['from']!.toLowerCase() == currentFrom &&
-            route['to']!.toLowerCase() == currentTo);
+        _savedRoutes.any(
+          (route) =>
+              route['from']!.toLowerCase() == currentFrom &&
+              route['to']!.toLowerCase() == currentTo,
+        );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3653,16 +3277,21 @@ class HomepageState extends State<Homepage> {
             children: [
               // FROM Input
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.location_on,
-                        color: Color(0xFF0F2E5A), size: 18),
+                    const Icon(
+                      Icons.location_on,
+                      color: Color(0xFF0F2E5A),
+                      size: 18,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -3671,9 +3300,10 @@ class HomepageState extends State<Homepage> {
                           const Text(
                             "FROM",
                             style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold),
+                              fontSize: 9,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           SizedBox(
                             height: 24,
@@ -3681,9 +3311,10 @@ class HomepageState extends State<Homepage> {
                               controller: _fromBusController,
                               onChanged: (val) => setState(() {}),
                               style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0F2E5A)),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F2E5A),
+                              ),
                               decoration: const InputDecoration(
                                 border: InputBorder.none,
                                 isDense: true,
@@ -3701,8 +3332,11 @@ class HomepageState extends State<Homepage> {
                             _fromBusController.clear();
                           });
                         },
-                        child: const Icon(Icons.clear,
-                            color: Colors.grey, size: 18),
+                        child: const Icon(
+                          Icons.clear,
+                          color: Colors.grey,
+                          size: 18,
+                        ),
                       ),
                   ],
                 ),
@@ -3710,16 +3344,21 @@ class HomepageState extends State<Homepage> {
               const SizedBox(height: 10),
               // TO Input
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.navigation,
-                        color: Color(0xFFFFB800), size: 18),
+                    const Icon(
+                      Icons.navigation,
+                      color: Color(0xFFFFB800),
+                      size: 18,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -3728,9 +3367,10 @@ class HomepageState extends State<Homepage> {
                           const Text(
                             "TO",
                             style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold),
+                              fontSize: 9,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           SizedBox(
                             height: 24,
@@ -3738,9 +3378,10 @@ class HomepageState extends State<Homepage> {
                               controller: _toBusController,
                               onChanged: (val) => setState(() {}),
                               style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0F2E5A)),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F2E5A),
+                              ),
                               decoration: const InputDecoration(
                                 border: InputBorder.none,
                                 isDense: true,
@@ -3758,8 +3399,11 @@ class HomepageState extends State<Homepage> {
                             _toBusController.clear();
                           });
                         },
-                        child: const Icon(Icons.clear,
-                            color: Colors.grey, size: 18),
+                        child: const Icon(
+                          Icons.clear,
+                          color: Colors.grey,
+                          size: 18,
+                        ),
                       ),
                   ],
                 ),
@@ -3775,7 +3419,8 @@ class HomepageState extends State<Homepage> {
                         onPressed: () {
                           setState(() {});
                           toastInfo(
-                              "Searching schedules from ${_fromBusController.text} to ${_toBusController.text}...");
+                            "Searching schedules from ${_fromBusController.text} to ${_toBusController.text}...",
+                          );
                           Future.delayed(
                             const Duration(milliseconds: 100),
                             _scrollToSchedule,
@@ -3784,15 +3429,17 @@ class HomepageState extends State<Homepage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0F2E5A),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           elevation: 0,
                         ),
                         child: const Text(
                           "Search Schedules",
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold),
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -3811,16 +3458,18 @@ class HomepageState extends State<Homepage> {
                         final toText = _toBusController.text.trim();
                         if (fromText.isEmpty || toText.isEmpty) {
                           toastWarning(
-                              "Please fill both FROM and TO fields to save.");
+                            "Please fill both FROM and TO fields to save.",
+                          );
                           return;
                         }
 
                         final alreadyExistsIndex = _savedRoutes.indexWhere(
-                            (route) =>
-                                route['from']!.toLowerCase() ==
-                                    fromText.toLowerCase() &&
-                                route['to']!.toLowerCase() ==
-                                    toText.toLowerCase());
+                          (route) =>
+                              route['from']!.toLowerCase() ==
+                                  fromText.toLowerCase() &&
+                              route['to']!.toLowerCase() ==
+                                  toText.toLowerCase(),
+                        );
 
                         if (alreadyExistsIndex != -1) {
                           // Toggle: unsave
@@ -3872,9 +3521,10 @@ class HomepageState extends State<Homepage> {
                 const Text(
                   "Saved Routes",
                   style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F2E5A)),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F2E5A),
+                  ),
                 ),
               ],
             ),
@@ -3910,7 +3560,9 @@ class HomepageState extends State<Homepage> {
                           foregroundColor: const Color(0xFF0F2E5A),
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                             side: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -3919,7 +3571,9 @@ class HomepageState extends State<Homepage> {
                         child: Text(
                           routeText,
                           style: const TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.w600),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       Positioned(
@@ -3938,8 +3592,11 @@ class HomepageState extends State<Homepage> {
                               color: Color(0xFFE2E8F0),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close,
-                                size: 8, color: Color(0xFF0F2E5A)),
+                            child: const Icon(
+                              Icons.close,
+                              size: 8,
+                              color: Color(0xFF0F2E5A),
+                            ),
                           ),
                         ),
                       ),
@@ -3975,9 +3632,10 @@ class HomepageState extends State<Homepage> {
               const Text(
                 "Upcoming Schedules",
                 style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F2E5A)),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F2E5A),
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -4020,9 +3678,10 @@ class HomepageState extends State<Homepage> {
               Text(
                 "No advertisements yet",
                 style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF64748B),
-                    fontWeight: FontWeight.w500),
+                  fontSize: 14,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -4039,8 +3698,10 @@ class HomepageState extends State<Homepage> {
           child: Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFB800).withAlpha(30),
                   borderRadius: BorderRadius.circular(20),
@@ -4048,8 +3709,11 @@ class HomepageState extends State<Homepage> {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.local_offer_outlined,
-                        size: 13, color: Color(0xFFD97706)),
+                    Icon(
+                      Icons.local_offer_outlined,
+                      size: 13,
+                      color: Color(0xFFD97706),
+                    ),
                     SizedBox(width: 4),
                     Text(
                       "SPONSORED",
@@ -4088,485 +3752,96 @@ class HomepageState extends State<Homepage> {
         ),
 
         // ── Category Filter Chips ──────────────────────────────────────────
-        Builder(builder: (context) {
-          // Derive unique categories from the live data
-          final categories = <String>['All'];
-          for (final doc in allServices) {
-            final cat = ((doc.data() as Map<String, dynamic>)['category'] ?? '')
-                .toString()
-                .trim();
-            if (cat.isNotEmpty && !categories.contains(cat)) {
-              categories.add(cat);
+        Builder(
+          builder: (context) {
+            // Derive unique categories from the live data
+            final categories = <String>['All'];
+            for (final doc in allServices) {
+              final cat =
+                  ((doc.data() as Map<String, dynamic>)['category'] ?? '')
+                      .toString()
+                      .trim();
+              if (cat.isNotEmpty && !categories.contains(cat)) {
+                categories.add(cat);
+              }
             }
-          }
 
-          // Clamp selection if the category no longer exists
-          if (!categories.contains(_selectedAdCategory)) {
-            _selectedAdCategory = 'All';
-          }
+            // Clamp selection if the category no longer exists
+            if (!categories.contains(_selectedAdCategory)) {
+              _selectedAdCategory = 'All';
+            }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Scrollable chip row
-              SizedBox(
-                height: 40,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: categories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, i) {
-                    final cat = categories[i];
-                    final isSelected = _selectedAdCategory == cat;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Scrollable chip row
+                SizedBox(
+                  height: 40,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: categories.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final cat = categories[i];
+                      final isSelected = _selectedAdCategory == cat;
 
-                    final Map<String, Color> catColors = {
-                      'All': const Color(0xFF0F2E5A),
-                      'Exterior': const Color(0xFF0F2E5A),
-                      'Interior': const Color(0xFF7C3AED),
-                      'Vehicle': const Color(0xFF059669),
-                      'Pet': const Color(0xFFDB2777),
-                      'Home': const Color(0xFFEA580C),
-                    };
-                    final Color chipColor =
-                        catColors[cat] ?? const Color(0xFF0F2E5A);
+                      final Map<String, Color> catColors = {
+                        'All': const Color(0xFF0F2E5A),
+                        'Exterior': const Color(0xFF0F2E5A),
+                        'Interior': const Color(0xFF7C3AED),
+                        'Vehicle': const Color(0xFF059669),
+                        'Pet': const Color(0xFFDB2777),
+                        'Home': const Color(0xFFEA580C),
+                      };
+                      final Color chipColor =
+                          catColors[cat] ?? const Color(0xFF0F2E5A);
 
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() => _selectedAdCategory = cat);
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color:
-                              isSelected ? chipColor : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedAdCategory = cat);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
                             color: isSelected
                                 ? chipColor
-                                : const Color(0xFFE2E8F0),
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected
+                                  ? chipColor
+                                  : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Text(
+                            cat,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF64748B),
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                            ),
                           ),
                         ),
-                        child: Text(
-                          cat,
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : const Color(0xFF64748B),
-                            fontSize: 12,
-                            fontWeight:
-                                isSelected ? FontWeight.bold : FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // Filtered Ad Cards
-              Builder(builder: (context) {
-                final filtered = _selectedAdCategory == 'All'
-                    ? allServices
-                    : allServices.where((doc) {
-                        final cat =
-                            ((doc.data() as Map<String, dynamic>)['category'] ??
-                                    '')
-                                .toString();
-                        return cat == _selectedAdCategory;
-                      }).toList();
-
-                if (filtered.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          const Icon(Icons.search_off_rounded,
-                              size: 40, color: Color(0xFFCBD5E1)),
-                          const SizedBox(height: 10),
-                          Text(
-                            'No ads in "$_selectedAdCategory"',
-                            style: const TextStyle(
-                                fontSize: 13, color: Color(0xFF64748B)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return Column(
-                  children: filtered.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final String name = data['service_name'] ?? 'Advertisement';
-                    final String image = data['image'] ?? '';
-                    final String category = data['category'] ?? '';
-                    final double rating = (data['rating'] ?? 0).toDouble();
-                    final String price = data['price']?.toString() ??
-                        data['original_price']?.toString() ??
-                        '';
-                    final String originalPrice =
-                        data['original_price']?.toString() ?? '';
-                    final String discount = data['discount']?.toString() ?? '';
-                    final String serviceType =
-                        data['service_type']?.toString() ?? '';
-
-                    // Category badge colour
-                    final Map<String, Color> catColors = {
-                      'Exterior': const Color(0xFF0F2E5A),
-                      'Interior': const Color(0xFF7C3AED),
-                      'Vehicle': const Color(0xFF059669),
-                      'Pet': const Color(0xFFDB2777),
-                      'Home': const Color(0xFFEA580C),
-                    };
-                    final Color badgeColor =
-                        catColors[category] ?? const Color(0xFF0F2E5A);
-
-                    return GestureDetector(
-                      onTap: () {
-                        if (category == 'Exterior') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => ExteriorBookingpage(
-                                        category: category,
-                                        serviceName: name,
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: image,
-                                        discountPrice: data['price'],
-                                        serviceType: serviceType,
-                                      )));
-                        } else if (category == 'Interior') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => InteriorBookingPage(
-                                        category: category,
-                                        serviceName: name,
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: image,
-                                        discountPrice: data['price'],
-                                        serviceType: serviceType,
-                                      )));
-                        } else if (category == 'Vehicle') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => VehicleBookingPage(
-                                        category: category,
-                                        serviceName: name,
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: image,
-                                        discountPrice: data['price'],
-                                        serviceType: serviceType,
-                                      )));
-                        } else if (category == 'Pet') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => PetCleaning(
-                                        category: category,
-                                        serviceName: name,
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: image,
-                                        discountPrice: data['price'],
-                                        serviceType: serviceType,
-                                      )));
-                        } else if (category == 'Home') {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => HomeBookingPage(
-                                        category: category,
-                                        serviceName: name,
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: image,
-                                        discountPrice: data['price'],
-                                        serviceType: serviceType,
-                                      )));
-                        } else {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => ExteriorBookingpage(
-                                        category: category,
-                                        serviceName: name,
-                                        rating: _safeRating(data['rating']),
-                                        originalPrice: data['original_price'],
-                                        discount: data['discount'],
-                                        image: image,
-                                        discountPrice: data['price'],
-                                        serviceType: serviceType,
-                                      )));
-                        }
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(10),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Banner Image
-                            Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(20)),
-                                  child: image.startsWith('http')
-                                      ? Image.network(
-                                          image,
-                                          height: 180,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) =>
-                                              Container(
-                                            height: 180,
-                                            color: const Color(0xFFF1F5F9),
-                                            child: const Center(
-                                              child: Icon(
-                                                  Icons.campaign_outlined,
-                                                  size: 48,
-                                                  color: Color(0xFFCBD5E1)),
-                                            ),
-                                          ),
-                                        )
-                                      : Container(
-                                          height: 180,
-                                          color: const Color(0xFFF1F5F9),
-                                          child: const Center(
-                                            child: Icon(Icons.campaign_outlined,
-                                                size: 48,
-                                                color: Color(0xFFCBD5E1)),
-                                          ),
-                                        ),
-                                ),
-                                // Gradient overlay
-                                Positioned.fill(
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(20)),
-                                    child: Container(
-                                      decoration: const BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.transparent,
-                                            Color(0xCC0F2E5A),
-                                          ],
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                // Category badge
-                                Positioned(
-                                  top: 12,
-                                  left: 12,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: badgeColor,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      category.isNotEmpty ? category : 'Ad',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                // Rating badge
-                                if (rating > 0)
-                                  Positioned(
-                                    top: 12,
-                                    right: 12,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFFB800),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.star,
-                                              size: 11,
-                                              color: Color(0xFF0F2E5A)),
-                                          const SizedBox(width: 3),
-                                          Text(
-                                            rating.toStringAsFixed(1),
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF0F2E5A),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                // Title overlay on image bottom
-                                Positioned(
-                                  bottom: 12,
-                                  left: 12,
-                                  right: 12,
-                                  child: Text(
-                                    name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            // Bottom info row
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        if (price.isNotEmpty)
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              Text(
-                                                '₹$price',
-                                                style: const TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF0F2E5A),
-                                                ),
-                                              ),
-                                              if (originalPrice.isNotEmpty &&
-                                                  originalPrice != price) ...[
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  '₹$originalPrice',
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    decoration: TextDecoration
-                                                        .lineThrough,
-                                                    color: Color(0xFF94A3B8),
-                                                  ),
-                                                ),
-                                              ],
-                                              if (discount.isNotEmpty) ...[
-                                                const SizedBox(width: 6),
-                                                Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        const Color(0xFFDCFCE7),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            6),
-                                                  ),
-                                                  child: Text(
-                                                    '$discount% OFF',
-                                                    style: const TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Color(0xFF16A34A),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        if (serviceType.isNotEmpty)
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 2),
-                                            child: Text(
-                                              serviceType,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                color: Color(0xFF64748B),
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF0F2E5A),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Text(
-                                      "View Deal",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ); // closes GestureDetector (each ad card)
-                  }).toList(), // closes filtered.map → Column children
-                ); // closes inner Column (filtered cards)
-              }), // closes inner Builder (filtered card list)
-            ], // closes outer Column children (chips + filtered cards)
-          ); // closes outer Column
-        }), // closes outer Builder (category derivation + chips)
+                // Filtered Ad Cards
+              ],
+            ); // closes outer Column
+          },
+        ), // closes outer Builder (category derivation + chips)
         const SizedBox(height: 12),
       ],
     );
@@ -4630,8 +3905,10 @@ class HomepageState extends State<Homepage> {
                   final isLive = tag == "LIVE";
                   return Container(
                     margin: const EdgeInsets.only(right: 6),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: isLive
                           ? const Color(0xFF0F2E5A)
@@ -4652,9 +3929,10 @@ class HomepageState extends State<Homepage> {
               Text(
                 bus['time'],
                 style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F2E5A)),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F2E5A),
+                ),
               ),
             ],
           ),
@@ -4663,9 +3941,10 @@ class HomepageState extends State<Homepage> {
           Text(
             "${bus['from']} to ${bus['to']}",
             style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F2E5A)),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F2E5A),
+            ),
           ),
           Text(
             bus['via'],
@@ -4711,9 +3990,10 @@ class HomepageState extends State<Homepage> {
                           Text(
                             stop['name'],
                             style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF334155)),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF334155),
+                            ),
                           ),
                           Text(
                             status ?? stop['time'] ?? '',
@@ -4744,25 +4024,30 @@ class HomepageState extends State<Homepage> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.directions_bus,
-                      color: Color(0xFF0F2E5A), size: 18),
+                  const Icon(
+                    Icons.directions_bus,
+                    color: Color(0xFF0F2E5A),
+                    size: 18,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       bus['infoBox']['title'],
                       style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F2E5A)),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F2E5A),
+                      ),
                     ),
                   ),
                   Text(
                     bus['infoBox']['subtitle'],
                     textAlign: TextAlign.right,
                     style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF475569)),
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF475569),
+                    ),
                   ),
                 ],
               ),
@@ -4775,9 +4060,10 @@ class HomepageState extends State<Homepage> {
               Text(
                 bus['frequency'],
                 style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500),
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               Row(
                 children: [
@@ -4786,8 +4072,8 @@ class HomepageState extends State<Homepage> {
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content:
-                                  Text("Showing live bus route on map...")),
+                            content: Text("Showing live bus route on map..."),
+                          ),
                         );
                       },
                       child: Container(
@@ -4796,8 +4082,11 @@ class HomepageState extends State<Homepage> {
                           color: const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.map,
-                            color: Color(0xFF0F2E5A), size: 16),
+                        child: const Icon(
+                          Icons.map,
+                          color: Color(0xFF0F2E5A),
+                          size: 16,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -4835,7 +4124,9 @@ class HomepageState extends State<Homepage> {
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0F2E5A),
                         borderRadius: BorderRadius.circular(10),
@@ -4843,9 +4134,10 @@ class HomepageState extends State<Homepage> {
                       child: const Text(
                         "Details",
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold),
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -4874,17 +4166,24 @@ class HomepageState extends State<Homepage> {
               Text(
                 "${bus['from']} to ${bus['to']}",
                 style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F2E5A)),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F2E5A),
+                ),
               ),
               const SizedBox(height: 6),
-              Text(bus['via'],
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              Text(
+                bus['via'],
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
               const SizedBox(height: 16),
-              const Text("Schedule Information:",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Color(0xFF0F2E5A))),
+              const Text(
+                "Schedule Information:",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F2E5A),
+                ),
+              ),
               const SizedBox(height: 8),
               Text("Departure Time: ${bus['time']}"),
               const SizedBox(height: 4),
@@ -4897,10 +4196,13 @@ class HomepageState extends State<Homepage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0F2E5A),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text("Close",
-                      style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    "Close",
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ],

@@ -1,11 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/services/service_details_page.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
@@ -60,70 +56,39 @@ class Servicecard2 extends StatelessWidget {
           itemBuilder: (_, index) {
             final item = services[index].data() as Map<String, dynamic>;
 
+            final String itemCategory = item['category'] ?? '';
+            final String serviceName = item['service_name'] ?? '';
+            final dynamic rating = item['rating'] ?? 0;
+            final dynamic originalPrice = item['original_price'];
+            final dynamic discount = item['discount'];
+            final String? image = item['image'];
+            final dynamic price = item['price'];
+            final String? serviceType = item['service_type'];
+
             return GestureDetector(
               onTap: () {
-                final category = item['category'];
                 Widget? targetPage;
 
-                switch (category) {
-                  case 'Exterior':
-                    targetPage = ExteriorBookingpage(
-                      category: item['category'],
-                      serviceName: item['service_name'],
-                      rating: item['rating'],
-                      originalPrice: item['original_price'],
-                      discount: item['discount'],
-                      image: item['image'],
-                      discountPrice: item['price'],
-                      serviceType: item['service_type'],
-                    );
-                    break;
-                  case 'Interior':
-                    targetPage = InteriorBookingPage(
-                      category: item['category'],
-                      serviceName: item['service_name'],
-                      rating: item['rating'],
-                      originalPrice: item['original_price'],
-                      discount: item['discount'],
-                      image: item['image'],
-                      discountPrice: item['price'],
-                      serviceType: item['service_type'],
-                    );
-                    break;
-                  case 'Vehicle':
-                    targetPage = VehicleBookingPage(
-                      category: item['category'],
-                      serviceName: item['service_name'],
-                      rating: item['rating'],
-                      originalPrice: item['original_price'],
-                      discount: item['discount'],
-                      image: item['image'],
-                      discountPrice: item['price'],
-                      serviceType: item['service_type'],
-                    );
-                    break;
-                  case 'Pet':
-                    targetPage = PetCleaning(
-                      category: item['category'],
-                      serviceName: item['service_name'],
-                      rating: item['rating'],
-                      originalPrice: item['original_price'],
-                      discount: item['discount'],
-                      image: item['image'],
-                      discountPrice: item['price'],
-                      serviceType: item['service_type'],
-                    );
-                    break;
-                  case 'Home':
-                    targetPage = HomeBookingPage(
-                      category: item['category'],
-                      serviceName: item['service_name'],
-                      rating: item['rating'],
-                      originalPrice: item['original_price'],
-                      discount: item['discount'],
-                      image: item['image'],
-                      discountPrice: item['price'],
-                      serviceType: item['service_type'],
+                switch (itemCategory) {
+                  case 'plumber':
+                  case 'electrician':
+                  case 'carpenter':
+                  case 'painter':
+                    targetPage = ServiceDetailsPage(
+                      category: itemCategory,
+                      serviceName: serviceName,
+                      rating: double.tryParse(rating.toString()) ?? 0.0,
+                      originalPrice: originalPrice,
+                      discount: discount,
+                      image: image ?? '',
+                      discountPrice: price,
+                      serviceType: serviceType,
+                      serviceId: item['id']?.toString() ?? item['serviceId']?.toString() ?? 'Unknown',
+                      providerId: item['providerId']?.toString() ?? item['uid']?.toString() ?? 'Unknown',
+                      providerName: item['providerName']?.toString() ?? item['workerName']?.toString() ?? 'Unknown',
+                      providerPhone: item['providerPhone']?.toString() ?? item['phone']?.toString() ?? '',
+                      serviceDescription: item['description']?.toString() ?? item['about']?.toString() ?? '',
+                      estimatedDuration: item['duration']?.toString() ?? '1 hr',
                     );
                     break;
                 }
@@ -147,10 +112,10 @@ class Servicecard2 extends StatelessWidget {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        child: item['image'] != null &&
-                                item['image'].toString().startsWith('http')
+                        child: image != null &&
+                                image.toString().startsWith('http')
                             ? Image.network(
-                                item['image'],
+                                image,
                                 height: 120,
                                 width: 95.5,
                                 fit: BoxFit.cover,
@@ -168,7 +133,7 @@ class Servicecard2 extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              item["service_name"] ?? '',
+                              serviceName,
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 18),
                             ),
@@ -176,7 +141,8 @@ class Servicecard2 extends StatelessWidget {
                             Row(
                               children: [
                                 RatingBarIndicator(
-                                  rating: (item["rating"] ?? 0).toDouble(),
+                                  rating:
+                                      double.tryParse(rating.toString()) ?? 0.0,
                                   itemBuilder: (_, __) => const Icon(Icons.star,
                                       color: gradientgreen2.c),
                                   itemCount: 5,
@@ -184,7 +150,7 @@ class Servicecard2 extends StatelessWidget {
                                   direction: Axis.horizontal,
                                 ),
                                 const SizedBox(width: 6),
-                                Text("${item["rating"] ?? 0}"),
+                                Text("$rating"),
                               ],
                             ),
                             Wrap(
@@ -192,32 +158,36 @@ class Servicecard2 extends StatelessWidget {
                               spacing: 4,
                               runSpacing: 4,
                               children: [
-                                if (item["discount"] != null)
+                                if (discount != null &&
+                                    discount.toString().isNotEmpty)
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       const Icon(Icons.arrow_downward,
                                           size: 15, color: gradientgreen2.c),
-                                      Text("${item["discount"]}%",
+                                      Text("$discount%",
                                           style: const TextStyle(
                                               color: gradientgreen2.c)),
                                     ],
                                   ),
-                                if (item["original_price"] != null)
+                                if (originalPrice != null &&
+                                    originalPrice.toString().isNotEmpty)
                                   Text(
-                                    "₹${formatPrice(item["original_price"])}",
+                                    "₹${formatPrice(originalPrice)}",
                                     style: const TextStyle(
                                       color: Colors.grey,
                                       decoration: TextDecoration.lineThrough,
                                     ),
                                   ),
-                                Text(
-                                  "₹${formatPrice(item["price"])}",
-                                  style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                if (item["service_type"] == "Hour")
+                                if (price != null &&
+                                    price.toString().isNotEmpty)
+                                  Text(
+                                    "₹${formatPrice(price)}",
+                                    style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                if (serviceType == "Hour")
                                   const Text("/hour",
                                       style: TextStyle(
                                           fontSize: 18,

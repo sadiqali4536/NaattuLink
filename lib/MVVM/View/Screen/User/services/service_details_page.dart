@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'service_schedule_page.dart';
 
-class WorkerDetailsPage extends StatelessWidget {
+class ServiceDetailsPage extends StatelessWidget {
   final String category;
   final String serviceName;
   final double rating;
@@ -14,8 +16,14 @@ class WorkerDetailsPage extends StatelessWidget {
   final double? businessLng;
   final String? businessAddress;
   final String? businessMapsUrl;
+  final String? serviceId;
+  final String? providerId;
+  final String? providerName;
+  final String? providerPhone;
+  final String? serviceDescription;
+  final String? estimatedDuration;
 
-  const WorkerDetailsPage({
+  const ServiceDetailsPage({
     Key? key,
     required this.category,
     required this.serviceName,
@@ -29,6 +37,12 @@ class WorkerDetailsPage extends StatelessWidget {
     this.businessLng,
     this.businessAddress,
     this.businessMapsUrl,
+    this.serviceId,
+    this.providerId,
+    this.providerName,
+    this.providerPhone,
+    this.serviceDescription,
+    this.estimatedDuration,
   }) : super(key: key);
 
   /// Launch Google Maps navigation to the worker's saved coordinates.
@@ -46,138 +60,27 @@ class WorkerDetailsPage extends StatelessWidget {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open Google Maps.'),
-            backgroundColor: Color(0xFF0F2E5A),
-          ),
-        );
+        CherryToast.error(
+          title: const Text('Could not open Google Maps.'),
+        ).show(context);
       }
     }
   }
 
   String _getWorkerDescription() {
-    final name = serviceName.toLowerCase();
-    if (name.contains('electrician')) {
-      return "Expert electrical repairs, wiring, and installation by certified local professionals. Available for emergency call-outs across Thalayadukkar.";
-    } else if (name.contains('plumber')) {
-      return "Professional plumbing services including leak repairs, pipe installations, drainage cleaning, and sanitary fittings by experienced plumbers.";
-    } else if (name.contains('carpenter')) {
-      return "Custom woodwork, furniture repairs, door lock installations, and cabinet work by skilled local carpenters.";
-    } else if (name.contains('painter')) {
-      return "Interior and exterior wall painting, touch-ups, wall putty application, and decorative finishes with premium quality paints.";
-    } else {
-      return "Expert and reliable $serviceName services provided by certified local professionals. Committed to delivering high-quality workmanship and timely completion.";
-    }
+    return "";
   }
 
   String _getWorkerImage() {
-    if (image.isNotEmpty && image.startsWith('http')) {
-      return image;
-    }
-    final name = serviceName.toLowerCase();
-    if (name.contains('electrician')) {
-      return "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80";
-    } else if (name.contains('plumber')) {
-      return "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=800&q=80";
-    } else if (name.contains('carpenter')) {
-      return "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=800&q=80";
-    } else if (name.contains('painter')) {
-      return "https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=800&q=80";
-    } else {
-      return "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80";
-    }
+    return image;
   }
 
   List<Map<String, dynamic>> _getMockReviews() {
-    final name = serviceName.toLowerCase();
-    if (name.contains('electrician')) {
-      return [
-        {
-          "initials": "SA",
-          "name": "Sadiq Ali",
-          "rating": 5,
-          "comment":
-              "Punctual and very professional. Fixed my main distribution board issues quickly. Highly recommended for Thalayadukkar residents."
-        },
-        {
-          "initials": "LM",
-          "name": "Lakshmi Menon",
-          "rating": 5,
-          "comment":
-              "Great service for installing our new inverter system. The pricing was exactly as mentioned."
-        }
-      ];
-    } else if (name.contains('plumber')) {
-      return [
-        {
-          "initials": "AK",
-          "name": "Arun Kumar",
-          "rating": 5,
-          "comment":
-              "Fixed my kitchen sink leakage within 15 minutes. Very polite and prompt service."
-        },
-        {
-          "initials": "SN",
-          "name": "Saritha Nair",
-          "rating": 5,
-          "comment":
-              "Excellent work installing the water pump. Highly recommended."
-        }
-      ];
-    } else {
-      return [
-        {
-          "initials": "SA",
-          "name": "Sadiq Ali",
-          "rating": 5,
-          "comment":
-              "Very neat work and professional attitude. Punctual and cleaned up afterwards."
-        },
-        {
-          "initials": "LM",
-          "name": "Lakshmi Menon",
-          "rating": 5,
-          "comment":
-              "Transparent rates and high-quality service. Extremely satisfied."
-        }
-      ];
-    }
+    return [];
   }
 
   List<Map<String, dynamic>> _getRelatedBookings() {
-    final name = serviceName.toLowerCase();
-    final allRelated = [
-      {
-        "name": "Expert Plumber",
-        "price": 199,
-        "image":
-            "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=300&q=80"
-      },
-      {
-        "name": "Skilled Carpenter",
-        "price": 249,
-        "image":
-            "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=300&q=80"
-      },
-      {
-        "name": "Wall Painter",
-        "price": 499,
-        "image":
-            "https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=300&q=80"
-      },
-      {
-        "name": "Master Electrician",
-        "price": 299,
-        "image":
-            "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=300&q=80"
-      }
-    ];
-
-    return allRelated
-        .where((element) =>
-            !(element['name'] as String).toLowerCase().contains(name))
-        .toList();
+    return [];
   }
 
   @override
@@ -220,28 +123,51 @@ class WorkerDetailsPage extends StatelessWidget {
                             stops: const [0.0, 0.4, 0.9, 1.0],
                           ),
                         ),
-                        child: Image.network(
-                          _getWorkerImage(),
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              color: bgLight,
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF0F2E5A)),
+                        child: _getWorkerImage().startsWith('http')
+                            ? Image.network(
+                                _getWorkerImage(),
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: bgLight,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Color(0xFF0F2E5A)),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                  color: bgLight,
+                                  child: Icon(Icons.handyman_outlined,
+                                      size: 80,
+                                      color: primaryColor.withOpacity(0.3)),
                                 ),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(
-                            color: bgLight,
-                            child: Icon(Icons.handyman_outlined,
-                                size: 80, color: primaryColor.withOpacity(0.3)),
-                          ),
-                        ),
+                              )
+                            : _getWorkerImage().isNotEmpty
+                                ? Image.asset(
+                                    _getWorkerImage(),
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                      color: bgLight,
+                                      child: Icon(Icons.handyman_outlined,
+                                          size: 80,
+                                          color: primaryColor.withOpacity(0.3)),
+                                    ),
+                                  )
+                                : Container(
+                                    color: bgLight,
+                                    child: Icon(Icons.handyman_outlined,
+                                        size: 80,
+                                        color: primaryColor.withOpacity(0.3)),
+                                  ),
                       ),
                     ],
                   ),
@@ -328,7 +254,7 @@ class WorkerDetailsPage extends StatelessWidget {
                                       ),
                                     ),
                                     Text(
-                                      " (124 Reviews)",
+                                      " (${reviews.length} Reviews)",
                                       style: TextStyle(
                                         color: textGrey,
                                         fontSize: 13,
@@ -336,15 +262,17 @@ class WorkerDetailsPage extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  _getWorkerDescription(),
-                                  style: TextStyle(
-                                    color: textGrey,
-                                    fontSize: 12,
-                                    height: 1.5,
+                                if (_getWorkerDescription().isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _getWorkerDescription(),
+                                    style: TextStyle(
+                                      color: textGrey,
+                                      fontSize: 12,
+                                      height: 1.5,
+                                    ),
                                   ),
-                                ),
+                                ],
                                 // ── View Location Button ─────────────
                                 if (businessLat != null ||
                                     (businessMapsUrl != null &&
@@ -499,200 +427,216 @@ class WorkerDetailsPage extends StatelessWidget {
                           const SizedBox(height: 24),
 
                           // Customer Reviews Section
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "Customer Reviews",
-                                style: TextStyle(
-                                  color: primaryColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {},
-                                child: Text(
-                                  "View All",
+                          if (reviews.isNotEmpty) ...[
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Customer Reviews",
                                   style: TextStyle(
-                                    color: themeGreen,
+                                    color: primaryColor,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 13,
+                                    fontSize: 16,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: reviews.length,
-                            padding: EdgeInsets.zero,
-                            itemBuilder: (context, index) {
-                              final rev = reviews[index];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: const Color(0xFFF1F5F9)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 16,
-                                          backgroundColor:
-                                              const Color(0xFF3B82F6)
-                                                  .withOpacity(0.15),
-                                          child: Text(
-                                            rev['initials'],
-                                            style: const TextStyle(
-                                              color: Color(0xFF3B82F6),
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            rev['name'],
-                                            style: TextStyle(
-                                              color: primaryColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        Row(
-                                          children: List.generate(
-                                            5,
-                                            (starIdx) => Icon(
-                                              Icons.star,
-                                              color: starIdx < rev['rating']
-                                                  ? themeGreen
-                                                  : Colors.grey[200],
-                                              size: 12,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                TextButton(
+                                  onPressed: () {},
+                                  child: Text(
+                                    "View All",
+                                    style: TextStyle(
+                                      color: themeGreen,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
                                     ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      "\"${rev['comment']}\"",
-                                      style: TextStyle(
-                                        color: primaryColor.withOpacity(0.8),
-                                        fontSize: 12,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // People also booked Section
-                          Text(
-                            "People also booked",
-                            style: TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 155,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: related.length,
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: reviews.length,
+                              padding: EdgeInsets.zero,
                               itemBuilder: (context, index) {
-                                final relItem = related[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => WorkerDetailsPage(
-                                          category: category,
-                                          serviceName: relItem['name'],
-                                          rating: 4.8,
-                                          originalPrice: relItem['price'],
-                                          discount: 0,
-                                          image: relItem['image'],
-                                          discountPrice: relItem['price'],
+                                final rev = reviews[index];
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color: const Color(0xFFF1F5F9)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 16,
+                                            backgroundColor:
+                                                const Color(0xFF3B82F6)
+                                                    .withOpacity(0.15),
+                                            child: Text(
+                                              rev['initials'],
+                                              style: const TextStyle(
+                                                color: Color(0xFF3B82F6),
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              rev['name'],
+                                              style: TextStyle(
+                                                color: primaryColor,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                          Row(
+                                            children: List.generate(
+                                              5,
+                                              (starIdx) => Icon(
+                                                Icons.star,
+                                                color: starIdx < rev['rating']
+                                                    ? themeGreen
+                                                    : Colors.grey[200],
+                                                size: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        "\"${rev['comment']}\"",
+                                        style: TextStyle(
+                                          color: primaryColor.withOpacity(0.8),
+                                          fontSize: 12,
+                                          height: 1.5,
                                         ),
                                       ),
-                                    );
-                                  },
-                                  child: Container(
-                                    width: 140,
-                                    margin: const EdgeInsets.only(right: 14),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                          color: const Color(0xFFF1F5F9)),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius:
-                                              const BorderRadius.vertical(
-                                                  top: Radius.circular(16)),
-                                          child: Image.network(
-                                            relItem['image'],
-                                            height: 90,
-                                            width: double.infinity,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                relItem['name'],
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  color: primaryColor,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                "Starts ₹${relItem['price']}",
-                                                style: TextStyle(
-                                                  color: textGrey,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                    ],
                                   ),
                                 );
                               },
                             ),
-                          ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // People also booked Section
+                          if (related.isNotEmpty) ...[
+                            Text(
+                              "People also booked",
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 155,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: related.length,
+                                itemBuilder: (context, index) {
+                                  final relItem = related[index];
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ServiceDetailsPage(
+                                            category: category,
+                                            serviceName: relItem['name'],
+                                            rating: 4.8,
+                                            originalPrice: relItem['price'],
+                                            discount: 0,
+                                            image: relItem['image'],
+                                            discountPrice: relItem['price'],
+                                            serviceId:
+                                                relItem['id'] ?? serviceId,
+                                            providerId: providerId,
+                                            providerName: providerName,
+                                            providerPhone: providerPhone,
+                                            serviceDescription:
+                                                relItem['description'] ??
+                                                    serviceDescription,
+                                            estimatedDuration:
+                                                estimatedDuration,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      width: 140,
+                                      margin: const EdgeInsets.only(right: 14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                            color: const Color(0xFFF1F5F9)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                    top: Radius.circular(16)),
+                                            child: Image.network(
+                                              relItem['image'],
+                                              height: 90,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  relItem['name'],
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color: primaryColor,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  "Starts ₹${relItem['price']}",
+                                                  style: TextStyle(
+                                                    color: textGrey,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 40),
                         ],
                       ),
@@ -783,11 +727,22 @@ class WorkerDetailsPage extends StatelessWidget {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content:
-                                Text("Booking request sent for $serviceName!"),
-                            backgroundColor: primaryColor,
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ServiceSchedulePage(
+                              serviceName: serviceName,
+                              price: discountPrice,
+                              image: image,
+                              rating: rating,
+                              serviceId: serviceId,
+                              providerId: providerId,
+                              providerName: providerName,
+                              providerPhone: providerPhone,
+                              serviceDescription: serviceDescription,
+                              estimatedDuration: estimatedDuration,
+                              serviceCategory: category,
+                            ),
                           ),
                         );
                       },

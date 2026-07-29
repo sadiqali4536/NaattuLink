@@ -4,7 +4,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/worker_bookings/worker_details_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/services/service_details_page.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 
 class WorkerCardList extends StatefulWidget {
@@ -131,7 +131,7 @@ class _WorkerCardListState extends State<WorkerCardList> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => WorkerDetailsPage(
+                    builder: (_) => ServiceDetailsPage(
                       category: item['category'] ?? 'Worker',
                       serviceName: item['category'] ?? 'Worker',
                       rating: (item['ratings'] ?? 0).toDouble(),
@@ -143,6 +143,12 @@ class _WorkerCardListState extends State<WorkerCardList> {
                           : 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80',
                       discountPrice: 500,
                       serviceType: 'Hour',
+                      serviceId: availableWorkers[index].id,
+                      providerId: item['uid']?.toString() ?? 'Unknown',
+                      providerName: item['name']?.toString() ?? item['workerName']?.toString() ?? 'Unknown',
+                      providerPhone: item['phone']?.toString() ?? '',
+                      serviceDescription: item['about']?.toString() ?? item['description']?.toString() ?? '',
+                      estimatedDuration: '1 hr',
                     ),
                   ),
                 );

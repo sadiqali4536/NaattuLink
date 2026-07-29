@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cherry_toast/cherry_toast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Edit_address.dart';
@@ -198,9 +199,9 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
       Get.offAll(() => LoginAndSigning());
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting account: ${e.toString()}')),
-      );
+      CherryToast.error(
+        title: Text('Error deleting account: ${e.toString()}'),
+      ).show(context);
     }
   }
 

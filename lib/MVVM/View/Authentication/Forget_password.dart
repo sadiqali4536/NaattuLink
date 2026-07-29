@@ -31,19 +31,19 @@ class _ForgetPasswordState extends State<ForgetPassword> {
               fit: BoxFit.cover,
             ),
 
-            /// Logo
-            Positioned(
-              top: 20,
-              left: 280,
-              child:
-                  Image.asset("assets/icons/logo2.png", height: 70, width: 70),
-            ),
-            Positioned(
-              top: 60,
-              left: 260,
-              child:
-                  Image.asset("assets/icons/SWIFT.png", height: 50, width: 55),
-            ),
+            /// Logo (Removed missing images to prevent PathNotFoundException)
+            // Positioned(
+            //   top: 20,
+            //   left: 280,
+            //   child:
+            //       Image.asset("assets/icons/logo2.png", height: 70, width: 70),
+            // ),
+            // Positioned(
+            //   top: 60,
+            //   left: 260,
+            //   child:
+            //       Image.asset("assets/icons/SWIFT.png", height: 50, width: 55),
+            // ),
             Positioned(
               top: 60,
               left: 320,

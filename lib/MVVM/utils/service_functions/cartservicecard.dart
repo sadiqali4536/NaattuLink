@@ -3,11 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Exterior_Bookingpage.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 import 'package:naattulink/MVVM/model/models/cart_model.dart';
 import 'package:naattulink/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
@@ -81,78 +77,6 @@ class _CartservicecardState extends State<Cartservicecard> {
     }
   }
 
-  void _navigateToBookingPage() {
-    final cartItem = widget.cartItem;
-    Widget? targetPage;
-
-    switch (cartItem.category) {
-      case 'Exterior':
-        targetPage = ExteriorBookingpage(
-          category: cartItem.category,
-          serviceName: cartItem.service_name,
-          rating: cartItem.rating,
-          originalPrice: cartItem.original_price,
-          discount: cartItem.discount,
-          image: cartItem.image,
-          discountPrice: cartItem.price,
-          serviceType: cartItem.service_type,
-        );
-        break;
-      case 'Interior':
-        targetPage = InteriorBookingPage(
-          category: cartItem.category,
-          serviceName: cartItem.service_name,
-          rating: cartItem.rating,
-          originalPrice: cartItem.original_price,
-          discount: cartItem.discount,
-          image: cartItem.image,
-          discountPrice: cartItem.price,
-          serviceType: cartItem.service_type,
-        );
-        break;
-      case 'Vehicle':
-        targetPage = VehicleBookingPage(
-          category: cartItem.category,
-          serviceName: cartItem.service_name,
-          rating: cartItem.rating,
-          originalPrice: cartItem.original_price,
-          discount: cartItem.discount,
-          image: cartItem.image,
-          discountPrice: cartItem.price,
-          serviceType: cartItem.service_type,
-        );
-        break;
-      case 'Pet':
-        targetPage = PetCleaning(
-          category: cartItem.category,
-          serviceName: cartItem.service_name,
-          rating: cartItem.rating,
-          originalPrice: cartItem.original_price,
-          discount: cartItem.discount,
-          image: cartItem.image,
-          discountPrice: cartItem.price,
-          serviceType: cartItem.service_type,
-        );
-        break;
-      case 'Home':
-        targetPage = HomeBookingPage(
-          category: cartItem.category,
-          serviceName: cartItem.service_name,
-          rating: cartItem.rating,
-          originalPrice: cartItem.original_price,
-          discount: cartItem.discount,
-          image: cartItem.image,
-          discountPrice: cartItem.price,
-          serviceType: cartItem.service_type,
-        );
-        break;
-    }
-
-    if (targetPage != null && mounted) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => targetPage!));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final cartItem = widget.cartItem;
@@ -160,7 +84,6 @@ class _CartservicecardState extends State<Cartservicecard> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: GestureDetector(
-        onTap: _navigateToBookingPage,
         child: Card(
           color: primary.c,
           elevation: 4,
