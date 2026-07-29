@@ -77,6 +77,267 @@ class _CartservicecardState extends State<Cartservicecard> {
     }
   }
 
+  Future<void> _showRemoveBottomSheet() async {
+    String? selectedReason;
+    final commentController = TextEditingController();
+
+    final reasons = [
+      'No longer needed',
+      'Found a better service',
+      'Changed my mind',
+      'Other',
+    ];
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+                left: 20,
+                right: 20,
+                top: 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Handle bar
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Title
+                    const Text(
+                      'Remove from Cart?',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Warning banner
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFCD34D)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Icon(Icons.info_outline,
+                              color: Color(0xFFD97706), size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Removing this item will delete it from your cart. You can always re-add it from the services page.',
+                              style: TextStyle(
+                                color: Color(0xFFD97706),
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Reason label
+                    const Text(
+                      'Please select a reason for removing:',
+                      style: TextStyle(fontSize: 13, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Reason radio options
+                    ...reasons.map((reason) {
+                      final selected = selectedReason == reason;
+                      return GestureDetector(
+                        onTap: () =>
+                            setSheetState(() => selectedReason = reason),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: selected
+                                  ? const Color(0xFF059669)
+                                  : Colors.grey.shade300,
+                              width: selected ? 2 : 1,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            color: selected
+                                ? const Color(0xFFF0FDF4)
+                                : Colors.white,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: selected
+                                        ? const Color(0xFF059669)
+                                        : Colors.grey.shade400,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: selected
+                                    ? Center(
+                                        child: Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: const BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Color(0xFF059669),
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                reason,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: selected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+
+                    const SizedBox(height: 16),
+
+                    // Optional comments
+                    const Text(
+                      'Additional comments (Optional)',
+                      style: TextStyle(fontSize: 13, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: commentController,
+                      maxLines: 3,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: "Tell us more about why you're removing...",
+                        hintStyle: TextStyle(
+                            color: Colors.grey.shade400, fontSize: 13),
+                        contentPadding: const EdgeInsets.all(14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: Color(0xFF0F2E5A), width: 1.5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Confirm Remove button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: selectedReason == null
+                            ? null
+                            : () async {
+                                Navigator.pop(ctx);
+                                await _removeItemFromCart();
+                              },
+                        icon: const Icon(Icons.delete_outline,
+                            color: Colors.white, size: 18),
+                        label: const Text(
+                          'Confirm Remove',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          disabledBackgroundColor: Colors.grey.shade300,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Keep in Cart button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                              color: Color(0xFF0F2E5A), width: 1.5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                        ),
+                        child: const Text(
+                          'Keep in Cart',
+                          style: TextStyle(
+                            color: Color(0xFF0F2E5A),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    commentController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final cartItem = widget.cartItem;
@@ -177,7 +438,7 @@ class _CartservicecardState extends State<Cartservicecard> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: _removeItemFromCart,
+                              onTap: _showRemoveBottomSheet,
                               child: Container(
                                 height: 30,
                                 color: primary.c,

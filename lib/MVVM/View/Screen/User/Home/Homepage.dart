@@ -258,10 +258,8 @@ class HomepageState extends State<Homepage> {
 
             // Map to dbSelected category name
             String dbSelected = selected;
-            if (selected == "For You")
+            if (selected == "For You" || selected == "Workers")
               dbSelected = "All";
-            else if (selected == "Workers")
-              dbSelected = "Exterior";
             else if (selected == "Bus")
               dbSelected = "Interior";
             else if (selected == "Local Ads") dbSelected = "Vehicle";
@@ -1205,11 +1203,21 @@ class HomepageState extends State<Homepage> {
                             businessAddress: data['businessAddress'] as String?,
                             businessMapsUrl: data['businessMapsUrl'] as String?,
                             serviceId: service.id,
-                            providerId: data['providerId']?.toString() ?? data['uid']?.toString() ?? 'Unknown',
-                            providerName: data['providerName']?.toString() ?? data['workerName']?.toString() ?? 'Unknown',
-                            providerPhone: data['providerPhone']?.toString() ?? data['phone']?.toString() ?? '',
-                            serviceDescription: data['description']?.toString() ?? data['about']?.toString() ?? '',
-                            estimatedDuration: data['duration']?.toString() ?? '1 hr',
+                            providerId: data['providerId']?.toString() ??
+                                data['uid']?.toString() ??
+                                'Unknown',
+                            providerName: data['providerName']?.toString() ??
+                                data['workerName']?.toString() ??
+                                'Unknown',
+                            providerPhone: data['providerPhone']?.toString() ??
+                                data['phone']?.toString() ??
+                                '',
+                            serviceDescription:
+                                data['description']?.toString() ??
+                                    data['about']?.toString() ??
+                                    '',
+                            estimatedDuration:
+                                data['duration']?.toString() ?? '1 hr',
                           ),
                         ),
                       );
@@ -2087,11 +2095,12 @@ class HomepageState extends State<Homepage> {
           itemCount: filtered.length,
           itemBuilder: (context, index) {
             final service = filtered[index];
-            final name = service['service_name'] ?? '';
-            final category = service['category'] ?? '';
-            final rating = (service['rating'] ?? 0.0).toDouble();
-            final price = service['price'] ?? 0;
-            final image = service['image'] ?? '';
+            final data = service.data() as Map<String, dynamic>;
+            final name = data['service_name'] ?? '';
+            final category = data['category'] ?? '';
+            final rating = (data['rating'] ?? 0.0).toDouble();
+            final price = data['price'] ?? 0;
+            final image = data['image'] ?? '';
 
             return GestureDetector(
               onTap: () {
@@ -2102,21 +2111,31 @@ class HomepageState extends State<Homepage> {
                       category: category,
                       serviceName: name,
                       rating: rating,
-                      originalPrice: service['original_price'] ?? 0,
-                      discount: service['discount'] ?? 0,
+                      originalPrice: data['original_price'] ?? 0,
+                      discount: data['discount'] ?? 0,
                       image: image,
                       discountPrice: price,
-                      serviceType: service['service_type'],
-                      businessLat: (service['businessLat'] as num?)?.toDouble(),
-                      businessLng: (service['businessLng'] as num?)?.toDouble(),
-                      businessAddress: service['businessAddress'] as String?,
-                      businessMapsUrl: service['businessMapsUrl'] as String?,
-                      serviceId: service['id']?.toString() ?? service['serviceId']?.toString() ?? 'Unknown',
-                      providerId: service['providerId']?.toString() ?? service['uid']?.toString() ?? 'Unknown',
-                      providerName: service['providerName']?.toString() ?? service['workerName']?.toString() ?? 'Unknown',
-                      providerPhone: service['providerPhone']?.toString() ?? service['phone']?.toString() ?? '',
-                      serviceDescription: service['description']?.toString() ?? service['about']?.toString() ?? '',
-                      estimatedDuration: service['duration']?.toString() ?? '1 hr',
+                      serviceType: data['service_type'],
+                      businessLat: (data['businessLat'] as num?)?.toDouble(),
+                      businessLng: (data['businessLng'] as num?)?.toDouble(),
+                      businessAddress: data['businessAddress'] as String?,
+                      businessMapsUrl: data['businessMapsUrl'] as String?,
+                      serviceId: data['id']?.toString() ??
+                          data['serviceId']?.toString() ??
+                          'Unknown',
+                      providerId: data['providerId']?.toString() ??
+                          data['uid']?.toString() ??
+                          'Unknown',
+                      providerName: data['providerName']?.toString() ??
+                          data['workerName']?.toString() ??
+                          'Unknown',
+                      providerPhone: data['providerPhone']?.toString() ??
+                          data['phone']?.toString() ??
+                          '',
+                      serviceDescription: data['description']?.toString() ??
+                          data['about']?.toString() ??
+                          '',
+                      estimatedDuration: data['duration']?.toString() ?? '1 hr',
                     ),
                   ),
                 );

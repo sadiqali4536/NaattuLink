@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'booking_success_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cherry_toast/cherry_toast.dart';
+import 'package:get/get.dart';
 
 class ServiceBookingSummaryPage extends StatefulWidget {
   final String serviceName;
@@ -119,9 +120,11 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
         });
       }
     } catch (e) {
-      setState(() {
-        addressSubtitle = 'Failed to get location';
-      });
+      if (mounted) {
+        setState(() {
+          addressSubtitle = 'Failed to get location';
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -756,35 +759,96 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Final Confirm action
-                      CherryToast.success(
-                        title: const Text("Booking Confirmed!"),
-                      ).show(context);
-                      // Navigator.popUntil(context, (route) => route.isFirst);
-                    },
+                    onPressed: _isLoading
+                        ? null
+                        : () async {
+                            setState(() => _isLoading = true);
+                            try {
+                              final user = FirebaseAuth.instance.currentUser;
+                              final bookingRef = await FirebaseFirestore
+                                  .instance
+                                  .collection('service_bookings')
+                                  .add({
+                                'userId': user?.uid,
+                                'userEmail': user?.email,
+                                'serviceId': widget.serviceId,
+                                'serviceName': widget.serviceName,
+                                'serviceCategory': widget.serviceCategory,
+                                'providerId': widget.providerId,
+                                'providerName': widget.providerName,
+                                'providerPhone': widget.providerPhone,
+                                'image': widget.image,
+                                'price': widget.price,
+                                'rating': widget.rating,
+                                'selectedDate':
+                                    widget.selectedDate.toIso8601String(),
+                                'selectedTimeSlot': widget.selectedTimeSlot,
+                                'estimatedDuration': widget.estimatedDuration,
+                                'addressTitle': addressTitle,
+                                'addressSubtitle': addressSubtitle,
+                                'latitude': _latitude,
+                                'longitude': _longitude,
+                                'status': 'confirmed',
+                                'createdAt': FieldValue.serverTimestamp(),
+                              });
+
+                              if (!mounted) return;
+                              Get.off(
+                                () => BookingSuccessPage(
+                                  bookingId: bookingRef.id
+                                      .substring(0, 8)
+                                      .toUpperCase(),
+                                  serviceName: widget.serviceName,
+                                  date: widget.selectedDate,
+                                  timeSlot: widget.selectedTimeSlot,
+                                  providerName:
+                                      widget.providerName ?? 'Provider',
+                                ),
+                                transition: Transition.fadeIn,
+                              );
+                            } catch (e) {
+                              if (!mounted) return;
+                              CherryToast.error(
+                                title: const Text("Booking Failed!"),
+                                description: Text(
+                                    "Something went wrong. Please try again."),
+                              ).show(context);
+                            } finally {
+                              if (mounted) setState(() => _isLoading = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
+                      disabledBackgroundColor: primaryColor.withOpacity(0.6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(25),
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          "Confirm Booking",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                "Confirm Booking",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward,
+                                  color: Colors.white, size: 18),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward,
-                            color: Colors.white, size: 18),
-                      ],
-                    ),
                   ),
                 ),
                 const SizedBox(height: 12),

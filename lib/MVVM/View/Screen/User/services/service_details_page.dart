@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cherry_toast/cherry_toast.dart';
+import 'package:get/get.dart';
 import 'service_schedule_page.dart';
+import '../User_Dashboard/user_Dashboard.dart';
 
 class ServiceDetailsPage extends StatelessWidget {
   final String category;
@@ -655,7 +657,7 @@ class ServiceDetailsPage extends StatelessWidget {
               backgroundColor: Colors.white.withOpacity(0.9),
               child: IconButton(
                 icon: Icon(Icons.arrow_back, color: primaryColor),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Get.offAll(() => const user_Dashboard()),
               ),
             ),
           ),
