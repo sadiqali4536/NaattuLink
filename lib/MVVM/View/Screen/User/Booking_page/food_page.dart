@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 
 class FoodPage extends StatefulWidget {
   const FoodPage({Key? key}) : super(key: key);
@@ -18,7 +18,7 @@ class _FoodPageState extends State<FoodPage> {
         elevation: 0,
         leading: Padding(
           padding: const EdgeInsets.only(left: 10.0),
-          child: customBackbutton1(onpress: () => Navigator.pop(context)),
+          child: const AppBackButton(),
         ),
         centerTitle: true,
         title: const Text(

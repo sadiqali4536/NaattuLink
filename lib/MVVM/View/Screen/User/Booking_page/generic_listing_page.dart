@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 
-class HelplinePage extends StatefulWidget {
-  const HelplinePage({Key? key}) : super(key: key);
+class GenericListingPage extends StatelessWidget {
+  final String title;
 
-  @override
-  State<HelplinePage> createState() => _HelplinePageState();
-}
+  const GenericListingPage({Key? key, required this.title}) : super(key: key);
 
-class _HelplinePageState extends State<HelplinePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -16,24 +13,24 @@ class _HelplinePageState extends State<HelplinePage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10.0),
-          child: const AppBackButton(),
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10.0),
+          child: AppBackButton(),
         ),
         centerTitle: true,
-        title: const Text(
-          "Helpline",
-          style: TextStyle(
+        title: Text(
+          title,
+          style: const TextStyle(
             color: Color(0xFF0F2E5A),
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
       ),
-      body: const Center(
+      body: Center(
         child: Text(
-          "Helpline Numbers coming soon...",
-          style: TextStyle(
+          "$title Listings coming soon...",
+          style: const TextStyle(
             color: Color(0xFF64748B),
             fontSize: 16,
           ),

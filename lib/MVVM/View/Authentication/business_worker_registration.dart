@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 
@@ -206,16 +207,9 @@ class _BusinessWorkerRegistrationPageState
       children: [
         Row(
           children: [
-            GestureDetector(
-              onTap: () => Get.back(),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF1F5F9),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.arrow_back, color: Color(0xFF0A235C)),
-              ),
+            AppBackButton(
+              margin: EdgeInsets.zero,
+              onPressed: () => Get.back(),
             ),
             const SizedBox(width: 16),
             const Text(

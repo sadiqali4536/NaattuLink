@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:naattulink/MVVM/utils/service_functions/distance_service.dart';
+import 'package:naattulink/MVVM/utils/service_functions/location_service.dart';
+import 'package:naattulink/MVVM/utils/formatters/distance_formatter.dart';
+
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'vehicles_auto_taxi_bookings/vehicle_details_page.dart';
 import 'vehicles_auto_taxi_bookings/agency_packages_page.dart';
@@ -74,19 +78,9 @@ class PickupListing {
   });
 
   double distanceFrom(double userLat, double userLng) {
-    const earthR = 6371.0;
-    final dLat = _degToRad(latitude - userLat);
-    final dLng = _degToRad(longitude - userLng);
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degToRad(userLat)) *
-            cos(_degToRad(latitude)) *
-            sin(dLng / 2) *
-            sin(dLng / 2);
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return earthR * c;
+    return DistanceService.calculateDistanceInKm(userLat, userLng, latitude, longitude);
   }
 
-  double _degToRad(double deg) => deg * (pi / 180);
 
   int etaMinutes(double userLat, double userLng) {
     final d = distanceFrom(userLat, userLng);
@@ -217,12 +211,32 @@ class _PickupPageState extends State<PickupPage>
   @override
   void initState() {
     super.initState();
-    _initLocation();
-    _fetchListingsFromFirestore();
+    _initializeData();
     // Simulate live vehicle movement every 5 seconds
     _liveUpdateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted && _allListings.isNotEmpty) setState(() => _driftVehicles());
     });
+  }
+
+  Future<void> _initializeData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingListings = true;
+      _locationLoading = true;
+    });
+    
+    await _initLocation();
+    
+    if (!mounted) return;
+    if (_locationName == 'Location access denied') {
+      setState(() {
+        _isLoadingListings = false;
+        _allListings = [];
+      });
+      return;
+    }
+    
+    await _fetchListingsFromFirestore();
   }
 
   @override
@@ -541,7 +555,7 @@ class _PickupPageState extends State<PickupPage>
       elevation: 0,
       leading: Padding(
         padding: const EdgeInsets.only(left: 10.0),
-        child: customBackbutton1(onpress: () => Navigator.pop(context)),
+        child: const AppBackButton(),
       ),
       centerTitle: true,
       title: const Text(
@@ -595,10 +609,7 @@ class _PickupPageState extends State<PickupPage>
             ),
           ),
           GestureDetector(
-            onTap: () => setState(() {
-              _locationLoading = true;
-              _initLocation();
-            }),
+            onTap: () => _initializeData(),
             child:
                 const Icon(Icons.refresh, color: Color(0xFF0F2E5A), size: 16),
           ),

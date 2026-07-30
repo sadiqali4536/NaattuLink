@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:get/get.dart';
@@ -653,12 +654,9 @@ class ServiceDetailsPage extends StatelessWidget {
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 16,
-            child: CircleAvatar(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              child: IconButton(
-                icon: Icon(Icons.arrow_back, color: primaryColor),
-                onPressed: () => Get.offAll(() => const user_Dashboard()),
-              ),
+            child: AppBackButton(
+              margin: EdgeInsets.zero,
+              onPressed: () => Get.offAll(() => const user_Dashboard()),
             ),
           ),
           Positioned(

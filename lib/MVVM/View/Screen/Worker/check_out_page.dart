@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/payment_screen.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
-import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 
 class CheckOutPage extends StatefulWidget {
   const CheckOutPage({super.key});
@@ -93,11 +93,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
             padding: const EdgeInsets.only(top: 5),
             child: Row(
               children: [
-                customBackbutton1(
-                  onpress: () {
-                    Navigator.pop(context);
-                  },
-                ),
+                const AppBackButton(),
                 const SizedBox(width: 30),
                 const Text(
                   'Checkout Work Payment',

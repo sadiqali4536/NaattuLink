@@ -1,11 +1,16 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:naattulink/MVVM/utils/service_functions/distance_service.dart';
+import 'package:naattulink/MVVM/utils/service_functions/location_service.dart';
+import 'package:naattulink/MVVM/utils/formatters/distance_formatter.dart';
+
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'clinic_doctors_page.dart';
 
 // ─────────────────────────────────────────────────
 // Model
@@ -45,19 +50,9 @@ class ClinicListing {
   });
 
   double distanceFrom(double userLat, double userLng) {
-    const earthR = 6371.0;
-    final dLat = _degToRad(latitude - userLat);
-    final dLng = _degToRad(longitude - userLng);
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degToRad(userLat)) *
-            cos(_degToRad(latitude)) *
-            sin(dLng / 2) *
-            sin(dLng / 2);
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return earthR * c;
+    return DistanceService.calculateDistanceInKm(userLat, userLng, latitude, longitude);
   }
 
-  double _degToRad(double deg) => deg * (pi / 180);
 
   int etaMinutes(double userLat, double userLng) {
     final d = distanceFrom(userLat, userLng);
@@ -69,7 +64,14 @@ class ClinicListing {
 // Page
 // ─────────────────────────────────────────────────
 class ClinicsPage extends StatefulWidget {
-  const ClinicsPage({Key? key}) : super(key: key);
+  final String healthcareType;
+  final String pageTitle;
+
+  const ClinicsPage({
+    Key? key,
+    this.healthcareType = 'Clinic',
+    this.pageTitle = 'Clinics',
+  }) : super(key: key);
 
   @override
   State<ClinicsPage> createState() => _ClinicsPageState();
@@ -97,15 +99,35 @@ class _ClinicsPageState extends State<ClinicsPage> {
   @override
   void initState() {
     super.initState();
-    _initLocation();
-    _fetchListingsFromFirestore();
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingListings = true;
+      _locationLoading = true;
+    });
+    
+    await _initLocation();
+    
+    if (!mounted) return;
+    if (_locationName == 'Location access denied') {
+      setState(() {
+        _isLoadingListings = false;
+        _allListings = [];
+      });
+      return;
+    }
+    
+    await _fetchListingsFromFirestore();
   }
 
   Future<void> _fetchListingsFromFirestore() async {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('healthcare')
-          .where('healthcare_type', isEqualTo: 'Clinic')
+          .where('healthcare_type', isEqualTo: widget.healthcareType)
           .get();
 
       final List<ClinicListing> fetchedListings = [];
@@ -337,11 +359,11 @@ class _ClinicsPageState extends State<ClinicsPage> {
       elevation: 0,
       leading: Padding(
         padding: const EdgeInsets.only(left: 10.0),
-        child: customBackbutton1(onpress: () => Navigator.pop(context)),
+        child: const AppBackButton(),
       ),
       centerTitle: true,
-      title: const Text(
-        "Clinics",
+      title: Text(
+        widget.pageTitle,
         style: TextStyle(
           color: Color(0xFF0F2E5A),
           fontWeight: FontWeight.bold,
@@ -385,10 +407,7 @@ class _ClinicsPageState extends State<ClinicsPage> {
             ),
           ),
           GestureDetector(
-            onTap: () => setState(() {
-              _locationLoading = true;
-              _initLocation();
-            }),
+            onTap: () => _initializeData(),
             child:
                 const Icon(Icons.refresh, color: Color(0xFF0F2E5A), size: 16),
           ),
@@ -545,24 +564,33 @@ class _ClinicsPageState extends State<ClinicsPage> {
       statusText = const Color(0xFF4F46E5);
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(
-                  0.03), // Will leave withOpacity to avoid Flutter version compatibility issues if withAlpha isn't perfectly supported in this version's Color API.
-              blurRadius: 10,
-              offset: const Offset(0, 4)),
-        ],
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ClinicDoctorsPage(clinic: item),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(
+                    0.03), // Will leave withOpacity to avoid Flutter version compatibility issues if withAlpha isn't perfectly supported in this version's Color API.
+                blurRadius: 10,
+                offset: const Offset(0, 4)),
+          ],
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Top row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -728,6 +756,6 @@ class _ClinicsPageState extends State<ClinicsPage> {
           )
         ],
       ),
-    );
+    ));
   }
 }

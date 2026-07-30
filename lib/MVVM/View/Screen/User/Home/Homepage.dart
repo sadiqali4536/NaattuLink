@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:math';
 import 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_notch_bottom_bar.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,9 +12,15 @@ import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/healthcare_bookings/clinics_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/education_categories_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/public_services_categories_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/transportation_categories_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/shops_categories_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/healthcare_bookings/healthcare_categories_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/services/service_details_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/helpline_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/tuition_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/food_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/internet_cafe_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pickup_page.dart';
@@ -48,6 +55,7 @@ class HomepageState extends State<Homepage> {
 
   String? username;
   int selectedCategoryIndex = 0;
+  int _shuffleSeed = 0;
   int activeBannerIndex = 0;
   String searchQuery = "";
   double _minRating = 0;
@@ -56,6 +64,7 @@ class HomepageState extends State<Homepage> {
   Stream<QuerySnapshot>? _servicesStream;
   Stream<QuerySnapshot>? _advertisementsStream;
   Stream<QuerySnapshot>? _notificationsStream;
+  Stream<QuerySnapshot>? _busSchedulesStream;
 
   // Bus tab state variables
   String selectedBusFilter = "All Types";
@@ -98,9 +107,12 @@ class HomepageState extends State<Homepage> {
   @override
   void initState() {
     super.initState();
+    _shuffleSeed = DateTime.now().millisecondsSinceEpoch;
     _searchController = TextEditingController();
-    _fromBusController = TextEditingController(text: "Calicut");
-    _toBusController = TextEditingController(text: "Thalayad");
+    final String currentLoc = LocationController.to.currentLocation.value;
+    final String defaultFrom = currentLoc.split(',').first.trim();
+    _fromBusController = TextEditingController(text: defaultFrom);
+    _toBusController = TextEditingController(text: "");
     loadUsername();
     _servicesStream =
         FirebaseFirestore.instance.collection('services').snapshots();
@@ -114,12 +126,7 @@ class HomepageState extends State<Homepage> {
     // Initialize saved routes from Hive
     _routesBox = Hive.box('saved_routes_box');
     if (_routesBox.get('routes') == null) {
-      // Seed with default routes if empty
-      _routesBox.put('routes', [
-        {"from": "Calicut", "to": "Thalayad"},
-        {"from": "Kozhikode", "to": "Wayanad"},
-        {"from": "Balussery", "to": "Thalayad"},
-      ]);
+      _routesBox.put('routes', []);
     }
     _loadSavedRoutes();
   }
@@ -190,6 +197,7 @@ class HomepageState extends State<Homepage> {
       selectedCategoryIndex = 0;
       _selectedAdCategory = 'All';
       _clearBusSearch();
+      _shuffleSeed = DateTime.now().millisecondsSinceEpoch;
     });
     if (_homeScrollController.hasClients) {
       _homeScrollController.animateTo(
@@ -220,36 +228,6 @@ class HomepageState extends State<Homepage> {
               "Local Ads",
               "Online Shops",
             ];
-            for (var doc in allServices) {
-              final data = doc.data() as Map<String, dynamic>;
-              final cat = (data['category'] ?? '').toString().trim();
-              if (cat.isNotEmpty) {
-                String norm = cat.toLowerCase();
-                bool isDuplicate = false;
-                if (norm == 'exterior' || norm == 'workers')
-                  isDuplicate = true;
-                else if (norm == 'interior' || norm == 'bus')
-                  isDuplicate = true;
-                else if (norm == 'vehicle' || norm == 'local ads')
-                  isDuplicate = true;
-                else if (norm == 'all' || norm == 'for you')
-                  isDuplicate = true;
-                else if (norm == 'emergency' || norm == 'online shops')
-                  isDuplicate = true;
-                else if (norm == 'pet' || norm == 'home') isDuplicate = true;
-
-                for (var existing in currentCategoryList) {
-                  if (existing.trim().toLowerCase() == norm) {
-                    isDuplicate = true;
-                  }
-                }
-
-                if (!isDuplicate) {
-                  currentCategoryList.add(cat);
-                }
-              }
-            }
-
             // Clamp the selected category index
             if (selectedCategoryIndex >= currentCategoryList.length) {
               selectedCategoryIndex = 0;
@@ -271,13 +249,19 @@ class HomepageState extends State<Homepage> {
                   (data['service_name'] ?? '').toString().toLowerCase();
               final category = (data['category'] ?? '').toString();
               final rating = (data['rating'] ?? 0).toDouble();
+              final status = (data['status'] ?? '').toString().toLowerCase();
 
               final matchesCategory =
                   dbSelected == "All" || category == dbSelected;
-              final matchesSearch = name.contains(searchQuery.toLowerCase());
+              final sq = searchQuery.trim().toLowerCase();
+              final matchesSearch = sq.isEmpty || name.contains(sq);
               final matchesRating = rating >= _minRating;
+              final isActive = status != 'inactive';
 
-              return matchesCategory && matchesSearch && matchesRating;
+              return matchesCategory &&
+                  matchesSearch &&
+                  matchesRating &&
+                  isActive;
             }).toList();
 
             if (_sortBy == 'A-Z') {
@@ -302,7 +286,10 @@ class HomepageState extends State<Homepage> {
                     children: [
                       Column(
                         children: [
-                          const SizedBox(height: 290),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            height: selectedCategory == "Bus" ? 210 : 290,
+                          ),
                           if (_searchController.text.isEmpty) ...[
                             StreamBuilder<QuerySnapshot>(
                               stream: _advertisementsStream,
@@ -516,8 +503,7 @@ class HomepageState extends State<Homepage> {
                                   ? const ServiceCardListSkeleton()
                                   : buildWorkersTab(filtered),
                             )
-                          else if (selectedCategory == "Bus" &&
-                              _searchController.text.isEmpty)
+                          else if (selectedCategory == "Bus")
                             buildBusTab()
                           else if (selectedCategory == "Local Ads" &&
                               _searchController.text.isEmpty)
@@ -525,13 +511,37 @@ class HomepageState extends State<Homepage> {
                           else if (selectedCategory == "Online Shops" &&
                               _searchController.text.isEmpty)
                             buildOnlineShopsTab()
-                          else
-                            const SizedBox(height: 130), // bottom bar spacing
+                          else if (_searchController.text.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
+                              child: snapshot.connectionState ==
+                                      ConnectionState.waiting
+                                  ? const ServiceCardListSkeleton()
+                                  : filtered.isEmpty
+                                      ? const Padding(
+                                          padding: EdgeInsets.only(top: 100.0),
+                                          child: Center(
+                                            child: Text(
+                                              "No results found for your search.",
+                                              style: TextStyle(
+                                                  color: Colors.grey,
+                                                  fontSize: 14),
+                                            ),
+                                          ),
+                                        )
+                                      : buildWorkersTab(filtered),
+                            ),
+
+                          const SizedBox(height: 130), // bottom bar spacing
                         ],
                       ),
-                      Container(
-                        height: 280,
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        height: selectedCategory == "Bus" ? 200 : 280,
                         width: double.infinity,
+                        clipBehavior: Clip.hardEdge,
                         decoration: const BoxDecoration(
                           color: Color(0xFF0F2E5A), // Premium navy color
                           borderRadius: BorderRadius.only(
@@ -541,371 +551,395 @@ class HomepageState extends State<Homepage> {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.only(top: 48),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                height: 48,
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 300),
-                                  child: username == null
-                                      ? const HeaderSkeleton(
-                                          key: ValueKey('header_loading'),
-                                        )
-                                      : Padding(
-                                          key: const ValueKey('header_loaded'),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: Colors.white,
-                                                    width: 1.5,
-                                                  ),
-                                                ),
-                                                child: CircleAvatar(
-                                                  radius: 20,
-                                                  backgroundColor: const Color(
-                                                    0xFFFFB800,
-                                                  ), // Gold accent
-                                                  child: Text(
-                                                    username != null &&
-                                                            username!.isNotEmpty
-                                                        ? username![0]
-                                                            .toUpperCase()
-                                                        : 'U',
-                                                    style: const TextStyle(
+                          child: SingleChildScrollView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(
+                                  height: 48,
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 300),
+                                    child: username == null
+                                        ? const HeaderSkeleton(
+                                            key: ValueKey('header_loading'),
+                                          )
+                                        : Padding(
+                                            key:
+                                                const ValueKey('header_loaded'),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 20,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
                                                       color: Colors.white,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 16,
+                                                      width: 1.5,
                                                     ),
                                                   ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      username ?? 'Hello!',
+                                                  child: CircleAvatar(
+                                                    radius: 20,
+                                                    backgroundColor:
+                                                        const Color(
+                                                      0xFFFFB800,
+                                                    ), // Gold accent
+                                                    child: Text(
+                                                      username != null &&
+                                                              username!
+                                                                  .isNotEmpty
+                                                          ? username![0]
+                                                              .toUpperCase()
+                                                          : 'U',
                                                       style: const TextStyle(
                                                         color: Colors.white,
-                                                        fontSize: 16,
                                                         fontWeight:
                                                             FontWeight.bold,
+                                                        fontSize: 16,
                                                       ),
                                                     ),
-                                                    const SizedBox(height: 2),
-                                                    Obx(() {
-                                                      final loc =
-                                                          LocationController
-                                                              .to
-                                                              .currentLocation
-                                                              .value;
-                                                      if (loc.isEmpty)
-                                                        return const SizedBox
-                                                            .shrink();
-                                                      return Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          const Icon(
-                                                            Icons
-                                                                .location_on_outlined,
-                                                            color:
-                                                                Colors.white70,
-                                                            size: 12,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 4,
-                                                          ),
-                                                          Flexible(
-                                                            child: Text(
-                                                              loc,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                              style:
-                                                                  const TextStyle(
-                                                                color: Colors
-                                                                    .white70,
-                                                                fontSize: 11,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 2,
-                                                          ),
-                                                          const Icon(
-                                                            Icons
-                                                                .keyboard_arrow_down,
-                                                            color:
-                                                                Colors.white70,
-                                                            size: 12,
-                                                          ),
-                                                        ],
-                                                      );
-                                                    }),
-                                                  ],
+                                                  ),
                                                 ),
-                                              ),
-                                              StreamBuilder<QuerySnapshot>(
-                                                stream: _notificationsStream,
-                                                builder: (context, snapshot) {
-                                                  int unreadCount = 0;
-                                                  if (snapshot.hasData) {
-                                                    final lastRead = Hive.box(
-                                                      'saved_routes_box',
-                                                    ).get(
-                                                      'last_notification_read_time',
-                                                      defaultValue: 0,
-                                                    ) as int;
-                                                    for (var doc in snapshot
-                                                        .data!.docs) {
-                                                      final data = doc.data()
-                                                          as Map<String,
-                                                              dynamic>?;
-                                                      if (data != null &&
-                                                          data['created_at'] !=
-                                                              null) {
-                                                        final timestamp =
-                                                            data['created_at']
-                                                                as Timestamp;
-                                                        if (timestamp
-                                                                .millisecondsSinceEpoch >
-                                                            lastRead) {
-                                                          unreadCount++;
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                  return Stack(
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
                                                     children: [
-                                                      IconButton(
-                                                        icon: const Icon(
-                                                          Icons
-                                                              .notifications_none_outlined,
+                                                      Text(
+                                                        username ?? 'Hello!',
+                                                        style: const TextStyle(
                                                           color: Colors.white,
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                         ),
-                                                        onPressed: () {
-                                                          Hive.box(
-                                                            'saved_routes_box',
-                                                          ).put(
-                                                            'last_notification_read_time',
-                                                            DateTime.now()
-                                                                .millisecondsSinceEpoch,
-                                                          );
-                                                          setState(
-                                                            () {},
-                                                          ); // to instantly clear the badge before stream re-emits
-                                                          Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                              builder: (_) =>
-                                                                  const NotificationsPage(),
-                                                            ),
-                                                          );
-                                                        },
                                                       ),
-                                                      if (unreadCount > 0)
-                                                        Positioned(
-                                                          right: 8,
-                                                          top: 8,
-                                                          child: Container(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(
-                                                              4,
+                                                      const SizedBox(height: 2),
+                                                      Obx(() {
+                                                        final loc =
+                                                            LocationController
+                                                                .to
+                                                                .currentLocation
+                                                                .value;
+                                                        if (loc.isEmpty)
+                                                          return const SizedBox
+                                                              .shrink();
+                                                        return Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            const Icon(
+                                                              Icons
+                                                                  .location_on_outlined,
+                                                              color: Colors
+                                                                  .white70,
+                                                              size: 12,
                                                             ),
-                                                            decoration:
-                                                                const BoxDecoration(
-                                                              color: Colors.red,
-                                                              shape: BoxShape
-                                                                  .circle,
+                                                            const SizedBox(
+                                                              width: 4,
                                                             ),
-                                                            constraints:
-                                                                const BoxConstraints(
-                                                              minWidth: 16,
-                                                              minHeight: 16,
-                                                            ),
-                                                            child: Center(
+                                                            Flexible(
                                                               child: Text(
-                                                                unreadCount > 9
-                                                                    ? '9+'
-                                                                    : unreadCount
-                                                                        .toString(),
+                                                                loc,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
                                                                 style:
                                                                     const TextStyle(
                                                                   color: Colors
-                                                                      .white,
-                                                                  fontSize: 10,
+                                                                      .white70,
+                                                                  fontSize: 11,
                                                                   fontWeight:
                                                                       FontWeight
-                                                                          .bold,
+                                                                          .w500,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                              width: 2,
+                                                            ),
+                                                            const Icon(
+                                                              Icons
+                                                                  .keyboard_arrow_down,
+                                                              color: Colors
+                                                                  .white70,
+                                                              size: 12,
+                                                            ),
+                                                          ],
+                                                        );
+                                                      }),
+                                                    ],
+                                                  ),
+                                                ),
+                                                StreamBuilder<QuerySnapshot>(
+                                                  stream: _notificationsStream,
+                                                  builder: (context, snapshot) {
+                                                    int unreadCount = 0;
+                                                    if (snapshot.hasData) {
+                                                      final lastRead = Hive.box(
+                                                        'saved_routes_box',
+                                                      ).get(
+                                                        'last_notification_read_time',
+                                                        defaultValue: 0,
+                                                      ) as int;
+                                                      for (var doc in snapshot
+                                                          .data!.docs) {
+                                                        final data = doc.data()
+                                                            as Map<String,
+                                                                dynamic>?;
+                                                        if (data != null &&
+                                                            data['created_at'] !=
+                                                                null) {
+                                                          final timestamp =
+                                                              data['created_at']
+                                                                  as Timestamp;
+                                                          if (timestamp
+                                                                  .millisecondsSinceEpoch >
+                                                              lastRead) {
+                                                            unreadCount++;
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                    return Stack(
+                                                      children: [
+                                                        IconButton(
+                                                          icon: const Icon(
+                                                            Icons
+                                                                .notifications_none_outlined,
+                                                            color: Colors.white,
+                                                          ),
+                                                          onPressed: () {
+                                                            Hive.box(
+                                                              'saved_routes_box',
+                                                            ).put(
+                                                              'last_notification_read_time',
+                                                              DateTime.now()
+                                                                  .millisecondsSinceEpoch,
+                                                            );
+                                                            setState(
+                                                              () {},
+                                                            ); // to instantly clear the badge before stream re-emits
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                builder: (_) =>
+                                                                    const NotificationsPage(),
+                                                              ),
+                                                            );
+                                                          },
+                                                        ),
+                                                        if (unreadCount > 0)
+                                                          Positioned(
+                                                            right: 8,
+                                                            top: 8,
+                                                            child: Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(
+                                                                4,
+                                                              ),
+                                                              decoration:
+                                                                  const BoxDecoration(
+                                                                color:
+                                                                    Colors.red,
+                                                                shape: BoxShape
+                                                                    .circle,
+                                                              ),
+                                                              constraints:
+                                                                  const BoxConstraints(
+                                                                minWidth: 16,
+                                                                minHeight: 16,
+                                                              ),
+                                                              child: Center(
+                                                                child: Text(
+                                                                  unreadCount >
+                                                                          9
+                                                                      ? '9+'
+                                                                      : unreadCount
+                                                                          .toString(),
+                                                                  style:
+                                                                      const TextStyle(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontSize:
+                                                                        10,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                  ),
                                                                 ),
                                                               ),
                                                             ),
                                                           ),
-                                                        ),
-                                                    ],
-                                                  );
-                                                },
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(
-                                                  Icons.menu,
-                                                  color: Colors.white,
+                                                      ],
+                                                    );
+                                                  },
                                                 ),
-                                                onPressed: () {},
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              // Search field with integrated filter and mic buttons inside
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(30),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: TextFormField(
-                                    controller: _searchController,
-                                    onChanged: (value) =>
-                                        setState(() => searchQuery = value),
-                                    onFieldSubmitted: (value) {
-                                      RecommendationController.to.trackSearch(
-                                        value,
-                                        'Other',
-                                      );
-                                    },
-                                    decoration: InputDecoration(
-                                      hintText:
-                                          "Search for workers, services...",
-                                      hintStyle: const TextStyle(
-                                        color: Color(0xFF94A3B8),
-                                        fontSize: 13,
-                                      ),
-                                      prefixIcon: Padding(
-                                        padding: const EdgeInsets.all(12.0),
-                                        child: Image.asset(
-                                          "assets/icons/serch_icon.png",
-                                          color: const Color(0xFF0F2E5A),
-                                          height: 18,
-                                          width: 18,
-                                        ),
-                                      ),
-                                      suffixIcon: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            height: 20,
-                                            width: 1,
-                                            color: Colors.grey[300],
-                                          ),
-                                          const SizedBox(width: 8),
-                                          GestureDetector(
-                                            onTap: () => showModalBottomSheet(
-                                              context: context,
-                                              shape:
-                                                  const RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.vertical(
-                                                  top: Radius.circular(
-                                                    20,
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.menu,
+                                                    color: Colors.white,
                                                   ),
+                                                  onPressed: () {},
                                                 ),
-                                              ),
-                                              builder: (context) =>
-                                                  buildFilterSheet(),
-                                            ),
-                                            child: const Icon(
-                                              Icons.qr_code_scanner,
-                                              color: Color(0xFF64748B),
-                                              size: 20,
+                                              ],
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          const Padding(
-                                            padding: EdgeInsets.only(
-                                              right: 14.0,
-                                            ),
-                                            child: Icon(
-                                              Icons.mic_none_outlined,
-                                              color: Color(0xFF64748B),
-                                              size: 20,
-                                            ),
+                                  ),
+                                ),
+                                if (selectedCategory != "Bus") ...[
+                                  const SizedBox(height: 12),
+                                  // Search field with integrated filter and mic buttons inside
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(30),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.08),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
                                           ),
                                         ],
                                       ),
-                                      border: InputBorder.none,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                        vertical: 14,
+                                      child: TextFormField(
+                                        controller: _searchController,
+                                        onChanged: (value) =>
+                                            setState(() => searchQuery = value),
+                                        onFieldSubmitted: (value) {
+                                          RecommendationController.to
+                                              .trackSearch(
+                                            value,
+                                            'Other',
+                                          );
+                                        },
+                                        decoration: InputDecoration(
+                                          hintText:
+                                              "Search for workers, services...",
+                                          hintStyle: const TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 13,
+                                          ),
+                                          prefixIcon: Padding(
+                                            padding: const EdgeInsets.all(12.0),
+                                            child: Image.asset(
+                                              "assets/icons/serch_icon.png",
+                                              color: const Color(0xFF0F2E5A),
+                                              height: 18,
+                                              width: 18,
+                                            ),
+                                          ),
+                                          suffixIcon: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                height: 20,
+                                                width: 1,
+                                                color: Colors.grey[300],
+                                              ),
+                                              const SizedBox(width: 8),
+                                              GestureDetector(
+                                                onTap: () =>
+                                                    showModalBottomSheet(
+                                                  context: context,
+                                                  shape:
+                                                      const RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.vertical(
+                                                      top: Radius.circular(
+                                                        20,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  builder: (context) =>
+                                                      buildFilterSheet(),
+                                                ),
+                                                child: const Icon(
+                                                  Icons.qr_code_scanner,
+                                                  color: Color(0xFF64748B),
+                                                  size: 20,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Padding(
+                                                padding: EdgeInsets.only(
+                                                  right: 14.0,
+                                                ),
+                                                child: Icon(
+                                                  Icons.mic_none_outlined,
+                                                  color: Color(0xFF64748B),
+                                                  size: 20,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          border: InputBorder.none,
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              SizedBox(
-                                height: 80,
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 300),
-                                  child: snapshot.connectionState ==
-                                          ConnectionState.waiting
-                                      ? const CategoryRowSkeleton(
-                                          key: ValueKey('category_loading'),
-                                        )
-                                      : ScrollableHorizontalButtons(
-                                          key: const ValueKey(
-                                            'category_loaded',
+                                ],
+                                const SizedBox(height: 20),
+                                SizedBox(
+                                  height: 80,
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 300),
+                                    child: snapshot.connectionState ==
+                                            ConnectionState.waiting
+                                        ? const CategoryRowSkeleton(
+                                            key: ValueKey('category_loading'),
+                                          )
+                                        : ScrollableHorizontalButtons(
+                                            key: const ValueKey(
+                                              'category_loaded',
+                                            ),
+                                            categories: currentCategoryList,
+                                            selectedIndex:
+                                                selectedCategoryIndex,
+                                            onSelected: (index) {
+                                              setState(() {
+                                                selectedCategoryIndex = index;
+                                                _clearBusSearch();
+                                                _shuffleSeed = DateTime.now()
+                                                    .millisecondsSinceEpoch;
+                                                if (currentCategoryList[
+                                                        index] ==
+                                                    "Bus") {
+                                                  _searchController.clear();
+                                                  searchQuery = "";
+                                                }
+                                              });
+                                              if (index <
+                                                  currentCategoryList.length) {
+                                                RecommendationController.to
+                                                    .trackCategoryClick(
+                                                  currentCategoryList[index],
+                                                );
+                                              }
+                                            },
+                                            isDark: true,
                                           ),
-                                          categories: currentCategoryList,
-                                          selectedIndex: selectedCategoryIndex,
-                                          onSelected: (index) {
-                                            setState(() {
-                                              selectedCategoryIndex = index;
-                                              _clearBusSearch();
-                                            });
-                                            if (index <
-                                                currentCategoryList.length) {
-                                              RecommendationController.to
-                                                  .trackCategoryClick(
-                                                currentCategoryList[index],
-                                              );
-                                            }
-                                          },
-                                          isDark: true,
-                                        ),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                      )
                     ],
                   ),
                 ],
@@ -1010,6 +1044,183 @@ class HomepageState extends State<Homepage> {
     );
   }
 
+  IconData _getIconForSubcategory(String name) {
+    switch (name) {
+      // Healthcare
+      case "Hospital":
+        return Icons.local_hospital;
+      case "Clinic":
+        return Icons.medical_services;
+      case "Pharmacy":
+        return Icons.local_pharmacy;
+      case "Laboratory":
+        return Icons.science;
+
+      // Shops
+      case "Restaurant":
+        return Icons.restaurant;
+      case "Bakery":
+        return Icons.cake;
+      case "Grocery":
+        return Icons.local_grocery_store;
+      case "Supermarket":
+        return Icons.store;
+      case "Online Store":
+        return Icons.shopping_cart;
+      case "Fruits & Vegetables":
+        return Icons.eco;
+      case "Meat & Fish":
+        return Icons.set_meal;
+      case "Stationery":
+        return Icons.menu_book;
+      case "Mobile Shop":
+        return Icons.phone_android;
+      case "Electronics":
+        return Icons.electrical_services;
+      case "Fashion":
+        return Icons.checkroom;
+      case "Footwear":
+        return Icons
+            .dry_cleaning; // do_not_step is sometimes not available in older flutter, dry_cleaning or snowshoe
+      case "Jewellery":
+        return Icons.diamond;
+
+      // Transportation
+      case "Auto Taxi":
+        return Icons.local_taxi;
+      case "Pickup":
+        return Icons.local_shipping;
+      case "JCB":
+        return Icons.precision_manufacturing;
+      case "Bus":
+        return Icons.directions_bus;
+      case "Car Rental":
+        return Icons.car_rental;
+
+      // Education
+      case "Tuition":
+        return Icons.school;
+      case "Coaching Centre":
+        return Icons.cast_for_education;
+      case "Computer Institute":
+        return Icons.computer;
+      case "Spoken English":
+        return Icons.record_voice_over;
+
+      // Public Services
+      case "Helpline":
+        return Icons.support_agent;
+      case "Government Offices":
+        return Icons.account_balance;
+      case "Police":
+        return Icons.local_police;
+      case "Fire Station":
+        return Icons.local_fire_department;
+      case "Post Office":
+        return Icons.local_post_office;
+
+      default:
+        return Icons.category;
+    }
+  }
+
+  void _showSubcategoriesSheet(BuildContext context, String title,
+      List<String> subcategories, void Function(String) onSelect) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F2E5A),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  itemCount: subcategories.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.9,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemBuilder: (context, index) {
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        onSelect(subcategories[index]);
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            height: 50,
+                            width: 50,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEEF2FF),
+                              shape: BoxShape.circle,
+                            ),
+                            child: subcategories[index] == "JCB"
+                                ? Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Image.asset("assets/icons/jcb.png",
+                                        color: const Color(0xFF0F2E5A)),
+                                  )
+                                : Icon(
+                                    _getIconForSubcategory(
+                                        subcategories[index]),
+                                    color: const Color(0xFF0F2E5A),
+                                    size: 24),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            subcategories[index],
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF334155),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget buildFilterSheet() {
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -1090,23 +1301,18 @@ class HomepageState extends State<Homepage> {
 
       // Helper widget for horizontal expert services carousel
       Widget buildExpertServicesCarousel(List<dynamic> rawServices) {
-        final expertServices = rawServices.where((doc) {
-          final category = (doc['category'] ?? '').toString().toLowerCase();
-          return category == 'exterior' ||
-              category == 'plumber' ||
-              category == 'electrician' ||
-              category == 'carpenter' ||
-              category == 'painter';
+        var expertServices = rawServices.where((doc) {
+          final data = doc.data() as Map<String, dynamic>? ?? {};
+          final status = (data['status'] ?? '').toString().toLowerCase();
+          return status != 'inactive';
         }).toList();
 
         if (expertServices.isEmpty) return const SizedBox.shrink();
 
-        // Sort by rating to show the highest rated ones first
-        expertServices.sort(
-          (a, b) => (b['rating'] ?? 0.0).toDouble().compareTo(
-                (a['rating'] ?? 0.0).toDouble(),
-              ),
-        );
+        expertServices.shuffle(Random(_shuffleSeed));
+        if (expertServices.length > 5) {
+          expertServices = expertServices.take(5).toList();
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1385,7 +1591,12 @@ class HomepageState extends State<Homepage> {
       // Reusable widget for horizontal product carousels
 
       return RefreshIndicator(
-        onRefresh: () => recController.fetchRecommendations(),
+        onRefresh: () async {
+          setState(() {
+            _shuffleSeed = DateTime.now().millisecondsSinceEpoch;
+          });
+          await recController.fetchRecommendations();
+        },
         child: ListView(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -1420,43 +1631,45 @@ class HomepageState extends State<Homepage> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         buildEssentialItem(
-                          icon: Icons.directions_car_outlined,
-                          label: "Auto/Taxi",
-                          bgColor: const Color(0xFFEEF2FF),
-                          iconColor: const Color(0xFF0F2E5A),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AutoTaxiPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        buildEssentialItem(
                           icon: Icons.local_hospital_outlined,
-                          label: "Clinics",
+                          label: "Healthcare",
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const ClinicsPage(),
+                                builder: (_) =>
+                                    const HealthcareCategoriesPage(),
                               ),
                             );
                           },
                         ),
                         buildEssentialItem(
-                          icon: Icons.emergency_outlined,
-                          label: "Helpline",
+                          icon: Icons.shopping_bag_outlined,
+                          label: "Shops",
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const HelplinePage(),
+                                builder: (_) => const ShopsCategoriesPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        buildEssentialItem(
+                          icon: Icons.directions_car_outlined,
+                          label: "Transportation",
+                          bgColor: const Color(0xFFEEF2FF),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const TransportationCategoriesPage(),
                               ),
                             );
                           },
@@ -1469,83 +1682,34 @@ class HomepageState extends State<Homepage> {
                       children: [
                         buildEssentialItem(
                           icon: Icons.school_outlined,
-                          label: "Tuition",
+                          label: "Education",
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const TuitionPage(),
+                                builder: (_) => const EducationCategoriesPage(),
                               ),
                             );
                           },
                         ),
                         buildEssentialItem(
-                          icon: Icons.restaurant_outlined,
-                          label: "Food",
+                          icon: Icons.account_balance_outlined,
+                          label: "Public Services",
                           bgColor: const Color(0xFFEEF2FF),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const FoodPage(),
+                                builder: (_) =>
+                                    const PublicServicesCategoriesPage(),
                               ),
                             );
                           },
                         ),
-                        buildEssentialItem(
-                          icon: Icons.laptop_outlined,
-                          label: "Internet Cafe",
-                          bgColor: const Color(0xFFEEF2FF),
-                          iconColor: const Color(0xFF0F2E5A),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const InternetCafePage(),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        buildEssentialItem(
-                          icon: Icons.local_shipping_outlined,
-                          label: "Pickup",
-                          bgColor: const Color(0xFFEEF2FF),
-                          iconColor: const Color(0xFF0F2E5A),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const PickupPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        buildEssentialItem(
-                          imagePath: 'assets/icons/jcb.png',
-                          label: "JCBs",
-                          bgColor: const Color(0xFFEEF2FF),
-                          iconColor: const Color(0xFF0F2E5A),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const JcbsPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        const Expanded(
-                          child: SizedBox(),
-                        ), // Placeholder for alignment
+                        Expanded(child: const SizedBox()),
                       ],
                     ),
                   ],
@@ -2067,6 +2231,13 @@ class HomepageState extends State<Homepage> {
   }
 
   Widget buildWorkersTab(List<dynamic> filtered) {
+    List<dynamic> displayList = List.from(filtered);
+
+    // Shuffle the list for display if no explicit sort is applied
+    if (_sortBy == 'None') {
+      displayList.shuffle(Random(_shuffleSeed));
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2090,11 +2261,11 @@ class HomepageState extends State<Homepage> {
             crossAxisCount: 2,
             crossAxisSpacing: 14.0,
             mainAxisSpacing: 14.0,
-            mainAxisExtent: 260,
+            mainAxisExtent: 235,
           ),
-          itemCount: filtered.length,
+          itemCount: displayList.length,
           itemBuilder: (context, index) {
-            final service = filtered[index];
+            final service = displayList[index];
             final data = service.data() as Map<String, dynamic>;
             final name = data['service_name'] ?? '';
             final category = data['category'] ?? '';
@@ -3054,633 +3225,535 @@ class HomepageState extends State<Homepage> {
   }
 
   Widget buildBusTab() {
-    final List<Map<String, dynamic>> allBusSchedules = [
-      {
-        "id": "bus_1",
-        "type": "LIVE",
-        "tags": ["LIVE", "LIMITED STOP"],
-        "time": "08:30 AM",
-        "from": "Calicut",
-        "to": "Thalayad",
-        "via": "Via Pavangad, Atholi",
-        "stops": [
-          {"name": "Calicut Stand", "time": "Arrives 09:15 AM"},
-          {
-            "name": "Thalayad Junction",
-            "status": "On Time",
-            "statusColor": const Color(0xFF10B981),
-          },
-        ],
-        "frequency": "Every 15 mins",
-        "showMap": true,
-        "isKsrtc": false,
-      },
-      {
-        "id": "bus_ksrtc_1",
-        "type": "KSRTC",
-        "tags": ["KSRTC ORDINARY"],
-        "time": "06:30 AM",
-        "from": "Calicut",
-        "to": "Thalayad",
-        "via": "Via Pavangad, Atholi, Balussery",
-        "stops": [
-          {"name": "Calicut Stand", "time": "06:30 AM"},
-          {"name": "Balussery Stand", "time": "07:20 AM"},
-          {
-            "name": "Thalayad Junction",
-            "status": "On Time",
-            "statusColor": const Color(0xFF10B981),
-          },
-        ],
-        "frequency": "Daily Service",
-        "isKsrtc": true,
-      },
-      {
-        "id": "bus_ksrtc_2",
-        "type": "KSRTC",
-        "tags": ["K-SWIFT SF"],
-        "time": "07:45 AM",
-        "from": "Kozhikode",
-        "to": "Wayanad",
-        "via": "Via Balussery, Thalayad, Thamarassery",
-        "stops": [
-          {"name": "Kozhikode KSRTC", "time": "07:45 AM"},
-          {"name": "Balussery", "time": "08:30 AM"},
-          {
-            "name": "Thalayad Entry",
-            "status": "On Time",
-            "statusColor": const Color(0xFF10B981),
-          },
-        ],
-        "frequency": "Daily Service",
-        "showFavorite": true,
-        "isKsrtc": true,
-      },
-      {
-        "id": "bus_2",
-        "type": "KSRTC",
-        "tags": ["KSRTC FP"],
-        "time": "09:10 AM",
-        "from": "Kozhikode",
-        "to": "Wayanad",
-        "via": "Stop at Thalayad Road",
-        "stops": [
-          {"name": "Kozhikode KSRTC", "time": "Duration 90m"},
-          {
-            "name": "Thalayad Entry",
-            "status": "Delayed 5m",
-            "statusColor": const Color(0xFFF59E0B),
-          },
-        ],
-        "frequency": "Daily Service",
-        "showFavorite": true,
-        "isKsrtc": true,
-      },
-      {
-        "id": "bus_3",
-        "type": "Private",
-        "tags": ["ORDINARY"],
-        "time": "09:45 AM",
-        "from": "Balussery",
-        "to": "Thalayad",
-        "via": "Via Panangad",
-        "infoBox": {
-          "title": "Arriving in 12 mins",
-          "subtitle": "FREQUENCY\n30 min gaps",
-        },
-        "frequency": "Tracked Live",
-        "isKsrtc": false,
-      },
-      {
-        "id": "bus_ksrtc_3",
-        "type": "KSRTC",
-        "tags": ["KSRTC LS"],
-        "time": "10:30 AM",
-        "from": "Calicut",
-        "to": "Thalayad",
-        "via": "Via Atholi, Balussery",
-        "stops": [
-          {"name": "Calicut Stand", "time": "10:30 AM"},
-          {
-            "name": "Thalayad Junction",
-            "status": "Delayed 10m",
-            "statusColor": const Color(0xFFF59E0B),
-          },
-        ],
-        "frequency": "Daily Service",
-        "isKsrtc": true,
-      },
-      {
-        "id": "bus_ksrtc_4",
-        "type": "KSRTC",
-        "tags": ["KSRTC ORDINARY"],
-        "time": "12:15 PM",
-        "from": "Balussery",
-        "to": "Thalayad",
-        "via": "Via Panangad, Unnikulam",
-        "stops": [
-          {"name": "Balussery Stand", "time": "12:15 PM"},
-          {
-            "name": "Thalayad Junction",
-            "status": "On Time",
-            "statusColor": const Color(0xFF10B981),
-          },
-        ],
-        "frequency": "Daily Service",
-        "isKsrtc": true,
-      },
-      {
-        "id": "bus_ksrtc_5",
-        "type": "KSRTC",
-        "tags": ["K-SWIFT DELUXE"],
-        "time": "02:30 PM",
-        "from": "Kozhikode",
-        "to": "Wayanad",
-        "via": "Via Balussery, Thalayad, Vythiri",
-        "stops": [
-          {"name": "Kozhikode KSRTC", "time": "02:30 PM"},
-          {
-            "name": "Thalayad Entry",
-            "status": "On Time",
-            "statusColor": const Color(0xFF10B981),
-          },
-        ],
-        "frequency": "Daily Service",
-        "isKsrtc": true,
-      },
-      {
-        "id": "bus_ksrtc_6",
-        "type": "KSRTC",
-        "tags": ["KSRTC ORDINARY"],
-        "time": "05:45 PM",
-        "from": "Calicut",
-        "to": "Thalayad",
-        "via": "Via Pavangad, Atholi, Balussery",
-        "stops": [
-          {"name": "Calicut Stand", "time": "05:45 PM"},
-          {"name": "Balussery Stand", "time": "06:40 PM"},
-          {
-            "name": "Thalayad Junction",
-            "status": "On Time",
-            "statusColor": const Color(0xFF10B981),
-          },
-        ],
-        "frequency": "Daily Service",
-        "isKsrtc": true,
-      },
-      {
-        "id": "bus_ksrtc_7",
-        "type": "KSRTC",
-        "tags": ["KSRTC SF"],
-        "time": "08:15 PM",
-        "from": "Kozhikode",
-        "to": "Wayanad",
-        "via": "Via Balussery, Thalayad",
-        "stops": [
-          {"name": "Kozhikode KSRTC", "time": "08:15 PM"},
-          {
-            "name": "Thalayad Entry",
-            "status": "On Time",
-            "statusColor": const Color(0xFF10B981),
-          },
-        ],
-        "frequency": "Daily Service",
-        "isKsrtc": true,
-      },
-    ];
+    return StreamBuilder<QuerySnapshot>(
+      stream: _busSchedulesStream ??= FirebaseFirestore.instance
+          .collection('transports')
+          .where('transport_category', isEqualTo: 'Bus')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(60),
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFF0F2E5A)),
+            ),
+          );
+        }
 
-    final filteredSchedules = allBusSchedules.where((bus) {
-      if (selectedBusFilter == "KSRTC" && !bus['isKsrtc']) return false;
-      if (selectedBusFilter == "Private" && bus['isKsrtc']) return false;
+        final List<Map<String, dynamic>> allBusSchedules = snapshot.data?.docs
+                .map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  if (data['status']?.toString().toLowerCase() != 'active') {
+                    return null;
+                  }
 
-      final fromSearch = _fromBusController.text.trim().toLowerCase();
-      final toSearch = _toBusController.text.trim().toLowerCase();
+                  final isKsrtc =
+                      data['bus_type']?.toString().toUpperCase() == 'KSRTC';
+                  final subType =
+                      (data['bus_sub_type']?.toString().toUpperCase() ??
+                          "ORDINARY");
+                  final firstStop = data['first_stop']?.toString() ?? "";
+                  final rawTime = data['departure_time']?.toString() ?? "";
+                  String timeMain = rawTime;
+                  String timePeriod = "";
 
-      final matchesFrom = fromSearch.isEmpty ||
-          bus['from'].toString().toLowerCase().contains(fromSearch);
-      final matchesTo = toSearch.isEmpty ||
-          bus['to'].toString().toLowerCase().contains(toSearch);
+                  if (rawTime.toLowerCase().contains("am")) {
+                    timeMain = rawTime.replaceAll(RegExp(r'(?i)am'), '').trim();
+                    timePeriod = "AM";
+                  } else if (rawTime.toLowerCase().contains("pm")) {
+                    timeMain = rawTime.replaceAll(RegExp(r'(?i)pm'), '').trim();
+                    timePeriod = "PM";
+                  } else if (rawTime.isNotEmpty && rawTime.contains(":")) {
+                    final parts = rawTime.split(":");
+                    final h = int.tryParse(parts[0]) ?? 0;
+                    if (h >= 12) {
+                      timeMain = "${h > 12 ? h - 12 : 12}:${parts[1]}";
+                      timePeriod = "PM";
+                    } else {
+                      timeMain = "${h == 0 ? 12 : h}:${parts[1]}";
+                      timePeriod = "AM";
+                    }
+                  }
 
-      return matchesFrom && matchesTo;
-    }).toList();
-
-    final currentFrom = _fromBusController.text.trim().toLowerCase();
-    final currentTo = _toBusController.text.trim().toLowerCase();
-    final isCurrentRouteSaved = currentFrom.isNotEmpty &&
-        currentTo.isNotEmpty &&
-        _savedRoutes.any(
-          (route) =>
-              route['from']!.toLowerCase() == currentFrom &&
-              route['to']!.toLowerCase() == currentTo,
-        );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Search schedules card
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // FROM Input
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on,
-                      color: Color(0xFF0F2E5A),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "FROM",
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(
-                            height: 24,
-                            child: TextField(
-                              controller: _fromBusController,
-                              onChanged: (val) => setState(() {}),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0F2E5A),
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_fromBusController.text.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _fromBusController.clear();
-                          });
-                        },
-                        child: const Icon(
-                          Icons.clear,
-                          color: Colors.grey,
-                          size: 18,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              // TO Input
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.navigation,
-                      color: Color(0xFFFFB800),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "TO",
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(
-                            height: 24,
-                            child: TextField(
-                              controller: _toBusController,
-                              onChanged: (val) => setState(() {}),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0F2E5A),
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_toBusController.text.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _toBusController.clear();
-                          });
-                        },
-                        child: const Icon(
-                          Icons.clear,
-                          color: Colors.grey,
-                          size: 18,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              // Search Schedules & Save buttons Row
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 44,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {});
-                          toastInfo(
-                            "Searching schedules from ${_fromBusController.text} to ${_toBusController.text}...",
-                          );
-                          Future.delayed(
-                            const Duration(milliseconds: 100),
-                            _scrollToSchedule,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0F2E5A),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          "Search Schedules",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Container(
-                    height: 44,
-                    width: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      onPressed: () {
-                        final fromText = _fromBusController.text.trim();
-                        final toText = _toBusController.text.trim();
-                        if (fromText.isEmpty || toText.isEmpty) {
-                          toastWarning(
-                            "Please fill both FROM and TO fields to save.",
-                          );
-                          return;
-                        }
-
-                        final alreadyExistsIndex = _savedRoutes.indexWhere(
-                          (route) =>
-                              route['from']!.toLowerCase() ==
-                                  fromText.toLowerCase() &&
-                              route['to']!.toLowerCase() ==
-                                  toText.toLowerCase(),
-                        );
-
-                        if (alreadyExistsIndex != -1) {
-                          // Toggle: unsave
-                          setState(() {
-                            _savedRoutes.removeAt(alreadyExistsIndex);
-                            _routesBox.put('routes', _savedRoutes);
-                          });
-                          toastSuccess("Route removed from saved list.");
-                          return;
-                        }
-
-                        setState(() {
-                          // Insert at the beginning so it shows first
-                          _savedRoutes.insert(0, {
-                            "from": fromText,
-                            "to": toText,
-                          });
-                          _routesBox.put('routes', _savedRoutes);
-                        });
-                        toastSuccess("Saved route: $fromText ⇄ $toText");
+                  return {
+                    "id": doc.id,
+                    "type": "LIVE",
+                    "tags": [isKsrtc ? "KSRTC" : "PRIVATE", subType],
+                    "timeMain": timeMain,
+                    "timePeriod": timePeriod,
+                    "from": data['main_stand']?.toString() ?? "",
+                    "to": data['destination']?.toString() ?? "",
+                    "via": firstStop.isNotEmpty ? "Via $firstStop" : "",
+                    "stops": [
+                      {
+                        "name": data['main_stand']?.toString() ?? "Origin",
+                        "time": "Departs ${data['departure_time'] ?? ''}"
                       },
-                      icon: Icon(
-                        isCurrentRouteSaved
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
-                        color: isCurrentRouteSaved
-                            ? const Color(0xFFFFB800)
-                            : const Color(0xFF0F2E5A),
-                      ),
-                      tooltip: isCurrentRouteSaved
-                          ? "Remove saved route"
-                          : "Save current route",
-                    ),
+                      {
+                        "name":
+                            data['destination']?.toString() ?? "Destination",
+                        "status": "Arrives ${data['arrival_time'] ?? ''}",
+                        "statusColor": Colors.green,
+                      },
+                    ],
+                    "frequency": data['bus_name']?.toString() ?? "",
+                    "showMap": true,
+                    "showFavorite": false,
+                    "isKsrtc": isKsrtc,
+                  };
+                })
+                .whereType<Map<String, dynamic>>()
+                .toList() ??
+            [];
+
+        final filteredSchedules = allBusSchedules.where((bus) {
+          if (selectedBusFilter == "KSRTC" && !bus['isKsrtc']) return false;
+          if (selectedBusFilter == "Private Bus" && bus['isKsrtc'])
+            return false;
+
+          final fromSearch = _fromBusController.text.trim().toLowerCase();
+          final toSearch = _toBusController.text.trim().toLowerCase();
+
+          final matchesFrom = fromSearch.isEmpty ||
+              bus['from'].toString().toLowerCase().contains(fromSearch);
+          final matchesTo = toSearch.isEmpty ||
+              bus['to'].toString().toLowerCase().contains(toSearch);
+
+          final globalSearch = _searchController.text.trim().toLowerCase();
+          final matchesGlobal = globalSearch.isEmpty ||
+              bus['from'].toString().toLowerCase().contains(globalSearch) ||
+              bus['to'].toString().toLowerCase().contains(globalSearch) ||
+              bus['frequency']
+                  .toString()
+                  .toLowerCase()
+                  .contains(globalSearch) ||
+              bus['tags'].toString().toLowerCase().contains(globalSearch);
+
+          return matchesFrom && matchesTo && matchesGlobal;
+        }).toList();
+
+        final currentFrom = _fromBusController.text.trim().toLowerCase();
+        final currentTo = _toBusController.text.trim().toLowerCase();
+        final isCurrentRouteSaved = currentFrom.isNotEmpty &&
+            currentTo.isNotEmpty &&
+            _savedRoutes.any(
+              (route) =>
+                  route['from']!.toLowerCase() == currentFrom &&
+                  route['to']!.toLowerCase() == currentTo,
+            );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Search schedules card
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-
-        // Saved Routes Section
-        if (_savedRoutes.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.bookmark, size: 14, color: Color(0xFF0F2E5A)),
-                const SizedBox(width: 4),
-                const Text(
-                  "Saved Routes",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F2E5A),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            height: 38,
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              scrollDirection: Axis.horizontal,
-              itemCount: _savedRoutes.length,
-              itemBuilder: (context, index) {
-                final route = _savedRoutes[index];
-                final routeText = "${route['from']} ⇄ ${route['to']}";
-                return Container(
-                  margin: const EdgeInsets.only(right: 12, top: 4),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _fromBusController.text = route['from']!;
-                            _toBusController.text = route['to']!;
-                          });
-                          Future.delayed(
-                            const Duration(milliseconds: 100),
-                            _scrollToSchedule,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF0F2E5A),
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: const BorderSide(color: Color(0xFFE2E8F0)),
+              child: Column(
+                children: [
+                  // FROM Input
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          color: Color(0xFF0F2E5A),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "FROM",
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(
+                                height: 24,
+                                child: TextField(
+                                  controller: _fromBusController,
+                                  onChanged: (val) => setState(() {}),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF0F2E5A),
+                                  ),
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Text(
-                          routeText,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                        if (_fromBusController.text.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _fromBusController.clear();
+                              });
+                            },
+                            child: const Icon(
+                              Icons.clear,
+                              color: Colors.grey,
+                              size: 18,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // TO Input
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.navigation,
+                          color: Color(0xFFFFB800),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "TO",
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(
+                                height: 24,
+                                child: TextField(
+                                  controller: _toBusController,
+                                  onChanged: (val) => setState(() {}),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF0F2E5A),
+                                  ),
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_toBusController.text.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _toBusController.clear();
+                              });
+                            },
+                            child: const Icon(
+                              Icons.clear,
+                              color: Colors.grey,
+                              size: 18,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Search Schedules & Save buttons Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {});
+                              toastInfo(
+                                "Searching schedules from ${_fromBusController.text} to ${_toBusController.text}...",
+                              );
+                              Future.delayed(
+                                const Duration(milliseconds: 100),
+                                _scrollToSchedule,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F2E5A),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              "Search Schedules",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      Positioned(
-                        right: -6,
-                        top: -6,
-                        child: GestureDetector(
-                          onTap: () {
+                      const SizedBox(width: 10),
+                      Container(
+                        height: 44,
+                        width: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            final fromText = _fromBusController.text.trim();
+                            final toText = _toBusController.text.trim();
+                            if (fromText.isEmpty || toText.isEmpty) {
+                              toastWarning(
+                                "Please fill both FROM and TO fields to save.",
+                              );
+                              return;
+                            }
+
+                            final alreadyExistsIndex = _savedRoutes.indexWhere(
+                              (route) =>
+                                  route['from']!.toLowerCase() ==
+                                      fromText.toLowerCase() &&
+                                  route['to']!.toLowerCase() ==
+                                      toText.toLowerCase(),
+                            );
+
+                            if (alreadyExistsIndex != -1) {
+                              // Toggle: unsave
+                              setState(() {
+                                _savedRoutes.removeAt(alreadyExistsIndex);
+                                _routesBox.put('routes', _savedRoutes);
+                              });
+                              toastSuccess("Route removed from saved list.");
+                              return;
+                            }
+
                             setState(() {
-                              _savedRoutes.removeAt(index);
+                              // Insert at the beginning so it shows first
+                              _savedRoutes.insert(0, {
+                                "from": fromText,
+                                "to": toText,
+                              });
                               _routesBox.put('routes', _savedRoutes);
                             });
+                            toastSuccess("Saved route: $fromText ⇄ $toText");
                           },
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFE2E8F0),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              size: 8,
-                              color: Color(0xFF0F2E5A),
-                            ),
+                          icon: Icon(
+                            isCurrentRouteSaved
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            color: isCurrentRouteSaved
+                                ? const Color(0xFFFFB800)
+                                : const Color(0xFF0F2E5A),
                           ),
+                          tooltip: isCurrentRouteSaved
+                              ? "Remove saved route"
+                              : "Save current route",
                         ),
                       ),
                     ],
                   ),
-                );
-              },
+                ],
+              ),
             ),
-          ),
-        ],
 
-        // Filter chips
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            children: [
-              _buildBusFilterChip("All Types"),
-              const SizedBox(width: 8),
-              _buildBusFilterChip("KSRTC"),
-              const SizedBox(width: 8),
-              _buildBusFilterChip("Private"),
-            ],
-          ),
-        ),
-
-        // Section Title
-        Padding(
-          key: _scheduleKey,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Upcoming Schedules",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F2E5A),
+            // Saved Routes Section
+            if (_savedRoutes.isNotEmpty) ...[
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.bookmark,
+                        size: 14, color: Color(0xFF0F2E5A)),
+                    const SizedBox(width: 4),
+                    const Text(
+                      "Saved Routes",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F2E5A),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                "Live status for your route",
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              Container(
+                height: 38,
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _savedRoutes.length,
+                  itemBuilder: (context, index) {
+                    final route = _savedRoutes[index];
+                    final routeText = "${route['from']} ⇄ ${route['to']}";
+                    return Container(
+                      margin: const EdgeInsets.only(right: 12, top: 4),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _fromBusController.text = route['from']!;
+                                _toBusController.text = route['to']!;
+                              });
+                              Future.delayed(
+                                const Duration(milliseconds: 100),
+                                _scrollToSchedule,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF0F2E5A),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side:
+                                    const BorderSide(color: Color(0xFFE2E8F0)),
+                              ),
+                            ),
+                            child: Text(
+                              routeText,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: -6,
+                            top: -6,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _savedRoutes.removeAt(index);
+                                  _routesBox.put('routes', _savedRoutes);
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE2E8F0),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 8,
+                                  color: Color(0xFF0F2E5A),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
-          ),
-        ),
 
-        // List of Cards
-        if (filteredSchedules.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(40),
-            child: Center(
-              child: Text(
-                "No bus schedules found for this route.",
-                style: TextStyle(color: Colors.grey, fontSize: 13),
+            // Filter chips
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                children: [
+                  _buildBusFilterChip("All Types"),
+                  const SizedBox(width: 8),
+                  _buildBusFilterChip("KSRTC"),
+                  const SizedBox(width: 8),
+                  _buildBusFilterChip("Private Bus"),
+                ],
               ),
             ),
-          )
-        else
-          ...filteredSchedules
-              .map((bus) => _buildBusScheduleCard(bus))
-              .toList(),
-      ],
+
+            // Section Title
+            Padding(
+              key: _scheduleKey,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Upcoming Schedules",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F2E5A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "Live status for your route",
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+
+            // List of Cards
+            if (filteredSchedules.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(40),
+                child: Center(
+                  child: Text(
+                    "No bus schedules found for this route.",
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ),
+              )
+            else
+              ...filteredSchedules
+                  .map((bus) => _buildBusScheduleCard(bus))
+                  .toList(),
+          ],
+        );
+      },
     );
   }
 
@@ -3945,13 +4018,29 @@ class HomepageState extends State<Homepage> {
                   );
                 }).toList(),
               ),
-              Text(
-                bus['time'],
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F2E5A),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    bus['timeMain'] ?? bus['time'] ?? '',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F2E5A),
+                      height: 1.0,
+                    ),
+                  ),
+                  if (bus['timePeriod'] != null &&
+                      bus['timePeriod'].toString().isNotEmpty)
+                    Text(
+                      bus['timePeriod'],
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F2E5A),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
@@ -4072,96 +4161,29 @@ class HomepageState extends State<Homepage> {
               ),
             ),
           ],
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: Color(0xFFF1F5F9), height: 1, thickness: 1),
+          ),
           // Footer action row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                bus['frequency'],
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
               Row(
                 children: [
-                  if (bus['showMap'] == true) ...[
-                    GestureDetector(
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Showing live bus route on map..."),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.map,
-                          color: Color(0xFF0F2E5A),
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  if (bus['showFavorite'] == true) ...[
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          if (isFavorite) {
-                            _favoriteBuses.remove(bus['id']);
-                          } else {
-                            _favoriteBuses.add(bus['id']);
-                          }
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color:
-                              isFavorite ? Colors.red : const Color(0xFF0F2E5A),
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  GestureDetector(
-                    onTap: () {
-                      _showBusDetailsSheet(bus);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F2E5A),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        "Details",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    bus['frequency'],
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
+              // Hidden map and details buttons
             ],
           ),
         ],

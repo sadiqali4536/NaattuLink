@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/worker_verification_waiting_screen.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
@@ -70,9 +71,8 @@ class TransportWorkerRegistrationPage extends StatelessWidget {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.only(left: 8, top: 12),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new,
-                    color: Color(0xFF0A235C), size: 20),
+              child: AppBackButton(
+                margin: EdgeInsets.zero,
                 onPressed: () => Get.back(),
               ),
             ),
@@ -678,11 +678,7 @@ class _Shell extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              color: Color(0xFF0A235C), size: 18),
-          onPressed: () => Get.back(),
-        ),
+        leading: const AppBackButton(),
         title: Text(title,
             style: const TextStyle(
                 color: Color(0xFF0A235C),

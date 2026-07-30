@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
-import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
 
 class LoyaltyPoints extends StatelessWidget {
@@ -19,12 +19,14 @@ class LoyaltyPoints extends StatelessWidget {
               // Back button and title row
               Row(
                 children: [
-                  customBackbutton1(onpress: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => user_Dashboard()),
-                    );
-                  }),
+                  AppBackButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => user_Dashboard()),
+                      );
+                    },
+                  ),
                   const SizedBox(width: 50),
                   const Text(
                     "Loyality Points",

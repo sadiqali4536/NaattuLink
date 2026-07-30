@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 import 'package:naattulink/MVVM/utils/Constants/sizes_double.dart';
-import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -58,9 +58,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               padding: EdgeInsets.only(top: 10),
               child: Row(
                 children: [
-                  customBackbutton1(onpress: () {
-                    Navigator.pop(context);
-                  }),
+                  const AppBackButton(),
                   Padding(
                     padding: const EdgeInsets.only(left: 50),
                     child: Text(

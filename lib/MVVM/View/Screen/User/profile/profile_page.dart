@@ -8,7 +8,7 @@ import 'package:naattulink/MVVM/View/Screen/User/profile/Change_password/changep
 import 'package:naattulink/MVVM/View/Screen/User/profile/edit_profile.dart';
 import 'package:naattulink/MVVM/Viewmodel/themes_bloc.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
-import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/custom_image_banner2.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/custom_image_banner.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
@@ -128,11 +128,7 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 30),
             Padding(
               padding: const EdgeInsets.only(left: 10),
-              child: customBackbutton1(
-                onpress: () {
-                  Navigator.pop(context);
-                },
-              ),
+              child: const AppBackButton(),
             ),
             const SizedBox(height: 8),
             const Padding(

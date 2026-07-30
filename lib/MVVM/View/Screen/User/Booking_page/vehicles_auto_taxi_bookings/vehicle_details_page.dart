@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'auto_taxi_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
@@ -111,10 +112,7 @@ class VehicleDetailsPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F2E5A)),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: const AppBackButton(),
         title: const Text(
           "Vehicle Details",
           style: TextStyle(
@@ -142,7 +140,7 @@ class VehicleDetailsPage extends StatelessWidget {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              physics: const ClampingScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -155,33 +153,16 @@ class VehicleDetailsPage extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: bgLight,
                         ),
-                        child: Image.network(
-                          _getVehicleImage(listing.type),
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF0F2E5A)),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Center(
-                              child: Icon(
-                                listing.isAgency
-                                    ? Icons.domain_outlined
-                                    : (listing.type
-                                            .toLowerCase()
-                                            .contains('auto')
-                                        ? Icons.electric_rickshaw_outlined
-                                        : Icons.local_taxi_outlined),
-                                size: 80,
-                                color: primaryColor.withOpacity(0.3),
-                              ),
-                            );
-                          },
+                        child: Center(
+                          child: Icon(
+                            listing.isAgency
+                                ? Icons.domain_outlined
+                                : (listing.type.toLowerCase().contains('auto')
+                                    ? Icons.electric_rickshaw_outlined
+                                    : Icons.local_taxi_outlined),
+                            size: 100,
+                            color: primaryColor.withOpacity(0.5),
+                          ),
                         ),
                       ),
                       Positioned(
@@ -237,31 +218,21 @@ class VehicleDetailsPage extends StatelessWidget {
                                 fontSize: 22,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
-                                borderRadius: BorderRadius.circular(12),
+                            if (listing.isVerified)
+                              const Icon(Icons.verified_user_rounded,
+                                  color: Color(0xFF4F46E5), size: 18),
+                            if (listing.isElectric)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 6),
+                                child: Icon(Icons.bolt,
+                                    color: Color(0xFF059669), size: 18),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.check_circle,
-                                      color: Color(0xFF059669), size: 12),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    "Verified",
-                                    style: TextStyle(
-                                      color: Color(0xFF059669),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
+                            if (listing.isWomenDriver)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 6),
+                                child: Icon(Icons.person_pin_circle,
+                                    color: Color(0xFFec4899), size: 18),
                               ),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -302,14 +273,14 @@ class VehicleDetailsPage extends StatelessWidget {
                         const SizedBox(height: 12),
 
                         // Driver Avatar
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: bgLight,
-                          backgroundImage: const NetworkImage(
-                            'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
-                          ),
-                        ),
-                        const SizedBox(height: 24),
+                        // CircleAvatar(
+                        //   radius: 20,
+                        //   backgroundColor: bgLight,
+                        //   backgroundImage: const NetworkImage(
+                        //     'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+                        //   ),
+                        // ),
+                        // const SizedBox(height: 24),
 
                         // Details Grid (2 columns)
                         GridView.count(

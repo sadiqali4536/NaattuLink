@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
-import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
 import 'package:naattulink/MVVM/utils/widget/formfield/customformfield.dart';
 
@@ -205,8 +205,8 @@ class _EditProfileState extends State<EditProfile> {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 30, left: 10),
-            child: customBackbutton1(
-              onpress: () {
+            child: AppBackButton(
+              onPressed: () {
                 Navigator.pop(
                   context,
                   MaterialPageRoute(builder: (context) => user_Dashboard()),

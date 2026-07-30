@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
-import 'package:naattulink/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
 import 'package:naattulink/MVVM/utils/widget/formfield/customformfield2.dart';
 
@@ -43,11 +43,7 @@ class _EditAddressState extends State<EditAddress> {
             padding: const EdgeInsets.only(top: 5),
             child: Row(
               children: [
-                customBackbutton1(
-                  onpress: () {
-                    Navigator.pop(context);
-                  },
-                ),
+                const AppBackButton(),
                 const SizedBox(width: 30),
                 const Text(
                   '"Edit Address"',

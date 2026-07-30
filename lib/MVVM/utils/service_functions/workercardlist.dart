@@ -119,147 +119,158 @@ class _WorkerCardListState extends State<WorkerCardList> {
           );
         }
 
-        return ListView.builder(
+        return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.85,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
           itemCount: availableWorkers.length,
           itemBuilder: (_, index) {
             final item = availableWorkers[index].data() as Map<String, dynamic>;
+            final imageUrl = (item['profile_img']?.toString().isNotEmpty ==
+                    true)
+                ? item['profile_img']
+                : 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80';
+            final title = item["username"] ?? 'Unknown Worker';
+            final rating = (item["ratings"] ?? 0).toDouble();
+            final price = item['hourly_rate'] ?? 299;
+
+            void _handleTap() {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ServiceDetailsPage(
+                    category: item['category'] ?? 'Worker',
+                    serviceName: item['category'] ?? 'Worker',
+                    rating: rating,
+                    originalPrice: 500, // Mock price
+                    discount: 0,
+                    image: imageUrl.toString(),
+                    discountPrice: 500,
+                    serviceType: 'Hour',
+                    serviceId: availableWorkers[index].id,
+                    providerId: item['uid']?.toString() ?? 'Unknown',
+                    providerName: item['name']?.toString() ??
+                        item['workerName']?.toString() ??
+                        'Unknown',
+                    providerPhone: item['phone']?.toString() ?? '',
+                    serviceDescription: item['about']?.toString() ??
+                        item['description']?.toString() ??
+                        '',
+                    estimatedDuration: '1 hr',
+                  ),
+                ),
+              );
+            }
 
             return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ServiceDetailsPage(
-                      category: item['category'] ?? 'Worker',
-                      serviceName: item['category'] ?? 'Worker',
-                      rating: (item['ratings'] ?? 0).toDouble(),
-                      originalPrice: 500, // Mock price
-                      discount: 0,
-                      image: (item['profile_img']?.toString().isNotEmpty ==
-                              true)
-                          ? item['profile_img']
-                          : 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80',
-                      discountPrice: 500,
-                      serviceType: 'Hour',
-                      serviceId: availableWorkers[index].id,
-                      providerId: item['uid']?.toString() ?? 'Unknown',
-                      providerName: item['name']?.toString() ?? item['workerName']?.toString() ?? 'Unknown',
-                      providerPhone: item['phone']?.toString() ?? '',
-                      serviceDescription: item['about']?.toString() ?? item['description']?.toString() ?? '',
-                      estimatedDuration: '1 hr',
-                    ),
-                  ),
-                );
-              },
+              onTap: _handleTap,
               child: Card(
-                elevation: 4,
-                margin:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                elevation: 2,
+                margin: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: item['profile_img']?.toString().isNotEmpty ==
-                                true
-                            ? Image.network(
-                                item['profile_img'],
-                                height: 100,
-                                width: 90,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                  height: 100,
-                                  width: 90,
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.person,
-                                      size: 40, color: Colors.grey),
-                                ),
-                              )
-                            : Container(
-                                height: 100,
-                                width: 90,
-                                color: Colors.grey[300],
-                                child: const Icon(Icons.person,
-                                    size: 40, color: Colors.grey),
-                              ),
+                    borderRadius: BorderRadius.circular(16)),
+                color: Colors.white,
+                surfaceTintColor: Colors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top image (expands to fill available space)
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                        child: Image.network(
+                          imageUrl.toString(),
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                            width: double.infinity,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.person,
+                                size: 40, color: Colors.grey),
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item["username"] ?? 'Unknown Worker',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: Color(0xFF0F2E5A),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              (item["category"] ?? '').toString().toUpperCase(),
-                              style: const TextStyle(
-                                  color: Color(0xFF64748B),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                RatingBarIndicator(
-                                  rating: (item["ratings"] ?? 0).toDouble(),
-                                  itemBuilder: (_, __) => const Icon(Icons.star,
-                                      color: gradientgreen2.c),
-                                  itemCount: 5,
-                                  itemSize: 18,
-                                  direction: Axis.horizontal,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                    "${item["ratings"] ?? 0} (${item["total_reviews"] ?? 0})",
-                                    style: const TextStyle(fontSize: 12)),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(Icons.location_on_outlined,
-                                    size: 14, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    item["location"] ?? 'Unknown Location',
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.grey),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Exp: ${item['experience'] ?? '0'} years",
-                              style: const TextStyle(
-                                  fontSize: 12,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(Icons.star,
+                                  color: Color(0xFFFBBF24), size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                rating.toString(),
+                                style: const TextStyle(
+                                  color: Color(0xFF0F2E5A),
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F2E5A)),
-                            )
-                          ],
-                        ),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "Starts from ₹$price",
+                            style: const TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 32,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    const Color(0xFFFBBF24), // Yellow
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                padding: EdgeInsets.zero,
+                                elevation: 0,
+                              ),
+                              onPressed: _handleTap,
+                              child: const Text(
+                                "Book Now",
+                                style: TextStyle(
+                                  color: Color(0xFF0F2E5A),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      if (item['isVerified'] == 1 || item['isVerified'] == true)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8.0),
-                          child: Icon(Icons.verified,
-                              color: Colors.blue, size: 24),
-                        ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             );

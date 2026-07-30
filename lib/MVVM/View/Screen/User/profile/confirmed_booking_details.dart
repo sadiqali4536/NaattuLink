@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
@@ -35,9 +36,7 @@ class ConfirmedBookingDetails extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              color: Colors.black87, size: 18),
+        leading: AppBackButton(
           onPressed: () => Get.offAll(() => const user_Dashboard()),
         ),
         title: const Text(
