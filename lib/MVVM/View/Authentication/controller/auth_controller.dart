@@ -7,7 +7,11 @@ import 'package:naattulink/MVVM/View/Authentication/worker_verification_waiting_
 import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/bus_worker_main_page.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
 
+import 'package:get_storage/get_storage.dart';
+import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 
 class AuthController extends GetxController {
@@ -17,48 +21,118 @@ class AuthController extends GetxController {
   final _isLoading = false.obs;
   bool get isLoading => _isLoading.value;
 
+  Future<void> routeAuthenticatedUser(User firebaseUser) async {
+    final userId = firebaseUser.uid;
+
+    // Step 1: Check users collection
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    if (userDoc.exists && userDoc.data()?['role'] == 'user') {
+      Get.offAll(() => const FindingLocationPage());
+      return;
+    }
+
+    // Step 2: Search worker collections
+    final collections = [
+      'workers',
+      'transports',
+      'healthcare',
+      'shops_businesses'
+    ];
+    DocumentSnapshot? foundDoc;
+    String? foundCollection;
+
+    for (var collection in collections) {
+      final doc = await FirebaseFirestore.instance
+          .collection(collection)
+          .doc(userId)
+          .get();
+      if (doc.exists) {
+        foundDoc = doc;
+        foundCollection = collection;
+        break;
+      }
+    }
+
+    if (foundDoc != null) {
+      // Check verification status
+      final dataMap = foundDoc.data() as Map<String, dynamic>?;
+
+      final requiresVerification =
+          foundCollection == 'workers' && dataMap?['role'] == 'worker';
+
+      if (requiresVerification) {
+        final isVerified = dataMap?['isVerified'];
+        if (isVerified == 0) {
+          toastInfo(
+              'Your profile is currently under review by the admin. Please wait a moment.');
+          Get.offAll(() => const WorkerVerificationWaitingScreen());
+          return;
+        } else if (isVerified == -1) {
+          toastWarning(
+              'Your profile has been rejected by the admin due to an unsatisfactory reason.');
+          return;
+        } else if (isVerified != 1) {
+          toastWarning('Unknown verification status. Please contact support.');
+          return;
+        }
+      }
+
+      final data = foundDoc.data() as Map<String, dynamic>? ?? {};
+
+      // Route based on collection
+      if (foundCollection == 'workers') {
+        final category = data['category'] ?? '';
+        final excludedCategories = [
+          "Transport (Travels)",
+          "Healthcare",
+          "Shops & Businesses"
+        ];
+        if (!excludedCategories.contains(category)) {
+          // General Worker Dashboard
+          Get.offAll(() => const FindingLocationPage());
+        } else {
+          // Fallback if category was one of excluded but stored in 'workers' by mistake
+          Get.offAll(() => const FindingLocationPage());
+        }
+      } else if (foundCollection == 'transports') {
+        final transportCategory = data['transport_category'] ?? '';
+        if (transportCategory == 'Bus') {
+          // Bus Dashboard
+          final busController = Get.put(BusDashboardController());
+          await busController.initialize();
+          Get.offAll(() => const BusWorkerMainPage());
+        } else if (transportCategory == 'Truck / JCB') {
+          // Truck/JCB Dashboard placeholder
+          Get.offAll(() => const FindingLocationPage());
+        } else if (transportCategory == 'Taxi') {
+          // Taxi Dashboard placeholder
+          Get.offAll(() => const FindingLocationPage());
+        } else {
+          Get.offAll(() => const FindingLocationPage());
+        }
+      } else if (foundCollection == 'healthcare') {
+        // Healthcare Dashboard placeholder
+        Get.offAll(() => const FindingLocationPage());
+      } else if (foundCollection == 'shops_businesses') {
+        // Shops & Businesses Dashboard placeholder
+        Get.offAll(() => const FindingLocationPage());
+      }
+    } else {
+      toastError('Unable to determine user role or collection.');
+      await logout(Get.context!);
+    }
+  }
+
   Future<void> login(
       BuildContext context, String email, String password) async {
     _isLoading.value = true;
     try {
       final userCredential =
           await _authServices.signIn(context, email, password);
-      if (userCredential != null) {
+      if (userCredential != null && userCredential.user != null) {
         toastSuccess("Login Successful!");
-        final userId = userCredential.user?.uid;
-        if (userId != null) {
-          // Fetch user/worker role
-          final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .get();
-          final workerDoc = await FirebaseFirestore.instance
-              .collection('workers')
-              .doc(userId)
-              .get();
-
-          if (userDoc.exists && userDoc.data()?['role'] == 'user') {
-            Get.offAll(() => const FindingLocationPage());
-          } else if (workerDoc.exists &&
-              workerDoc.data()?['role'] == 'worker') {
-            final isVerified = workerDoc.data()?['isVerified'];
-            if (isVerified == 1) {
-              Get.offAll(() => const FindingLocationPage());
-            } else if (isVerified == -1) {
-              toastWarning(
-                  'Your profile has been rejected by the admin due to an unsatisfactory reason.');
-            } else if (isVerified == 0) {
-              toastInfo(
-                  'Your profile is currently under review by the admin. Please wait a moment.');
-              Get.offAll(() => const WorkerVerificationWaitingScreen());
-            } else {
-              toastWarning(
-                  'Unknown verification status. Please contact support.');
-            }
-          } else {
-            toastError('Unable to determine user role.');
-          }
-        }
+        await routeAuthenticatedUser(userCredential.user!);
       }
     } catch (e) {
       final message = FirebaseErrorHandler.getReadableErrorMessage(e);
@@ -75,33 +149,50 @@ class AuthController extends GetxController {
       final message = await _authServices.signInWithGoogle();
       if (message == 'Success') {
         toastSuccess("Google Login Successful!");
-        final userId = FirebaseAuth.instance.currentUser?.uid;
-        if (userId != null) {
-          // Check role or go to location page
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
           final userDoc = await FirebaseFirestore.instance
               .collection('users')
-              .doc(userId)
+              .doc(user.uid)
               .get();
-          if (userDoc.exists) {
-            Get.offAll(() => const FindingLocationPage());
-          } else {
+          bool foundAnywhere = userDoc.exists;
+          if (!foundAnywhere) {
+            final collections = [
+              'workers',
+              'transports',
+              'healthcare',
+              'shops_businesses'
+            ];
+            for (var collection in collections) {
+              final doc = await FirebaseFirestore.instance
+                  .collection(collection)
+                  .doc(user.uid)
+                  .get();
+              if (doc.exists) {
+                foundAnywhere = true;
+                break;
+              }
+            }
+          }
+
+          if (!foundAnywhere) {
             // New Google User default to user role
             await FirebaseFirestore.instance
                 .collection('users')
-                .doc(userId)
+                .doc(user.uid)
                 .set({
-              "username": FirebaseAuth.instance.currentUser?.displayName ?? "",
+              "username": user.displayName ?? "",
               "phone": "",
-              "email": FirebaseAuth.instance.currentUser?.email ?? "",
+              "email": user.email ?? "",
               "role": "user",
-              "profile_img": FirebaseAuth.instance.currentUser?.photoURL ?? "",
+              "profile_img": user.photoURL ?? "",
               "created_at": FieldValue.serverTimestamp(),
               "updated_at": FieldValue.serverTimestamp(),
               "status": "active",
               "loyalty_points": 0,
             });
-            Get.offAll(() => const FindingLocationPage());
           }
+          await routeAuthenticatedUser(user);
         }
       } else {
         toastError(message);
@@ -214,7 +305,17 @@ class AuthController extends GetxController {
 
   Future<void> logout(BuildContext context) async {
     try {
+      // 1. Sign out from Firebase
       await _authServices.signOut(context);
+
+      // 2. Clear all local storage
+      final getStorage = GetStorage();
+      await getStorage.erase();
+
+      // Clear controller states if needed
+
+      // 3. Remove navigation stack and route to login
+      Get.offAll(() => const LoginAndSigning());
     } catch (e) {
       final message = FirebaseErrorHandler.getReadableErrorMessage(e);
       debugPrint(message);

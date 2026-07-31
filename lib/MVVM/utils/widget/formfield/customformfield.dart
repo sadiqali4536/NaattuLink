@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class Customformfield extends StatefulWidget {
   final Color color;
@@ -14,6 +15,10 @@ class Customformfield extends StatefulWidget {
   final FormFieldValidator<String>? validator;
   final Color? borderColor;
   final double? borderRadius;
+  final String? prefixText;
+  final int? maxLength;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   const Customformfield({
     super.key,
@@ -30,6 +35,10 @@ class Customformfield extends StatefulWidget {
     this.validator,
     this.borderColor,
     this.borderRadius,
+    this.prefixText,
+    this.maxLength,
+    this.keyboardType,
+    this.inputFormatters,
   });
 
   @override
@@ -37,7 +46,7 @@ class Customformfield extends StatefulWidget {
 }
 
 class _CustomformfieldState extends State<Customformfield> {
-  bool _obscureText = true; 
+  bool _obscureText = true;
 
   @override
   void initState() {
@@ -59,9 +68,15 @@ class _CustomformfieldState extends State<Customformfield> {
     return TextFormField(
       controller: widget.controller,
       validator: widget.validator,
-      obscureText: _obscureText, 
+      obscureText: _obscureText,
+      maxLength: widget.maxLength,
+      keyboardType: widget.keyboardType,
+      inputFormatters: widget.inputFormatters,
       decoration: InputDecoration(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        counterText: "",
+        prefixText: widget.prefixText,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
           borderSide: widget.borderColor != null
               ? BorderSide(color: widget.borderColor!, width: 1)
@@ -87,19 +102,22 @@ class _CustomformfieldState extends State<Customformfield> {
         hintStyle: widget.hintstyle,
         helperText: widget.helpertext,
         prefixIcon: widget.prefixicon,
-        suffixIcon: widget.suffixicon ?? (widget.obscureText
-            ? IconButton(
-                icon: Icon(
-                  _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  color: const Color.fromRGBO(144, 144, 144, 1),
-                ),
-                onPressed: () {
-                  setState(() {
-                    _obscureText = !_obscureText;
-                  });
-                },
-              )
-            : null),     
+        suffixIcon: widget.suffixicon ??
+            (widget.obscureText
+                ? IconButton(
+                    icon: Icon(
+                      _obscureText
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: const Color.fromRGBO(144, 144, 144, 1),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  )
+                : null),
       ),
     );
   }

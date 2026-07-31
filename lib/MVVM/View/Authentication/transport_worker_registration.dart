@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/worker_verification_waiting_screen.dart';
@@ -263,7 +264,7 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
 
       await FirebaseFirestore.instance.collection("transports").doc(uid).set({
         "username": _nameCtrl.text.trim(),
-        "phone": _mobileCtrl.text.trim(),
+        "phone": "+91${_mobileCtrl.text.trim()}",
         "email": _emailCtrl.text.trim(),
         "role": "worker",
         "category": "Transport (Travels)",
@@ -311,9 +312,19 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
       children: [
         _F('Full Name', 'Enter your full name', Icons.person_outline, _nameCtrl,
             isRequired: true),
-        _F('Mobile Number', 'Enter mobile number', Icons.phone_outlined,
-            _mobileCtrl,
-            isRequired: true, type: TextInputType.phone),
+        _F('Mobile Number', '00000 00000', Icons.phone_outlined, _mobileCtrl,
+            isRequired: true,
+            type: TextInputType.phone,
+            prefixText: '+91 ',
+            maxLength: 10,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            validator: (v) {
+          if (v == null || v.isEmpty) return 'Required';
+          if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v)) {
+            return 'Invalid 10-digit Indian mobile number';
+          }
+          return null;
+        }),
         _F('Email Address', 'Enter email', Icons.email_outlined, _emailCtrl,
             isRequired: true, type: TextInputType.emailAddress),
         _F('Password', 'Enter password', Icons.lock_outline, _passwordCtrl,
@@ -460,7 +471,7 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
 
       await FirebaseFirestore.instance.collection("transports").doc(uid).set({
         "username": _nameCtrl.text.trim(),
-        "phone": _mobileCtrl.text.trim(),
+        "phone": "+91${_mobileCtrl.text.trim()}",
         "email": _emailCtrl.text.trim(),
         "role": "worker",
         "category": "Transport (Travels)",
@@ -508,9 +519,19 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
       children: [
         _F('Full Name', 'Enter your full name', Icons.person_outline, _nameCtrl,
             isRequired: true),
-        _F('Mobile Number', 'Enter mobile number', Icons.phone_outlined,
-            _mobileCtrl,
-            isRequired: true, type: TextInputType.phone),
+        _F('Mobile Number', '00000 00000', Icons.phone_outlined, _mobileCtrl,
+            isRequired: true,
+            type: TextInputType.phone,
+            prefixText: '+91 ',
+            maxLength: 10,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            validator: (v) {
+          if (v == null || v.isEmpty) return 'Required';
+          if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v)) {
+            return 'Invalid 10-digit Indian mobile number';
+          }
+          return null;
+        }),
         _F('Email Address', 'Enter email', Icons.email_outlined, _emailCtrl,
             isRequired: true, type: TextInputType.emailAddress),
         _F('Password', 'Enter password', Icons.lock_outline, _passwordCtrl,
@@ -841,7 +862,14 @@ class _F extends StatefulWidget {
       {this.isRequired = false,
       this.isPassword = false,
       this.type,
-      this.validator});
+      this.validator,
+      this.prefixText,
+      this.maxLength,
+      this.inputFormatters});
+
+  final String? prefixText;
+  final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   State<_F> createState() => _FState();
@@ -890,12 +918,16 @@ class _FState extends State<_F> {
                 obscureText: widget.isPassword ? _obscure : false,
                 keyboardType: widget.type,
                 validator: widget.validator,
+                maxLength: widget.maxLength,
+                inputFormatters: widget.inputFormatters,
                 style: const TextStyle(
                     fontSize: 13,
                     color: Colors.black,
                     fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   isDense: true,
+                  counterText: "",
+                  prefixText: widget.prefixText,
                   contentPadding: const EdgeInsets.only(top: 4, bottom: 4),
                   hintText: widget.hint,
                   hintStyle:
@@ -1094,7 +1126,7 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
 
       await FirebaseFirestore.instance.collection("transports").doc(uid).set({
         "username": _nameCtrl.text.trim(),
-        "phone": _mobileCtrl.text.trim(),
+        "phone": "+91${_mobileCtrl.text.trim()}",
         "email": _emailCtrl.text.trim(),
         "role": "worker",
         "category": "Transport (Travels)",
@@ -1141,9 +1173,19 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
       children: [
         _F("Full Name", "Enter your full name", Icons.person_outline, _nameCtrl,
             isRequired: true),
-        _F("Mobile Number", "Enter mobile number", Icons.phone_outlined,
-            _mobileCtrl,
-            isRequired: true, type: TextInputType.phone),
+        _F("Mobile Number", "00000 00000", Icons.phone_outlined, _mobileCtrl,
+            isRequired: true,
+            type: TextInputType.phone,
+            prefixText: '+91 ',
+            maxLength: 10,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            validator: (v) {
+          if (v == null || v.isEmpty) return 'Required';
+          if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v)) {
+            return 'Invalid 10-digit Indian mobile number';
+          }
+          return null;
+        }),
         _F("Email Address", "Enter email", Icons.email_outlined, _emailCtrl,
             isRequired: true, type: TextInputType.emailAddress),
         _F("Password", "Enter password", Icons.lock_outline, _passwordCtrl,

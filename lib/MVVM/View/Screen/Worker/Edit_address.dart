@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
@@ -72,16 +73,19 @@ class _EditAddressState extends State<EditAddress> {
                     hight: 55,
                     width: 370,
                     color: primary.c,
-                    hinttext: "Enter your Phone Number",
+                    hinttext: "00000 00000",
                     hintstyle:
                         TextStyle(color: Color.fromRGBO(153, 153, 153, 1)),
                     controller: phoneController,
+                    prefixText: '+91 ',
+                    maxLength: 10,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     validator: (String? value) {
                       if (value == null || value.isEmpty) {
                         return "Enter your Phone Number";
-                      } else if (!RegExp(r'^\+?[0-9]{10,15}$')
+                      } else if (!RegExp(r'^[6-9]\d{9}$')
                           .hasMatch(value)) {
-                        return "Enter a valid Phone Number";
+                        return "Enter a valid 10-digit Indian mobile number";
                       }
                       return null;
                     },

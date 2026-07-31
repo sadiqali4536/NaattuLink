@@ -6,24 +6,45 @@ import 'package:naattulink/MVVM/View/Authentication/current_loaction_fetch.dart'
 import 'package:naattulink/MVVM/View/Authentication/onboarding/onboarding_screen.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/common_controller.dart';
 
-class Authgate extends StatelessWidget {
+import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.dart';
+
+class Authgate extends StatefulWidget {
   const Authgate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final isCompleted = CommonController.to.onboardingCompleted.value;
-      if (!isCompleted) {
-        return const OnboardingScreen();
-      }
+  State<Authgate> createState() => _AuthgateState();
+}
 
-      // Check Firebase auth state
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        return const FindingLocationPage();
-      } else {
-        return const LoginAndSigning();
-      }
+class _AuthgateState extends State<Authgate> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthAndRoute();
     });
+  }
+
+  Future<void> _checkAuthAndRoute() async {
+    final isCompleted = CommonController.to.onboardingCompleted.value;
+    if (!isCompleted) {
+      Get.offAll(() => const OnboardingScreen());
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await AuthController.to.routeAuthenticatedUser(user);
+    } else {
+      Get.offAll(() => const LoginAndSigning());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(color: const Color(0xFF0A235C)),
+      ),
+    );
   }
 }

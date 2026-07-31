@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:naattulink/MVVM/View/Authentication/Authgate.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/common_controller.dart';
+import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
+import 'package:naattulink/MVVM/View/Authentication/onboarding/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,9 +21,22 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _goToLocationPage() async {
-    await Future.delayed(const Duration(seconds: 3));
+    // Wait for the animation to play slightly, then initialize
+    await Future.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
-    Get.off(() => const Authgate(), transition: Transition.zoom);
+
+    final isCompleted = CommonController.to.onboardingCompleted.value;
+    if (!isCompleted) {
+      Get.offAll(() => const OnboardingScreen());
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await AuthController.to.routeAuthenticatedUser(user);
+    } else {
+      Get.offAll(() => const LoginAndSigning());
+    }
   }
 
   @override

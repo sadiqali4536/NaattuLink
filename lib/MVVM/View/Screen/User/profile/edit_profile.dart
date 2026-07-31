@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
@@ -168,7 +169,7 @@ class _EditProfileState extends State<EditProfile> {
 
     await FirebaseFirestore.instance.collection("users").doc(uid).update({
       "username": username.text.trim(),
-      "phone": phone.text.trim(),
+      "phone": "+91${phone.text.trim()}",
       "email": email.text.trim(),
       "profile_img": imageUrl,
       "updated_at": FieldValue.serverTimestamp(),
@@ -185,7 +186,7 @@ class _EditProfileState extends State<EditProfile> {
   void initState() {
     // TODO: implement initState
     email.text = widget.email;
-    phone.text = widget.phone;
+    phone.text = widget.phone.replaceAll('+91', '').trim();
     username.text = widget.username;
     super.initState();
   }
@@ -314,8 +315,19 @@ class _EditProfileState extends State<EditProfile> {
             padding: const EdgeInsets.only(top: 380, left: 30),
             child: Customformfield(
                 color: Colors.white,
-                hinttext: "Enter your phone number",
+                hinttext: "00000 00000",
                 controller: phone,
+                keyboardType: TextInputType.phone,
+                prefixText: '+91 ',
+                maxLength: 10,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v)) {
+                    return 'Invalid 10-digit Indian mobile number';
+                  }
+                  return null;
+                },
                 hintstyle:
                     TextStyle(color: const Color.fromARGB(255, 156, 156, 156))),
           ),

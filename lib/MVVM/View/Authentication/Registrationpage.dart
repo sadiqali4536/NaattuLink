@@ -1498,6 +1498,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
@@ -1899,12 +1900,18 @@ class _RegistrationpageState extends State<Registrationpage> {
         hintText: "Enter your phone number",
         prefixIcon: Icons.phone_outlined,
         controller: userPhoneController,
+        keyboardType: TextInputType.phone,
+        prefixText: '+91 ',
+        maxLength: 10,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+        ],
         validator: (value) {
           if (value == null || value.isEmpty) {
             return 'Please enter your phone number';
           }
-          if (!RegExp(r'^\+?[\d\s-]{10,}$').hasMatch(value)) {
-            return 'Please enter a valid phone number';
+          if (!RegExp(r'^[6-9]\d{9}$').hasMatch(value)) {
+            return 'Please enter a valid 10-digit Indian mobile number';
           }
           return null;
         },
@@ -2260,22 +2267,36 @@ class _RegistrationpageState extends State<Registrationpage> {
 
       RegistrationInputField(
         label: "Full Name",
-        hintText: "John Doe",
+        hintText: "Enter your name",
         prefixIcon: Icons.person_outline,
         controller: workerNameController,
         isRequired: true,
       ),
       RegistrationInputField(
         label: "Mobile Number",
-        hintText: "+91 00000 00000",
+        hintText: "Enter your mobile number",
         prefixIcon: Icons.phone_outlined,
         controller: workerPhoneController,
         keyboardType: TextInputType.phone,
         isRequired: true,
+        prefixText: '+91 ',
+        maxLength: 10,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+        ],
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter your phone number';
+          }
+          if (!RegExp(r'^[6-9]\d{9}$').hasMatch(value)) {
+            return 'Please enter a valid 10-digit Indian mobile number';
+          }
+          return null;
+        },
       ),
       RegistrationInputField(
         label: "Email",
-        hintText: "email@example.com",
+        hintText: "Enter your email",
         prefixIcon: Icons.mail_outline,
         controller: workerEmailController,
         keyboardType: TextInputType.emailAddress,
@@ -2563,7 +2584,7 @@ class _RegistrationpageState extends State<Registrationpage> {
         AuthController.to.registerUser(
           context,
           username: userNameController.text.trim(),
-          phone: userPhoneController.text.trim(),
+          phone: '+91${userPhoneController.text.trim()}',
           email: userEmailController.text.trim(),
           password: userPasswordController.text.trim(),
         );
@@ -2571,7 +2592,7 @@ class _RegistrationpageState extends State<Registrationpage> {
         AuthController.to.registerWorker(
           context,
           username: workerNameController.text.trim(),
-          phone: workerPhoneController.text.trim(),
+          phone: '+91${workerPhoneController.text.trim()}',
           email: workerEmailController.text.trim(),
           password: workerPasswordController.text.trim(),
           category: selectedCategory ?? "",
@@ -2595,6 +2616,9 @@ class RegistrationInputField extends StatefulWidget {
   final int maxLines;
   final TextInputType? keyboardType;
   final bool isRequired;
+  final String? prefixText;
+  final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
 
   const RegistrationInputField({
     super.key,
@@ -2608,6 +2632,9 @@ class RegistrationInputField extends StatefulWidget {
     this.maxLines = 1,
     this.keyboardType,
     this.isRequired = false,
+    this.prefixText,
+    this.maxLength,
+    this.inputFormatters,
   });
 
   @override
@@ -2671,6 +2698,8 @@ class _RegistrationInputFieldState extends State<RegistrationInputField> {
                   validator: widget.validator,
                   maxLines: widget.isPassword ? 1 : widget.maxLines,
                   keyboardType: widget.keyboardType,
+                  maxLength: widget.maxLength,
+                  inputFormatters: widget.inputFormatters,
                   style: const TextStyle(
                     fontSize: 15,
                     color: Colors.black,
@@ -2678,6 +2707,8 @@ class _RegistrationInputFieldState extends State<RegistrationInputField> {
                   ),
                   decoration: InputDecoration(
                     isDense: true,
+                    counterText: "",
+                    prefixText: widget.prefixText,
                     contentPadding: const EdgeInsets.only(top: 4, bottom: 4),
                     hintText: widget.hintText,
                     hintStyle:

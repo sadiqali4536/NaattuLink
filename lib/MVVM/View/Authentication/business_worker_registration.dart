@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
@@ -65,14 +66,14 @@ class _BusinessWorkerRegistrationPageState
 
       await FirebaseFirestore.instance.collection("businesses").doc(uid).set({
         "username": _nameCtrl.text.trim(),
-        "phone": _mobileCtrl.text.trim(),
+        "phone": "+91${_mobileCtrl.text.trim()}",
         "email": email,
         "role": "business",
         "category": "Shops & Businesses",
-        "business_category": _category,
+        "profession": _category,
         "address": _addressCtrl.text.trim(),
-        "business_name": _businessNameCtrl.text.trim(),
-        "contact_number": _contactNumberCtrl.text.trim(),
+        "facility_name": _businessNameCtrl.text.trim(),
+        "contact_number": "+91${_contactNumberCtrl.text.trim()}",
         "available_time": _availableTime,
         "profile_img": "",
         "created_at": FieldValue.serverTimestamp(),
@@ -116,9 +117,19 @@ class _BusinessWorkerRegistrationPageState
                 const SizedBox(height: 32),
                 _buildTextField("Full Name", "Enter your full name",
                     Icons.person_outline, _nameCtrl),
-                _buildTextField("Mobile Number", "+91 00000 00000",
+                _buildTextField("Mobile Number", "00000 00000",
                     Icons.phone_outlined, _mobileCtrl,
-                    type: TextInputType.phone),
+                    type: TextInputType.phone,
+                    prefixText: '+91 ',
+                    maxLength: 10,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required field';
+                  if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v)) {
+                    return 'Invalid 10-digit Indian mobile number';
+                  }
+                  return null;
+                }),
                 _buildTextField("Address", "Street name, Area, City",
                     Icons.location_on_outlined, _addressCtrl),
                 const SizedBox(height: 20),
@@ -139,10 +150,20 @@ class _BusinessWorkerRegistrationPageState
                     Icons.domain_add_outlined, _businessNameCtrl),
                 _buildTextField(
                     "Contact Number (Landline / Secondary)",
-                    "Facility contact number",
+                    "00000 00000",
                     Icons.phone_in_talk_outlined,
                     _contactNumberCtrl,
-                    type: TextInputType.phone),
+                    type: TextInputType.phone,
+                    prefixText: '+91 ',
+                    maxLength: 10,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required field';
+                  if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v)) {
+                    return 'Invalid 10-digit Indian mobile number';
+                  }
+                  return null;
+                }),
                 const SizedBox(height: 8),
                 _buildDropdownField(
                     "Available Time",
@@ -339,7 +360,12 @@ class _BusinessWorkerRegistrationPageState
 
   Widget _buildTextField(
       String label, String hint, IconData? icon, TextEditingController ctrl,
-      {bool isPassword = false, TextInputType type = TextInputType.text}) {
+      {bool isPassword = false,
+      TextInputType type = TextInputType.text,
+      String? prefixText,
+      int? maxLength,
+      List<TextInputFormatter>? inputFormatters,
+      String? Function(String?)? validator}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -358,10 +384,14 @@ class _BusinessWorkerRegistrationPageState
             controller: ctrl,
             obscureText: isPassword,
             keyboardType: type,
-            validator: (v) =>
-                v == null || v.trim().isEmpty ? 'Required field' : null,
+            maxLength: maxLength,
+            inputFormatters: inputFormatters,
+            validator: validator ??
+                (v) => v == null || v.trim().isEmpty ? 'Required field' : null,
             decoration: InputDecoration(
+              counterText: "",
               hintText: hint,
+              prefixText: prefixText,
               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
               prefixIcon: icon != null
                   ? Icon(icon, color: Colors.grey[400], size: 20)

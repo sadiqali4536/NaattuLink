@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:flutter/services.dart';
 
 class Customformfield2 extends StatelessWidget {
   final TextInputType? keyboardtype;
@@ -16,6 +17,9 @@ class Customformfield2 extends StatelessWidget {
   final Function()? suffix;
   final String? Function(String?)? validator;
   final int? maxline;
+  final String? prefixText;
+  final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
 
   const Customformfield2({
     super.key,
@@ -33,6 +37,9 @@ class Customformfield2 extends StatelessWidget {
     this.keyboardtype,
     this.width,
     this.maxline,
+    this.prefixText,
+    this.maxLength,
+    this.inputFormatters,
   });
 
   @override
@@ -45,7 +52,11 @@ class Customformfield2 extends StatelessWidget {
         keyboardType: keyboardtype,
         controller: controller,
         validator: validator,
+        maxLength: maxLength,
+        inputFormatters: inputFormatters,
         decoration: InputDecoration(
+          counterText: "",
+          prefixText: prefixText,
           enabledBorder: OutlineInputBorder(
             borderSide: BorderSide(color: formfield.c),
             borderRadius: BorderRadius.circular(15),
