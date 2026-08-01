@@ -8,6 +8,8 @@ import 'package:naattulink/MVVM/View/Authentication/worker_verification_waiting_
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry: choose Bus or Taxi
@@ -194,17 +196,79 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
   final _destCtrl = TextEditingController();
 
   String? _busType;
+  String? _serviceType;
   TimeOfDay? _arrivalTime, _departureTime;
 
-  final _busTypes = [
-    'AC Sleeper',
-    'Non-AC Sleeper',
-    'AC Seater',
-    'Non-AC Seater',
-    'Mini Bus',
-    'School Bus',
-    'Private Bus'
-  ];
+  final _busTypes = ['Private Bus', 'KSRTC'];
+
+  String? _selectedDistrict;
+
+  Widget _buildDistrictDropdown() {
+    final List<String> districts = [
+      "Kozhikode",
+      "Kannur",
+      "Malappuram",
+      "Wayanad",
+      "Palakkad",
+      "Thrissur",
+      "Ernakulam",
+      "Kottayam",
+      "Alappuzha",
+      "Pathanamthitta",
+      "Kollam",
+      "Thiruvananthapuram",
+      "Idukki",
+      "Kasaragod"
+    ];
+
+    if (_selectedDistrict != null && !districts.contains(_selectedDistrict)) {
+      districts.add(_selectedDistrict!);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('District',
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0A235C))),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: DropdownButtonFormField<String>(
+            dropdownColor: Colors.white,
+            value: _selectedDistrict,
+            hint: const Text('Select district',
+                style: TextStyle(color: Colors.grey, fontSize: 13)),
+            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.location_on, color: Colors.grey, size: 20),
+              border: InputBorder.none,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            items: districts.map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value, style: const TextStyle(fontSize: 14)),
+              );
+            }).toList(),
+            onChanged: (newValue) {
+              setState(() {
+                _selectedDistrict = newValue;
+              });
+            },
+            validator: (v) => v == null ? 'Please select a district' : null,
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   void dispose() {
@@ -249,6 +313,15 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
       toastError('Please select a bus type');
       return;
     }
+    if ((_busType == 'Private Bus' || _busType == 'KSRTC') &&
+        _serviceType == null) {
+      toastError('Please select a service type');
+      return;
+    }
+    if (_selectedDistrict == null) {
+      toastError('Please select a district');
+      return;
+    }
     if (!_agreeToTerms) {
       toastError('Please agree to Terms & Conditions');
       return;
@@ -283,10 +356,12 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         "bus_name": _busNameCtrl.text.trim(),
         "reg_number": _regCtrl.text.trim(),
         "bus_type": _busType,
+        if (_serviceType != null) "service_type": _serviceType,
         "first_stop": _firstStopCtrl.text.trim(),
         "destination": _destCtrl.text.trim(),
         "arrival_time": _fmt(_arrivalTime),
         "departure_time": _fmt(_departureTime),
+        "district": _selectedDistrict,
       });
 
       toastSuccess('Bus registration successful. Awaiting admin approval.');
@@ -334,6 +409,8 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
             isRequired: false),
         _readonlyDropdown('Profession', 'Bus', Icons.sync_alt_outlined),
         _secHeader('VEHICLE DETAILS'),
+        _buildDistrictDropdown(),
+        const SizedBox(height: 14),
         _F('Main Stand', 'e.g. City Bus Terminal', Icons.location_city_outlined,
             _mainStandCtrl),
         Row(children: [
@@ -347,7 +424,23 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         ]),
         _DD('Bus Type', 'Select Bus Type', Icons.category_outlined, _busType,
             _busTypes,
-            onChanged: (v) => setState(() => _busType = v)),
+            onChanged: (v) => setState(() {
+                  _busType = v;
+                  _serviceType = null;
+                })),
+        if (_busType == 'Private Bus' || _busType == 'KSRTC') ...[
+          const SizedBox(height: 14),
+          _DD(
+            'Service Type',
+            'Select Service Type',
+            Icons.miscellaneous_services_outlined,
+            _serviceType,
+            _busType == 'Private Bus'
+                ? ['Ordinary', 'Limited Stop']
+                : ['Ordinary', 'Fast Passenger', 'Super Fast'],
+            onChanged: (v) => setState(() => _serviceType = v),
+          ),
+        ],
         const SizedBox(height: 4),
         Row(children: [
           Expanded(

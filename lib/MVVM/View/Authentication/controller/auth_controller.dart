@@ -212,6 +212,9 @@ class AuthController extends GetxController {
     required String phone,
     required String email,
     required String password,
+    String? district,
+    double? latitude,
+    double? longitude,
   }) async {
     _isLoading.value = true;
     try {
@@ -229,6 +232,9 @@ class AuthController extends GetxController {
           "status": "active",
           "password": password,
           "loyalty_points": 0,
+          if (district != null) "district": district,
+          if (latitude != null) "latitude": latitude,
+          if (longitude != null) "longitude": longitude,
         });
         toastSuccess("User registered successfully");
         Get.offAll(() => const FindingLocationPage());
@@ -252,6 +258,9 @@ class AuthController extends GetxController {
     required String location,
     required String experience,
     required String about,
+    String? district,
+    double? latitude,
+    double? longitude,
   }) async {
     _isLoading.value = true;
     try {
@@ -268,6 +277,9 @@ class AuthController extends GetxController {
           "location": location,
           "experience": experience,
           "about": about,
+          if (district != null) "district": district,
+          if (latitude != null) "latitude": latitude,
+          if (longitude != null) "longitude": longitude,
           // Core fields
           "username": username,
           "phone": phone,

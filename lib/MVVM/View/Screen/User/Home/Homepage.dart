@@ -8,7 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/healthcare_bookings/clinics_page.dart';
@@ -64,10 +68,14 @@ class HomepageState extends State<Homepage> {
   Stream<QuerySnapshot>? _servicesStream;
   Stream<QuerySnapshot>? _advertisementsStream;
   Stream<QuerySnapshot>? _notificationsStream;
-  Stream<QuerySnapshot>? _busSchedulesStream;
+  Stream<List<Map<String, dynamic>>>? _busSchedulesStream;
+  Stream<List<Map<String, dynamic>>>? _busSchedulesStream2;
 
   // Bus tab state variables
   String selectedBusFilter = "All Types";
+  String _selectedDistrict = "All Districts";
+  String? _currentDistrict;
+  bool _districtLoading = true;
   late TextEditingController _fromBusController;
   late TextEditingController _toBusController;
   final Set<String> _favoriteBuses = {};
@@ -129,6 +137,56 @@ class HomepageState extends State<Homepage> {
       _routesBox.put('routes', []);
     }
     _loadSavedRoutes();
+
+    _detectUserDistrict();
+  }
+
+  Future<void> _detectUserDistrict() async {
+    String? savedDistrict = GetStorage().read<String>('selected_district');
+
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high);
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+            position.latitude, position.longitude);
+
+        if (placemarks.isNotEmpty) {
+          String district = placemarks.first.subAdministrativeArea ??
+              placemarks.first.administrativeArea ??
+              "Unknown";
+
+          // Clean up district string (e.g. "Kozhikode District" -> "Kozhikode")
+          if (district.toLowerCase().endsWith(" district")) {
+            district = district.substring(0, district.length - 9).trim();
+          }
+
+          if (mounted) {
+            setState(() {
+              _currentDistrict = district;
+              _selectedDistrict = savedDistrict ?? district;
+              _districtLoading = false;
+            });
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error detecting district: $e");
+    }
+
+    if (mounted) {
+      setState(() {
+        _selectedDistrict = savedDistrict ?? "All Districts";
+        _districtLoading = false;
+      });
+    }
   }
 
   void _loadSavedRoutes() {
@@ -3224,12 +3282,77 @@ class HomepageState extends State<Homepage> {
     );
   }
 
+  Stream<List<Map<String, dynamic>>> _getBusSchedulesStream() {
+    return FirebaseFirestore.instance
+        .collection('transports')
+        .where('transport_category', isEqualTo: 'Bus')
+        .snapshots()
+        .switchMap((transportsSnapshot) {
+      if (transportsSnapshot.docs.isEmpty) {
+        return Stream.value([]);
+      }
+
+      final List<Stream<List<Map<String, dynamic>>>> driverStreams =
+          transportsSnapshot.docs.map((driverDoc) {
+        final driverData = driverDoc.data() as Map<String, dynamic>;
+        final driverId = driverDoc.id;
+
+        return FirebaseFirestore.instance
+            .collection('transports')
+            .doc(driverId)
+            .collection('buses')
+            .snapshots()
+            .map((busesSnapshot) {
+          final List<Map<String, dynamic>> combinedBuses = [];
+
+          // Check parent transport status
+          final driverStatus = driverData['status']?.toString().toLowerCase();
+          if (driverStatus != 'inactive' && driverStatus != 'false') {
+            // Add the parent transport document as a bus
+            combinedBuses.add({
+              'bus_id': driverId,
+              'driver_id': driverId,
+              'bus': driverData,
+              'driver': driverData,
+            });
+          }
+
+          if (busesSnapshot.docs.isNotEmpty) {
+            print("Driver $driverId has ${busesSnapshot.docs.length} buses");
+            for (final busDoc in busesSnapshot.docs) {
+              final busData = busDoc.data() as Map<String, dynamic>? ?? {};
+
+              // Check subcollection bus status
+              final busStatus = busData['status']?.toString().toLowerCase();
+              if (busStatus != 'inactive' && busStatus != 'false') {
+                print(
+                    "  -> Found active bus inside transports/$driverId/buses: ${busDoc.id}");
+                print("     Bus Data: $busData");
+
+                combinedBuses.add({
+                  'bus_id': busDoc.id,
+                  'driver_id': driverId,
+                  'bus': busData,
+                  'driver': driverData,
+                });
+              }
+            }
+          }
+          return combinedBuses;
+        });
+      }).toList();
+
+      return Rx.combineLatestList(driverStreams).map((listOfLists) {
+        final flatList = listOfLists.expand((list) => list).toList();
+        print("Total Combined Buses emitted to UI: ${flatList.length}");
+        return flatList;
+      });
+    });
+  }
+
   Widget buildBusTab() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _busSchedulesStream ??= FirebaseFirestore.instance
-          .collection('transports')
-          .where('transport_category', isEqualTo: 'Bus')
-          .snapshots(),
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _busSchedulesStream2 ??= _getBusSchedulesStream(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
@@ -3240,28 +3363,30 @@ class HomepageState extends State<Homepage> {
           );
         }
 
-        final List<Map<String, dynamic>> allBusSchedules = snapshot.data?.docs
-                .map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  if (data['status']?.toString().toLowerCase() != 'active') {
-                    return null;
-                  }
+        final List<Map<String, dynamic>> allBusSchedules = snapshot.data
+                ?.map((item) {
+                  final busData = item['bus'] as Map<String, dynamic>;
+                  final driverData = item['driver'] as Map<String, dynamic>;
 
                   final isKsrtc =
-                      data['bus_type']?.toString().toUpperCase() == 'KSRTC';
+                      busData['bus_type']?.toString().toUpperCase() == 'KSRTC';
                   final subType =
-                      (data['bus_sub_type']?.toString().toUpperCase() ??
+                      (busData['bus_sub_type']?.toString().toUpperCase() ??
                           "ORDINARY");
-                  final firstStop = data['first_stop']?.toString() ?? "";
-                  final rawTime = data['departure_time']?.toString() ?? "";
+                  final firstStop = busData['first_stop']?.toString() ?? "";
+                  final rawTime = busData['departure_time']?.toString() ?? "";
                   String timeMain = rawTime;
                   String timePeriod = "";
 
                   if (rawTime.toLowerCase().contains("am")) {
-                    timeMain = rawTime.replaceAll(RegExp(r'(?i)am'), '').trim();
+                    timeMain = rawTime
+                        .replaceAll(RegExp(r'am', caseSensitive: false), '')
+                        .trim();
                     timePeriod = "AM";
                   } else if (rawTime.toLowerCase().contains("pm")) {
-                    timeMain = rawTime.replaceAll(RegExp(r'(?i)pm'), '').trim();
+                    timeMain = rawTime
+                        .replaceAll(RegExp(r'pm', caseSensitive: false), '')
+                        .trim();
                     timePeriod = "PM";
                   } else if (rawTime.isNotEmpty && rawTime.contains(":")) {
                     final parts = rawTime.split(":");
@@ -3276,30 +3401,50 @@ class HomepageState extends State<Homepage> {
                   }
 
                   return {
-                    "id": doc.id,
+                    "id": item['bus_id'],
+                    "driver_id": item['driver_id'],
                     "type": "LIVE",
                     "tags": [isKsrtc ? "KSRTC" : "PRIVATE", subType],
                     "timeMain": timeMain,
                     "timePeriod": timePeriod,
-                    "from": data['main_stand']?.toString() ?? "",
-                    "to": data['destination']?.toString() ?? "",
+                    "from": busData['start_place']?.toString() ??
+                        driverData['main_stand']?.toString() ??
+                        "",
+                    "to": busData['destination']?.toString() ?? "",
                     "via": firstStop.isNotEmpty ? "Via $firstStop" : "",
                     "stops": [
                       {
-                        "name": data['main_stand']?.toString() ?? "Origin",
-                        "time": "Departs ${data['departure_time'] ?? ''}"
+                        "name": busData['start_place']?.toString() ??
+                            driverData['main_stand']?.toString() ??
+                            "Origin",
+                        "time": "Departs ${busData['departure_time'] ?? ''}"
                       },
                       {
                         "name":
-                            data['destination']?.toString() ?? "Destination",
-                        "status": "Arrives ${data['arrival_time'] ?? ''}",
+                            busData['destination']?.toString() ?? "Destination",
+                        "status": "Arrives ${busData['arrival_time'] ?? ''}",
                         "statusColor": Colors.green,
                       },
                     ],
-                    "frequency": data['bus_name']?.toString() ?? "",
+                    "frequency": busData['bus_name']?.toString() ?? "",
+                    "bus_name": busData['bus_name']?.toString() ?? "",
+                    "registration_number":
+                        busData['registration_number']?.toString() ??
+                            busData['reg_number']?.toString() ??
+                            driverData['registration_number']?.toString() ??
+                            driverData['reg_number']?.toString() ??
+                            "",
+                    "driver_name": driverData['username']?.toString() ?? "",
+                    "driver_phone": driverData['phone']?.toString() ?? "",
+                    "driver_rating": driverData['ratings']?.toString() ?? "0.0",
+                    "driver_reviews":
+                        driverData['total_reviews']?.toString() ?? "0",
+                    "driver_img": driverData['profile_img']?.toString() ?? "",
                     "showMap": true,
                     "showFavorite": false,
                     "isKsrtc": isKsrtc,
+                    "district": busData['district']?.toString() ??
+                        driverData['district']?.toString(),
                   };
                 })
                 .whereType<Map<String, dynamic>>()
@@ -3310,6 +3455,9 @@ class HomepageState extends State<Homepage> {
           if (selectedBusFilter == "KSRTC" && !bus['isKsrtc']) return false;
           if (selectedBusFilter == "Private Bus" && bus['isKsrtc'])
             return false;
+
+          if (_selectedDistrict != "All Districts" &&
+              bus['district'] != _selectedDistrict) return false;
 
           final fromSearch = _fromBusController.text.trim().toLowerCase();
           final toSearch = _toBusController.text.trim().toLowerCase();
@@ -3698,6 +3846,97 @@ class HomepageState extends State<Homepage> {
               ),
             ],
 
+            // District Filter Dropdown
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on,
+                      size: 20, color: Color(0xFF0F2E5A)),
+                  const SizedBox(width: 8),
+                  const Text("District:",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF0F2E5A))),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _districtLoading
+                        ? const Align(
+                            alignment: Alignment.centerLeft,
+                            child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2)),
+                          )
+                        : Container(
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border:
+                                  Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                dropdownColor: Colors.white,
+                                isExpanded: true,
+                                value: _selectedDistrict,
+                                icon: const Icon(Icons.keyboard_arrow_down,
+                                    size: 24, color: Color(0xFF475569)),
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    color: Color(0xFF0F2E5A),
+                                    fontWeight: FontWeight.w600),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      _selectedDistrict = newValue;
+                                      GetStorage()
+                                          .write('selected_district', newValue);
+                                    });
+                                  }
+                                },
+                                items: () {
+                                  final List<String> districts = [
+                                    "All Districts",
+                                    "Kozhikode",
+                                    "Kannur",
+                                    "Malappuram",
+                                    "Wayanad",
+                                    "Palakkad",
+                                    "Thrissur",
+                                    "Ernakulam",
+                                    "Kottayam",
+                                    "Alappuzha",
+                                    "Pathanamthitta",
+                                    "Kollam",
+                                    "Thiruvananthapuram",
+                                    "Idukki",
+                                    "Kasaragod"
+                                  ];
+                                  if (!districts.contains(_selectedDistrict)) {
+                                    districts.add(_selectedDistrict);
+                                  }
+                                  return districts
+                                      .map<DropdownMenuItem<String>>(
+                                          (String value) {
+                                    return DropdownMenuItem<String>(
+                                      value: value,
+                                      child: Text(value),
+                                    );
+                                  }).toList();
+                                }(),
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+
             // Filter chips
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -3737,12 +3976,41 @@ class HomepageState extends State<Homepage> {
             ),
 
             // List of Cards
-            if (filteredSchedules.isEmpty)
+            if (_selectedDistrict == "All Districts")
+              Container(
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.location_on, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Please select a district to view available bus routes.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.orange,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (filteredSchedules.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(40),
                 child: Center(
                   child: Text(
-                    "No bus schedules found for this route.",
+                    "No bus schedules found for the selected district.",
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey, fontSize: 13),
                   ),
                 ),
@@ -4166,15 +4434,17 @@ class HomepageState extends State<Homepage> {
             child: Divider(color: Color(0xFFF1F5F9), height: 1, thickness: 1),
           ),
           // Footer action row
+          // Driver Details (Hidden per user request)
+          // Footer action row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
+                  Icon(Icons.directions_bus, size: 14, color: Colors.grey[600]),
                   const SizedBox(width: 4),
                   Text(
-                    bus['frequency'],
+                    "${bus['bus_name']} ${bus['registration_number'] != null && bus['registration_number'].isNotEmpty ? '• ${bus['registration_number']}' : ''}",
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey[600],

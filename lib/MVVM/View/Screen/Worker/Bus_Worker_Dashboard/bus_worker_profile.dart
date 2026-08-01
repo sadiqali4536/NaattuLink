@@ -170,7 +170,7 @@ class BusWorkerProfile extends StatelessWidget {
                             height: 55,
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                // TODO: Implement logout
+                                AuthController.to.logout(context);
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red.shade50,

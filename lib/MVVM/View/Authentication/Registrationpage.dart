@@ -1499,6 +1499,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
@@ -1543,6 +1544,108 @@ class _RegistrationpageState extends State<Registrationpage> {
 
   String? selectedCategory = "";
   final formKey = GlobalKey<FormState>();
+
+  String? _selectedUserDistrict;
+  String? _selectedWorkerDistrict;
+
+  Widget _buildDistrictDropdown(bool isForUser) {
+    final List<String> districts = [
+      "Kozhikode",
+      "Kannur",
+      "Malappuram",
+      "Wayanad",
+      "Palakkad",
+      "Thrissur",
+      "Ernakulam",
+      "Kottayam",
+      "Alappuzha",
+      "Pathanamthitta",
+      "Kollam",
+      "Thiruvananthapuram",
+      "Idukki",
+      "Kasaragod"
+    ];
+
+    String? currentVal =
+        isForUser ? _selectedUserDistrict : _selectedWorkerDistrict;
+    if (currentVal != null && !districts.contains(currentVal)) {
+      districts.add(currentVal);
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RichText(
+            text: const TextSpan(
+              children: [
+                TextSpan(
+                  text: "DISTRICT",
+                  style: TextStyle(
+                    color: Color(0xFF0A235C),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: DropdownButtonFormField<String>(
+              dropdownColor: Colors.white,
+              value: currentVal,
+              hint: const Text('Select your district',
+                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+              icon: const Icon(Icons.keyboard_arrow_down,
+                  color: Color(0xFF94A3B8)),
+              decoration: const InputDecoration(
+                prefixIcon:
+                    Icon(Icons.location_on, color: Color(0xFF94A3B8), size: 22),
+                border: InputBorder.none,
+              ),
+              items: districts.map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w500)),
+                );
+              }).toList(),
+              onChanged: (newValue) {
+                setState(() {
+                  if (isForUser) {
+                    _selectedUserDistrict = newValue;
+                  } else {
+                    _selectedWorkerDistrict = newValue;
+                  }
+                });
+              },
+              validator: (v) => v == null ? 'Please select a district' : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // New variables for multi-step worker registration
   int workerStep = 1;
@@ -1916,6 +2019,7 @@ class _RegistrationpageState extends State<Registrationpage> {
           return null;
         },
       ),
+      _buildDistrictDropdown(true),
       RegistrationInputField(
         label: "PASSWORD",
         hintText: "Create a password",
@@ -2311,6 +2415,7 @@ class _RegistrationpageState extends State<Registrationpage> {
           return null;
         },
       ),
+      _buildDistrictDropdown(false),
       RegistrationInputField(
         label: "Location/Area",
         hintText: "Enter the area or landmark",
@@ -2518,7 +2623,7 @@ class _RegistrationpageState extends State<Registrationpage> {
     ];
   }
 
-  void _handleRegister() {
+  Future<void> _handleRegister() async {
     if (!isUser && workerStep == 1) {
       if (selectedWorkerCategory == null) {
         Get.snackbar(
@@ -2580,6 +2685,24 @@ class _RegistrationpageState extends State<Registrationpage> {
     }
 
     if (formKey.currentState!.validate()) {
+      double? lat;
+      double? lng;
+      try {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always) {
+          Position position = await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.high);
+          lat = position.latitude;
+          lng = position.longitude;
+        }
+      } catch (e) {
+        debugPrint("Location fetch failed: $e");
+      }
+
       if (isUser) {
         AuthController.to.registerUser(
           context,
@@ -2587,6 +2710,9 @@ class _RegistrationpageState extends State<Registrationpage> {
           phone: '+91${userPhoneController.text.trim()}',
           email: userEmailController.text.trim(),
           password: userPasswordController.text.trim(),
+          district: _selectedUserDistrict,
+          latitude: lat,
+          longitude: lng,
         );
       } else {
         AuthController.to.registerWorker(
@@ -2599,6 +2725,9 @@ class _RegistrationpageState extends State<Registrationpage> {
           location: workerLocationController.text.trim(),
           experience: workerExperienceController.text.trim(),
           about: workerAboutController.text.trim(),
+          district: _selectedWorkerDistrict,
+          latitude: lat,
+          longitude: lng,
         );
       }
     }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cherry_toast/cherry_toast.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class AddNewBusScreen extends StatefulWidget {
   final bool isEdit;
@@ -24,6 +26,7 @@ class AddNewBusScreen extends StatefulWidget {
 class _AddNewBusScreenState extends State<AddNewBusScreen> {
   String? _selectedBusType;
   String? _selectedServiceType;
+  String? _selectedDistrict;
   bool _isLoading = true;
   List<String> _busTypes = ['Private Bus', 'KSRTC'];
   bool _isBusTypeLocked = false;
@@ -57,6 +60,7 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
       final data = widget.initialData!;
       _selectedBusType = data['bus_type'];
       _selectedServiceType = data['service_type'];
+      _selectedDistrict = data['district'];
       _busNameController.text = data['bus_name'] ?? '';
 
       if (widget.isMainBus) {
@@ -160,6 +164,8 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
                       const SizedBox(height: 16),
                       _buildServiceTypeDropdown(),
                     ],
+                    const SizedBox(height: 16),
+                    _buildDistrictDropdown(),
                     const SizedBox(height: 32),
 
                     _buildSectionTitle('ROUTE INFORMATION'),
@@ -305,7 +311,8 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
         _departureTimeController.text.trim().isEmpty ||
         _arrivalTimeController.text.trim().isEmpty ||
         _selectedBusType == null ||
-        _selectedServiceType == null) {
+        _selectedServiceType == null ||
+        _selectedDistrict == null) {
       CherryToast.error(
         title: const Text('Please fill all required fields'),
       ).show(context);
@@ -341,7 +348,20 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
         "departure_time": _departureTimeController.text.trim(),
         "arrival_time": _arrivalTimeController.text.trim(),
         "status": _isActive ? "ACTIVE" : "INACTIVE",
+        "updated_at": FieldValue.serverTimestamp(),
       };
+
+      // Always use the manually selected district
+      final String finalDistrict = _selectedDistrict!;
+      busData['district'] = finalDistrict;
+
+      // Just save district to parent
+      await FirebaseFirestore.instance
+          .collection('transports')
+          .doc(user.uid)
+          .set({
+        'district': finalDistrict,
+      }, SetOptions(merge: true));
 
       if (widget.isEdit && widget.isMainBus) {
         // Main bus uses different keys
@@ -572,6 +592,73 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
             onChanged: (newValue) {
               setState(() {
                 _selectedServiceType = newValue;
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDistrictDropdown() {
+    final List<String> districts = [
+      "Kozhikode",
+      "Kannur",
+      "Malappuram",
+      "Wayanad",
+      "Palakkad",
+      "Thrissur",
+      "Ernakulam",
+      "Kottayam",
+      "Alappuzha",
+      "Pathanamthitta",
+      "Kollam",
+      "Thiruvananthapuram",
+      "Idukki",
+      "Kasaragod"
+    ];
+
+    if (_selectedDistrict != null && !districts.contains(_selectedDistrict)) {
+      districts.add(_selectedDistrict!);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('District',
+            style: TextStyle(
+                color: Colors.black87,
+                fontSize: 13,
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: DropdownButtonFormField<String>(
+            dropdownColor: Colors.white,
+            value: _selectedDistrict,
+            hint: Text('Select district',
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 14)),
+            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+            decoration: InputDecoration(
+              prefixIcon: Icon(Icons.location_on,
+                  color: Colors.grey.shade500, size: 20),
+              border: InputBorder.none,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            items: districts.map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: (newValue) {
+              setState(() {
+                _selectedDistrict = newValue;
               });
             },
           ),

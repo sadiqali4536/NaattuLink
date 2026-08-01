@@ -61,6 +61,7 @@ dependencies:
   hive_flutter: ^1.1.0
   url_launcher: ^6.3.2
   image_picker_android: ^0.8.13+19
+  rxdart: ^0.28.0
 
 dev_dependencies:
   flutter_test:
