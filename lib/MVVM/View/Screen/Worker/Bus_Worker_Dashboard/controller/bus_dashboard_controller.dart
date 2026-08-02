@@ -11,7 +11,7 @@ class BusDashboardController extends GetxController {
   final RxBool isLoading = true.obs;
   final RxBool hasError = false.obs;
 
-  final String? uid = FirebaseAuth.instance.currentUser?.uid;
+  String? get uid => FirebaseAuth.instance.currentUser?.uid;
   bool _isInitializing = false;
   bool _isInitialized = false;
 

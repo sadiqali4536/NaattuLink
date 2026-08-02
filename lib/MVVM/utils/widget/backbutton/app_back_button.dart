@@ -8,7 +8,7 @@ class AppBackButton extends StatelessWidget {
   const AppBackButton({
     super.key,
     this.onPressed,
-    this.margin = const EdgeInsets.only(left: 16, top: 16),
+    this.margin = const EdgeInsets.only(left: 12, top: 8, bottom: 8),
   });
 
   @override

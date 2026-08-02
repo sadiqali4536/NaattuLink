@@ -131,7 +131,7 @@ class BusCardWidget extends StatelessWidget {
               children: [
                 const Icon(Icons.access_time, size: 16, color: Colors.orange),
                 const SizedBox(width: 8),
-                Text('$departureTime - $arrivalTime',
+                Text('$arrivalTime - $departureTime',
                     style:
                         TextStyle(color: Colors.grey.shade700, fontSize: 13)),
               ],

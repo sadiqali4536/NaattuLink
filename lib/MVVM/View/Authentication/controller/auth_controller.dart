@@ -7,7 +7,7 @@ import 'package:naattulink/MVVM/View/Authentication/worker_verification_waiting_
 import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
-import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/bus_worker_main_page.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/bus_worker_dashboard.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
 
 import 'package:get_storage/get_storage.dart';
@@ -101,7 +101,7 @@ class AuthController extends GetxController {
           // Bus Dashboard
           final busController = Get.put(BusDashboardController());
           await busController.initialize();
-          Get.offAll(() => const BusWorkerMainPage());
+          Get.offAll(() => const BusWorkerDashboard());
         } else if (transportCategory == 'Truck / JCB') {
           // Truck/JCB Dashboard placeholder
           Get.offAll(() => const FindingLocationPage());

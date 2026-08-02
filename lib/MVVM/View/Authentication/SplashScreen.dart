@@ -5,6 +5,7 @@ import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.d
 import 'package:naattulink/MVVM/View/Authentication/controller/common_controller.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:naattulink/MVVM/View/Authentication/onboarding/onboarding_screen.dart';
+import 'package:get_storage/get_storage.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -25,18 +26,23 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
 
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      if (!CommonController.to.onboardingCompleted.value) {
+        CommonController.to.onboardingCompleted.value = true;
+        GetStorage().write('onboarding', 'true');
+      }
+      await AuthController.to.routeAuthenticatedUser(user);
+      return;
+    }
+
     final isCompleted = CommonController.to.onboardingCompleted.value;
     if (!isCompleted) {
       Get.offAll(() => const OnboardingScreen());
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await AuthController.to.routeAuthenticatedUser(user);
-    } else {
-      Get.offAll(() => const LoginAndSigning());
-    }
+    Get.offAll(() => const LoginAndSigning());
   }
 
   @override

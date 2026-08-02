@@ -314,7 +314,10 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: const AppBackButton(),
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10.0),
+          child: AppBackButton(),
+        ),
         title: const Text(
           "Booking Summary",
           style: TextStyle(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/bus_card_widget.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 
 class SeeAllBusesScreen extends StatelessWidget {
   const SeeAllBusesScreen({Key? key}) : super(key: key);
@@ -18,9 +19,9 @@ class SeeAllBusesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10.0),
+          child: AppBackButton(),
         ),
         title: const Text('All Buses',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -61,13 +62,11 @@ class SeeAllBusesScreen extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final docs =
-                    busSnapshot.hasData ? busSnapshot.data!.docs : [];
+                final docs = busSnapshot.hasData ? busSnapshot.data!.docs : [];
                 final totalCount = docs.length + (hasOriginalBus ? 1 : 0);
 
                 if (totalCount == 0) {
-                  return const Center(
-                      child: Text("No buses found."));
+                  return const Center(child: Text("No buses found."));
                 }
 
                 return ListView.builder(
@@ -82,8 +81,8 @@ class SeeAllBusesScreen extends StatelessWidget {
                         destination: data['destination'] ?? 'N/A',
                         arrivalTime: data['arrival_time'] ?? 'N/A',
                         departureTime: data['departure_time'] ?? 'N/A',
-                        status:
-                            data['status']?.toString().toUpperCase() ?? 'ACTIVE',
+                        status: data['status']?.toString().toUpperCase() ??
+                            'ACTIVE',
                         docId: uid,
                         isMainBus: true,
                         rawData: data,
@@ -92,8 +91,7 @@ class SeeAllBusesScreen extends StatelessWidget {
 
                     final docIndex = hasOriginalBus ? index - 1 : index;
                     final docSnapshot = docs[docIndex];
-                    final bData =
-                        docSnapshot.data() as Map<String, dynamic>;
+                    final bData = docSnapshot.data() as Map<String, dynamic>;
                     return BusCardWidget(
                       busName: bData['bus_name'] ?? 'Unknown',
                       regNumber: bData['registration_number'] ?? 'N/A',

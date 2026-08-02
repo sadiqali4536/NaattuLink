@@ -57,7 +57,10 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: const AppBackButton(),
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10.0),
+          child: AppBackButton(),
+        ),
         title: const Text(
           "Schedule Service",
           style: TextStyle(

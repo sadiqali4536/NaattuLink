@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/worker_verification_waiting_screen.dart';
@@ -10,6 +11,8 @@ import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/bus_worker_dashboard.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry: choose Bus or Taxi
@@ -289,19 +292,27 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
     super.dispose();
   }
 
-  String _fmt(TimeOfDay? t) => t == null
-      ? '--:--'
-      : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  String _fmt(TimeOfDay? t) {
+    if (t == null) return '--:--';
+    final h = t.hour == 0 ? 12 : (t.hour > 12 ? t.hour - 12 : t.hour);
+    final m = t.minute.toString().padLeft(2, '0');
+    final p = t.hour >= 12 ? 'PM' : 'AM';
+    return '${h.toString().padLeft(2, '0')}:$m $p';
+  }
 
   Future<void> _pickTime(bool isArrival) async {
     final p = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
-        builder: (ctx, child) => Theme(
-            data: Theme.of(ctx).copyWith(
-                colorScheme: const ColorScheme.light(
-                    primary: Color(0xFF0A235C), onSurface: Color(0xFF0A235C))),
-            child: child!));
+        builder: (ctx, child) => MediaQuery(
+              data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: false),
+              child: Theme(
+                  data: Theme.of(ctx).copyWith(
+                      colorScheme: const ColorScheme.light(
+                          primary: Color(0xFF0A235C),
+                          onSurface: Color(0xFF0A235C))),
+                  child: child!),
+            ));
     if (p != null) {
       setState(() => isArrival ? _arrivalTime = p : _departureTime = p);
     }
@@ -345,7 +356,7 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         "profile_img": "",
         "created_at": FieldValue.serverTimestamp(),
         "updated_at": FieldValue.serverTimestamp(),
-        "status": "pending",
+        "status": "active",
         "services": [],
         "ratings": 0,
         "total_reviews": 0,
@@ -364,8 +375,11 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         "district": _selectedDistrict,
       });
 
-      toastSuccess('Bus registration successful. Awaiting admin approval.');
-      Get.back();
+      toastSuccess('Bus registration successful.');
+      if (Get.isRegistered<BusDashboardController>()) {
+        Get.delete<BusDashboardController>(force: true);
+      }
+      Get.offAll(() => const BusWorkerDashboard());
     } on FirebaseAuthException catch (e) {
       toastError(FirebaseErrorHandler.getReadableErrorMessage(e));
     } catch (e) {
@@ -412,15 +426,18 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         _buildDistrictDropdown(),
         const SizedBox(height: 14),
         _F('Main Stand', 'e.g. City Bus Terminal', Icons.location_city_outlined,
-            _mainStandCtrl),
+            _mainStandCtrl,
+            textCapitalization: TextCapitalization.characters),
         Row(children: [
           Expanded(
               child: _F('Bus Name', 'e.g. Star Travels',
-                  Icons.directions_bus_outlined, _busNameCtrl)),
+                  Icons.directions_bus_outlined, _busNameCtrl,
+                  textCapitalization: TextCapitalization.characters)),
           const SizedBox(width: 10),
           Expanded(
-              child: _F('Reg. Number', 'KL-XX-0000', Icons.numbers_outlined,
-                  _regCtrl)),
+              child: _F(
+                  'Reg. Number', 'KL-XX-0000', Icons.numbers_outlined, _regCtrl,
+                  textCapitalization: TextCapitalization.characters)),
         ]),
         _DD('Bus Type', 'Select Bus Type', Icons.category_outlined, _busType,
             _busTypes,
@@ -445,11 +462,13 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         Row(children: [
           Expanded(
               child: _F(
-                  'First Stop', 'Origin', Icons.trip_origin, _firstStopCtrl)),
+                  'First Stop', 'Origin', Icons.trip_origin, _firstStopCtrl,
+                  textCapitalization: TextCapitalization.characters)),
           const SizedBox(width: 10),
           Expanded(
               child: _F('Destination', 'End Point', Icons.location_on_outlined,
-                  _destCtrl)),
+                  _destCtrl,
+                  textCapitalization: TextCapitalization.characters)),
         ]),
         Row(children: [
           Expanded(
@@ -717,13 +736,16 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
         _F('Luggage Capacity', 'e.g. 10 Large Bags', Icons.luggage_outlined,
             _luggageCtrl),
         _F('Main Stand', 'e.g. City Bus Terminal', Icons.business_outlined,
-            _mainStandCtrl),
+            _mainStandCtrl,
+            textCapitalization: TextCapitalization.characters),
         Row(children: [
           Expanded(
               child: _F('Vehicle Model', 'e.g. Maruti Dzire', null,
                   _vehicleModelCtrl)),
           const SizedBox(width: 10),
-          Expanded(child: _F('Reg. Number', 'KL-XX-0000', null, _regCtrl)),
+          Expanded(
+              child: _F('Reg. Number', 'KL-XX-0000', null, _regCtrl,
+                  textCapitalization: TextCapitalization.characters)),
         ]),
       ],
     );
@@ -958,11 +980,13 @@ class _F extends StatefulWidget {
       this.validator,
       this.prefixText,
       this.maxLength,
-      this.inputFormatters});
+      this.inputFormatters,
+      this.textCapitalization = TextCapitalization.none});
 
   final String? prefixText;
   final int? maxLength;
   final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
 
   @override
   State<_F> createState() => _FState();
@@ -1013,6 +1037,7 @@ class _FState extends State<_F> {
                 validator: widget.validator,
                 maxLength: widget.maxLength,
                 inputFormatters: widget.inputFormatters,
+                textCapitalization: widget.textCapitalization,
                 style: const TextStyle(
                     fontSize: 13,
                     color: Colors.black,
@@ -1093,6 +1118,10 @@ class _DD extends StatelessWidget {
                         color: Color(0xFF94A3B8), fontSize: 13)),
                 icon: const Icon(Icons.keyboard_arrow_down,
                     color: Color(0xFF0A235C)),
+                style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w500),
                 items: items
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
@@ -1112,9 +1141,15 @@ class _TT extends StatelessWidget {
   final TimeOfDay? time;
   final VoidCallback onTap;
   const _TT(this.label, this.time, this.onTap);
-  String get _d => time == null
-      ? '--:--'
-      : '${time!.hour.toString().padLeft(2, '0')}:${time!.minute.toString().padLeft(2, '0')}';
+  String get _d {
+    if (time == null) return '--:--';
+    final h =
+        time!.hour == 0 ? 12 : (time!.hour > 12 ? time!.hour - 12 : time!.hour);
+    final m = time!.minute.toString().padLeft(2, '0');
+    final p = time!.hour >= 12 ? 'PM' : 'AM';
+    return '${h.toString().padLeft(2, '0')}:$m $p';
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -1339,7 +1374,8 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
           _F("Load Capacity", "e.g. 10 Tons", Icons.work_outline,
               _loadCapacityCtrl),
         _F("Main Stand", "e.g. City Bus Terminal", Icons.business_outlined,
-            _mainStandCtrl),
+            _mainStandCtrl,
+            textCapitalization: TextCapitalization.characters),
         Row(children: [
           Expanded(
               child: _F(
@@ -1348,7 +1384,9 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
                   null,
                   _vehicleModelCtrl)),
           const SizedBox(width: 10),
-          Expanded(child: _F("Reg. Number", "KL-XX-0000", null, _regCtrl)),
+          Expanded(
+              child: _F("Reg. Number", "KL-XX-0000", null, _regCtrl,
+                  textCapitalization: TextCapitalization.characters)),
         ]),
       ],
     );

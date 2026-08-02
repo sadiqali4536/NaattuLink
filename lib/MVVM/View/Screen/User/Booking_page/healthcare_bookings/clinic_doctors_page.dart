@@ -64,7 +64,10 @@ class ClinicDoctorsPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: const AppBackButton(),
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10.0),
+          child: AppBackButton(),
+        ),
         title: const Text(
           "Available Doctors",
           style: TextStyle(

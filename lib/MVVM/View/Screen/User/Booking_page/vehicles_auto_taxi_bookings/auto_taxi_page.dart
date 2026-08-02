@@ -517,7 +517,10 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
-      leading: const AppBackButton(),
+      leading: const Padding(
+          padding: EdgeInsets.only(left: 10.0),
+          child: AppBackButton(),
+        ),
       centerTitle: true,
       title: const Text(
         "Auto & Taxi",

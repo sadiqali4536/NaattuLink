@@ -5,6 +5,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
@@ -38,6 +39,7 @@ import 'package:naattulink/MVVM/utils/widget/button/Scrollable/scrollable_horizo
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Home/notifications_page.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({Key? key}) : super(key: key);
@@ -67,6 +69,7 @@ class HomepageState extends State<Homepage> {
   late TextEditingController _searchController;
   Stream<QuerySnapshot>? _servicesStream;
   Stream<QuerySnapshot>? _advertisementsStream;
+  Stream<DocumentSnapshot>? _globalContactStream;
   Stream<QuerySnapshot>? _notificationsStream;
   Stream<List<Map<String, dynamic>>>? _busSchedulesStream;
   Stream<List<Map<String, dynamic>>>? _busSchedulesStream2;
@@ -75,7 +78,7 @@ class HomepageState extends State<Homepage> {
   String selectedBusFilter = "All Types";
   String _selectedDistrict = "All Districts";
   String? _currentDistrict;
-  bool _districtLoading = true;
+  bool _districtLoading = false;
   late TextEditingController _fromBusController;
   late TextEditingController _toBusController;
   final Set<String> _favoriteBuses = {};
@@ -128,6 +131,12 @@ class HomepageState extends State<Homepage> {
         .collection('advertisements')
         .where('isActive', isEqualTo: true)
         .snapshots();
+    _globalContactStream = FirebaseFirestore.instance
+        .collection('advertisements')
+        .doc('global_contact')
+        .collection('ads_contact')
+        .doc('contact')
+        .snapshots();
     _notificationsStream =
         FirebaseFirestore.instance.collection('notifications').snapshots();
 
@@ -153,9 +162,12 @@ class HomepageState extends State<Homepage> {
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
         Position position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.high);
+          desiredAccuracy: LocationAccuracy.high,
+        );
         List<Placemark> placemarks = await placemarkFromCoordinates(
-            position.latitude, position.longitude);
+          position.latitude,
+          position.longitude,
+        );
 
         if (placemarks.isNotEmpty) {
           String district = placemarks.first.subAdministrativeArea ??
@@ -170,7 +182,7 @@ class HomepageState extends State<Homepage> {
           if (mounted) {
             setState(() {
               _currentDistrict = district;
-              _selectedDistrict = savedDistrict ?? district;
+              _selectedDistrict = savedDistrict ?? "All Districts";
               _districtLoading = false;
             });
           }
@@ -266,6 +278,459 @@ class HomepageState extends State<Homepage> {
     }
   }
 
+  /// Fetches a service by [serviceId] from Firestore and navigates to
+  /// [ServiceDetailsPage]. Shows a snackbar if the service is missing or inactive.
+  Future<void> _openServiceFromBanner(
+      BuildContext context, String? serviceId) async {
+    if (serviceId == null || serviceId.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This service is no longer available.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show a loading dialog while fetching
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0F2E5A)),
+      ),
+    );
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('services')
+          .doc(serviceId.trim())
+          .get();
+
+      // Dismiss loading
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+
+      if (!doc.exists) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This service is no longer available.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+      final status = (data['status'] ?? '').toString().toLowerCase();
+      if (status == 'inactive') {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This service is no longer available.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final name = (data['service_name'] ?? 'Service').toString();
+      final category = (data['category'] ?? '').toString();
+      final image = (data['image_url'] ?? data['image'] ?? '').toString();
+      final rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
+
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ServiceDetailsPage(
+              category: category,
+              serviceName: name,
+              rating: rating,
+              originalPrice: data['original_price'] ?? 0,
+              discount: data['discount'] ?? 0,
+              image: image,
+              discountPrice: data['discount_price'] ?? data['price'] ?? 0,
+              serviceType: data['service_type'],
+              businessLat: (data['businessLat'] as num?)?.toDouble(),
+              businessLng: (data['businessLng'] as num?)?.toDouble(),
+              businessAddress: data['businessAddress'] as String?,
+              businessMapsUrl: data['businessMapsUrl'] as String?,
+              serviceId: doc.id,
+              providerId: data['providerId']?.toString() ??
+                  data['uid']?.toString() ??
+                  'Unknown',
+              providerName: data['providerName']?.toString() ??
+                  data['workerName']?.toString() ??
+                  'Unknown',
+              providerPhone: data['providerPhone']?.toString() ??
+                  data['phone']?.toString() ??
+                  '',
+              serviceDescription: data['description']?.toString() ??
+                  data['about']?.toString() ??
+                  '',
+              estimatedDuration: data['duration']?.toString() ?? '1 hr',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Dismiss loading if still showing
+      if (context.mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This service is no longer available.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      debugPrint('Error opening service from banner: $e');
+    }
+  }
+
+  Future<void> _openInAppPageFromBanner(
+      BuildContext context, String? inAppPageId) async {
+    if (inAppPageId == null || inAppPageId.trim().isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This page is currently unavailable.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final id = inAppPageId.trim().toLowerCase();
+
+    switch (id) {
+      case 'home':
+      case 'for_you':
+        setState(() {
+          selectedCategoryIndex = 0;
+        });
+        break;
+      case 'workers':
+        setState(() {
+          selectedCategoryIndex = 1;
+        });
+        break;
+      case 'bus':
+        setState(() {
+          selectedCategoryIndex = 2;
+        });
+        break;
+      case 'shopping':
+        setState(() {
+          selectedCategoryIndex = 4;
+        });
+        break;
+      case 'healthcare':
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const HealthcareCategoriesPage()));
+        break;
+      case 'taxi':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => const AutoTaxiPage()));
+        break;
+      case 'truck_jcb':
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => const JcbsPage()));
+        break;
+      case 'notifications':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => const NotificationsPage()));
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This page is currently unavailable.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+    }
+  }
+
+  /// Fetches a product by [productId] from Firestore and navigates to
+  /// [ServiceDetailsPage] (as a fallback). Shows a snackbar if the product is missing or inactive.
+  Future<void> _openProductFromBanner(
+      BuildContext context, String? productId) async {
+    if (productId == null || productId.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This product is no longer available.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show a loading dialog while fetching
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0F2E5A)),
+      ),
+    );
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(productId.trim())
+          .get();
+
+      // Dismiss loading
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+
+      if (!doc.exists) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This product is no longer available.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+      final status = (data['status'] ?? '').toString().toLowerCase();
+      if (status == 'inactive') {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This product is no longer available.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final name =
+          (data['title'] ?? data['productName'] ?? 'Product').toString();
+      final category = (data['category'] ?? '').toString();
+      final image = (data['image'] ?? data['image_url'] ?? '').toString();
+      final rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
+      final price = data['price'] ?? 0;
+
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ServiceDetailsPage(
+              category: category,
+              serviceName: name,
+              rating: rating,
+              originalPrice: price,
+              discount: 0,
+              image: image,
+              discountPrice: price,
+              serviceType: 'Product',
+              businessLat: null,
+              businessLng: null,
+              businessAddress: null,
+              businessMapsUrl: null,
+              serviceId: doc.id,
+              providerId: data['sellerId']?.toString() ?? 'Unknown',
+              providerName: 'Seller',
+              providerPhone: '',
+              serviceDescription: data['description']?.toString() ?? '',
+              estimatedDuration: '',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Dismiss loading if still showing
+      if (context.mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This product is no longer available.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      debugPrint('Error opening product from banner: $e');
+    }
+  }
+
+  void _showGlobalContactSheet(
+      BuildContext context, Map<String, dynamic> data) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                height: 4,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Banner Image
+              // if (data['bannerImageUrl'] != null &&
+              //     data['bannerImageUrl'].toString().isNotEmpty)
+              //   ClipRRect(
+              //     borderRadius:
+              //         const BorderRadius.vertical(top: Radius.circular(16)),
+              //     child: Image.network(
+              //       data['bannerImageUrl'],
+              //       width: double.infinity,
+              //       height: 150,
+              //       fit: BoxFit.cover,
+              //     ),
+              //   ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      "Need to publish an advertisement?",
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1F2937),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Subtitle
+                    Text(
+                      "Contact our support team to publish your advertisement through a phone call or WhatsApp.",
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    // Two large action buttons — numbers are NOT displayed
+                    Column(
+                      children: [
+                        // WhatsApp Button
+                        if (data['whatsappNumber'] != null &&
+                            data['whatsappNumber'].toString().isNotEmpty)
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final phone =
+                                    "${data['whatsappCountryCode'] ?? ''}${data['whatsappNumber']}"
+                                        .replaceAll('+', '')
+                                        .replaceAll(' ', '');
+                                final uri = Uri.parse('https://wa.me/$phone');
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri,
+                                      mode: LaunchMode.externalApplication);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF25D366),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 18),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const FaIcon(FontAwesomeIcons.whatsapp,
+                                      color: Colors.white, size: 22),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    "WhatsApp",
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        if (data['whatsappNumber'] != null &&
+                            data['whatsappNumber'].toString().isNotEmpty &&
+                            data['phoneNumber'] != null &&
+                            data['phoneNumber'].toString().isNotEmpty)
+                          const SizedBox(height: 12),
+                        // Call Now Button
+                        if (data['phoneNumber'] != null &&
+                            data['phoneNumber'].toString().isNotEmpty)
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final uri =
+                                    Uri.parse('tel:${data['phoneNumber']}');
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri);
+                                }
+                              },
+                              icon: const Icon(Icons.phone_rounded,
+                                  color: Colors.white, size: 22),
+                              label: Text(
+                                "Call Now",
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 18),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context).size;
@@ -349,176 +814,325 @@ class HomepageState extends State<Homepage> {
                             height: selectedCategory == "Bus" ? 210 : 290,
                           ),
                           if (_searchController.text.isEmpty) ...[
-                            StreamBuilder<QuerySnapshot>(
-                              stream: _advertisementsStream,
-                              builder: (context, bannerSnap) {
-                                // While loading banners show skeleton
-                                if (bannerSnap.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const CarouselSkeleton(
-                                    key: ValueKey('carousel_loading'),
-                                  );
-                                }
+                            StreamBuilder<DocumentSnapshot>(
+                              stream: _globalContactStream,
+                              builder: (context, globalContactSnap) {
+                                return StreamBuilder<QuerySnapshot>(
+                                  stream: _advertisementsStream,
+                                  builder: (context, bannerSnap) {
+                                    // While loading banners show skeleton
+                                    if (bannerSnap.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const CarouselSkeleton(
+                                        key: ValueKey('carousel_loading'),
+                                      );
+                                    }
 
-                                final bannerDocs = bannerSnap.data?.docs ?? [];
+                                    final bannerDocs =
+                                        bannerSnap.data?.docs ?? [];
 
-                                // In-memory filter and sort to avoid composite index requirements
-                                final now = DateTime.now();
-                                final filteredDocs = bannerDocs.where((doc) {
-                                  final data =
-                                      doc.data() as Map<String, dynamic>;
+                                    // In-memory filter and sort to avoid composite index requirements
+                                    final now = DateTime.now();
+                                    final filteredDocs =
+                                        bannerDocs.where((doc) {
+                                      final data =
+                                          doc.data() as Map<String, dynamic>;
 
-                                  // Filter by category position: "Home -> $selectedCategory"
-                                  final position = data['bannerPosition'] ?? '';
-                                  if (position != 'Home -> $selectedCategory') {
-                                    return false;
-                                  }
+                                      final position =
+                                          data['bannerPosition'] ?? '';
+                                      final showOnHome =
+                                          data['showInForYou'] ?? true;
 
-                                  // Filter by dates
-                                  final startTimestamp =
-                                      data['startDate'] as Timestamp?;
-                                  final endTimestamp =
-                                      data['endDate'] as Timestamp?;
-                                  if (startTimestamp != null &&
-                                      startTimestamp.toDate().isAfter(now)) {
-                                    return false;
-                                  }
-                                  if (endTimestamp != null &&
-                                      endTimestamp.toDate().isBefore(now)) {
-                                    return false;
-                                  }
+                                      bool matchesCategory = (position ==
+                                          'Home -> $selectedCategory');
+                                      if (selectedCategory == "For You") {
+                                        matchesCategory =
+                                            matchesCategory || showOnHome;
+                                      }
 
-                                  return true;
-                                }).toList();
+                                      if (!matchesCategory) {
+                                        return false;
+                                      }
 
-                                // Sort in-memory: priority descending, then createdAt descending
-                                filteredDocs.sort((a, b) {
-                                  final dataA =
-                                      a.data() as Map<String, dynamic>;
-                                  final dataB =
-                                      b.data() as Map<String, dynamic>;
+                                      // Filter by dates
+                                      final startTimestamp =
+                                          data['startDate'] as Timestamp?;
+                                      final endTimestamp =
+                                          data['endDate'] as Timestamp?;
+                                      if (startTimestamp != null &&
+                                          startTimestamp
+                                              .toDate()
+                                              .isAfter(now)) {
+                                        return false;
+                                      }
+                                      if (endTimestamp != null &&
+                                          endTimestamp.toDate().isBefore(now)) {
+                                        return false;
+                                      }
 
-                                  final priorityA = dataA['priority'] ?? 0;
-                                  final priorityB = dataB['priority'] ?? 0;
-                                  if (priorityA != priorityB) {
-                                    return (priorityB as num).compareTo(
-                                      priorityA as num,
-                                    );
-                                  }
+                                      return true;
+                                    }).toList();
 
-                                  final aTime =
-                                      dataA['createdAt'] as Timestamp?;
-                                  final bTime =
-                                      dataB['createdAt'] as Timestamp?;
-                                  if (aTime == null && bTime == null) return 0;
-                                  if (aTime == null) return 1;
-                                  if (bTime == null) return -1;
-                                  return bTime.compareTo(aTime);
-                                });
+                                    // Sort in-memory: priority descending, then createdAt descending
+                                    filteredDocs.sort((a, b) {
+                                      final dataA =
+                                          a.data() as Map<String, dynamic>;
+                                      final dataB =
+                                          b.data() as Map<String, dynamic>;
 
-                                // Fallback: no banners from admin → show placeholder
-                                final bannerItems = filteredDocs.isEmpty
-                                    ? [buildPromoCard(imageUrl: '', title: '')]
-                                    : filteredDocs.map((doc) {
-                                        final data =
-                                            doc.data() as Map<String, dynamic>;
-                                        return buildPromoCard(
-                                          imageUrl: data['imageUrl'] ?? '',
-                                          onTap: () async {
-                                            final action =
-                                                data['bannerAction'] ??
-                                                    data['buttonAction'] ??
-                                                    '';
-                                            final value = data['actionValue'] ??
-                                                data['website'] ??
-                                                '';
-                                            if (action == 'Open URL' &&
-                                                value.toString().isNotEmpty) {
-                                              final uri = Uri.tryParse(
-                                                value.toString(),
+                                      final priorityA = dataA['priority'] ?? 0;
+                                      final priorityB = dataB['priority'] ?? 0;
+                                      if (priorityA != priorityB) {
+                                        return (priorityB as num)
+                                            .compareTo(priorityA as num);
+                                      }
+
+                                      final aTime =
+                                          dataA['createdAt'] as Timestamp?;
+                                      final bTime =
+                                          dataB['createdAt'] as Timestamp?;
+                                      if (aTime == null && bTime == null)
+                                        return 0;
+                                      if (aTime == null) return 1;
+                                      if (bTime == null) return -1;
+                                      return bTime.compareTo(aTime);
+                                    });
+
+                                    // Fallback: no banners from admin -> show placeholder
+                                    final List<Widget> bannerItems = [];
+
+                                    // Check for global contact banner
+                                    final Map<String, dynamic>?
+                                        globalContactData =
+                                        globalContactSnap.data?.data()
+                                            as Map<String, dynamic>?;
+
+                                    if (globalContactData != null &&
+                                        globalContactData['status'] ==
+                                            'active' &&
+                                        globalContactData['bannerImageUrl'] !=
+                                            null &&
+                                        globalContactData['bannerImageUrl']
+                                            .toString()
+                                            .isNotEmpty) {
+                                      bannerItems.add(buildPromoCard(
+                                          imageUrl: globalContactData[
+                                              'bannerImageUrl'],
+                                          onTap: () {
+                                            if (globalContactData['status'] ==
+                                                'active') {
+                                              _showGlobalContactSheet(
+                                                  context, globalContactData);
+                                            } else {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                      "Contact support is currently unavailable."),
+                                                  backgroundColor: Colors.red,
+                                                ),
                                               );
-                                              if (uri != null) {
-                                                try {
-                                                  await launchUrl(
-                                                    uri,
+                                            }
+                                          }));
+                                    }
+
+                                    final adminBanners =
+                                        filteredDocs.map((doc) {
+                                      final data =
+                                          doc.data() as Map<String, dynamic>;
+                                      return buildPromoCard(
+                                        imageUrl: data['imageUrl'] ?? '',
+                                        bannerImageUrl: data['bannerImageUrl'],
+                                        title: data['title'] ?? '',
+                                        buttonText: data['buttonText'],
+                                        buttonBackgroundColor:
+                                            data['buttonBackgroundColor'],
+                                        buttonTextColor:
+                                            data['buttonTextColor'],
+                                        onTap: () async {
+                                          final action = data['bannerAction'] ??
+                                              data['buttonAction'] ??
+                                              '';
+                                          final value = data['actionValue'] ??
+                                              data['website'] ??
+                                              '';
+                                          if (action == 'Open Product') {
+                                            await _openProductFromBanner(
+                                              context,
+                                              data['productId']?.toString(),
+                                            );
+                                          } else if (action == 'Open Service') {
+                                            await _openServiceFromBanner(
+                                              context,
+                                              data['serviceId']?.toString(),
+                                            );
+                                          } else if (action ==
+                                              'Open In-App Page') {
+                                            await _openInAppPageFromBanner(
+                                              context,
+                                              data['inAppPageId']?.toString() ??
+                                                  data['actionValue']
+                                                      ?.toString(),
+                                            );
+                                          } else if (action == 'Open URL' &&
+                                              value.toString().isNotEmpty) {
+                                            final uri =
+                                                Uri.tryParse(value.toString());
+                                            if (uri != null) {
+                                              try {
+                                                await launchUrl(uri,
                                                     mode: LaunchMode
-                                                        .externalApplication,
-                                                  );
-                                                } catch (e) {
-                                                  debugPrint(
-                                                    'Error launching URL: $e',
-                                                  );
-                                                }
+                                                        .externalApplication);
+                                              } catch (e) {
+                                                debugPrint(
+                                                    'Error launching URL: $e');
                                               }
                                             }
-                                          },
-                                        );
-                                      }).toList();
+                                          }
+                                        },
+                                        onButtonTap: () async {
+                                          final action = data['buttonAction'] ??
+                                              data['bannerAction'] ??
+                                              '';
+                                          final value = data['actionValue'] ??
+                                              data['website'] ??
+                                              '';
+                                          final valStr =
+                                              value.toString().trim();
 
-                                final bannerCount = bannerItems.length;
+                                          if (action == 'Open Product') {
+                                            await _openProductFromBanner(
+                                              context,
+                                              data['productId']?.toString(),
+                                            );
+                                          } else if (action == 'Open Service') {
+                                            await _openServiceFromBanner(
+                                              context,
+                                              data['serviceId']?.toString(),
+                                            );
+                                          } else if (action ==
+                                              'Open In-App Page') {
+                                            await _openInAppPageFromBanner(
+                                              context,
+                                              data['inAppPageId']?.toString() ??
+                                                  data['actionValue']
+                                                      ?.toString(),
+                                            );
+                                          } else if (action == 'Open URL') {
+                                            if (valStr.isEmpty) return;
+                                            final uri = Uri.tryParse(valStr);
+                                            if (uri != null) {
+                                              try {
+                                                await launchUrl(uri,
+                                                    mode: LaunchMode
+                                                        .externalApplication);
+                                              } catch (e) {
+                                                debugPrint(
+                                                    'Error launching URL: $e');
+                                              }
+                                            }
+                                          } else if (action ==
+                                              'Open WhatsApp') {
+                                            if (valStr.isEmpty) return;
+                                            final phone = valStr.replaceAll(
+                                                RegExp(r'[^0-9]'), '');
+                                            final uri = Uri.parse(
+                                                'https://wa.me/$phone');
+                                            if (await canLaunchUrl(uri)) {
+                                              await launchUrl(uri,
+                                                  mode: LaunchMode
+                                                      .externalApplication);
+                                            }
+                                          } else if (action == 'Call') {
+                                            if (valStr.isEmpty) return;
+                                            final uri =
+                                                Uri.parse('tel:$valStr');
+                                            if (await canLaunchUrl(uri)) {
+                                              await launchUrl(uri);
+                                            }
+                                          }
+                                        },
+                                      );
+                                    }).toList();
 
-                                int localActiveIndex = 0;
-                                return AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 400),
-                                  child: StatefulBuilder(
-                                    key: const ValueKey('carousel_loaded'),
-                                    builder: (context, setLocalState) {
-                                      return Column(
-                                        children: [
-                                          CarouselSlider(
-                                            items: bannerItems,
-                                            options: CarouselOptions(
-                                              autoPlay: bannerCount > 1,
-                                              enlargeCenterPage: false,
-                                              aspectRatio: 1.8,
-                                              viewportFraction: 1,
-                                              onPageChanged: (index, reason) {
-                                                setLocalState(() {
-                                                  localActiveIndex = index;
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: List.generate(
-                                              bannerCount,
-                                              (index) {
-                                                return AnimatedContainer(
-                                                  duration: const Duration(
-                                                    milliseconds: 250,
-                                                  ),
-                                                  width:
-                                                      localActiveIndex == index
+                                    bannerItems.addAll(adminBanners);
+
+                                    if (bannerItems.isEmpty) {
+                                      bannerItems.add(buildPromoCard(
+                                          imageUrl: '', title: ''));
+                                    }
+
+                                    final bannerCount = bannerItems.length;
+
+                                    int localActiveIndex = 0;
+                                    return AnimatedSwitcher(
+                                      duration:
+                                          const Duration(milliseconds: 400),
+                                      child: StatefulBuilder(
+                                        key: const ValueKey('carousel_loaded'),
+                                        builder: (context, setLocalState) {
+                                          return Column(
+                                            children: [
+                                              CarouselSlider(
+                                                items: bannerItems,
+                                                options: CarouselOptions(
+                                                  autoPlay: bannerCount > 1,
+                                                  enlargeCenterPage: false,
+                                                  aspectRatio: 1.8,
+                                                  viewportFraction: 1,
+                                                  onPageChanged:
+                                                      (index, reason) {
+                                                    setLocalState(() {
+                                                      localActiveIndex = index;
+                                                    });
+                                                  },
+                                                ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: List.generate(
+                                                  bannerCount,
+                                                  (index) {
+                                                    return AnimatedContainer(
+                                                      duration: const Duration(
+                                                        milliseconds: 250,
+                                                      ),
+                                                      width: localActiveIndex ==
+                                                              index
                                                           ? 15
                                                           : 6,
-                                                  height: 6,
-                                                  margin: const EdgeInsets
-                                                      .symmetric(
-                                                    horizontal: 3,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                      3,
-                                                    ),
-                                                    color: localActiveIndex ==
-                                                            index
-                                                        ? const Color(
-                                                            0xFFFFB800,
-                                                          )
-                                                        : Colors.grey[300],
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
+                                                      height: 6,
+                                                      margin: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 3,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(
+                                                          3,
+                                                        ),
+                                                        color:
+                                                            localActiveIndex ==
+                                                                    index
+                                                                ? const Color(
+                                                                    0xFFFFB800,
+                                                                  )
+                                                                : Colors
+                                                                    .grey[300],
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
                                 );
                               },
                             ),
@@ -584,8 +1198,9 @@ class HomepageState extends State<Homepage> {
                                             child: Text(
                                               "No results found for your search.",
                                               style: TextStyle(
-                                                  color: Colors.grey,
-                                                  fontSize: 14),
+                                                color: Colors.grey,
+                                                fontSize: 14,
+                                              ),
                                             ),
                                           ),
                                         )
@@ -623,8 +1238,9 @@ class HomepageState extends State<Homepage> {
                                             key: ValueKey('header_loading'),
                                           )
                                         : Padding(
-                                            key:
-                                                const ValueKey('header_loaded'),
+                                            key: const ValueKey(
+                                              'header_loaded',
+                                            ),
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 20,
                                             ),
@@ -863,8 +1479,9 @@ class HomepageState extends State<Homepage> {
                                         borderRadius: BorderRadius.circular(30),
                                         boxShadow: [
                                           BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.08),
+                                            color: Colors.black.withOpacity(
+                                              0.08,
+                                            ),
                                             blurRadius: 12,
                                             offset: const Offset(0, 4),
                                           ),
@@ -876,10 +1493,7 @@ class HomepageState extends State<Homepage> {
                                             setState(() => searchQuery = value),
                                         onFieldSubmitted: (value) {
                                           RecommendationController.to
-                                              .trackSearch(
-                                            value,
-                                            'Other',
-                                          );
+                                              .trackSearch(value, 'Other');
                                         },
                                         decoration: InputDecoration(
                                           hintText:
@@ -997,7 +1611,7 @@ class HomepageState extends State<Homepage> {
                             ),
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ],
@@ -1009,13 +1623,44 @@ class HomepageState extends State<Homepage> {
     );
   }
 
+  /// Parses a hex color string like "#1565C0" or "1565C0".
+  /// Returns [fallback] if the string is null, empty, or invalid.
+  Color _parseHexColor(String? hex, Color fallback) {
+    if (hex == null || hex.trim().isEmpty) return fallback;
+    try {
+      final h = hex.replaceAll('#', '').trim();
+      if (h.length == 6) return Color(int.parse('FF$h', radix: 16));
+      if (h.length == 8) return Color(int.parse(h, radix: 16));
+    } catch (_) {}
+    return fallback;
+  }
+
+  /// Returns [textColor] if it has sufficient contrast against [bgColor].
+  /// Otherwise auto-picks white or black for readability.
+  Color _ensureReadableTextColor(Color bgColor, Color textColor) {
+    final bgLuminance = bgColor.computeLuminance();
+    final textLuminance = textColor.computeLuminance();
+    final lighter = bgLuminance > textLuminance ? bgLuminance : textLuminance;
+    final darker = bgLuminance > textLuminance ? textLuminance : bgLuminance;
+    final contrastRatio = (lighter + 0.05) / (darker + 0.05);
+    // WCAG AA requires at least 4.5:1 for normal text
+    if (contrastRatio >= 3.0) return textColor;
+    // Fall back: choose white or black based on background luminance
+    return bgLuminance > 0.5 ? Colors.black : Colors.white;
+  }
+
   /// Builds a promotional banner card.
   /// [imageUrl] — network URL from Firestore; falls back to asset placeholder if empty.
   /// [title]    — optional overlay text set by the admin.
   Widget buildPromoCard({
     required String imageUrl,
+    String? bannerImageUrl,
     String title = '',
+    String? buttonText,
+    String? buttonBackgroundColor,
+    String? buttonTextColor,
     VoidCallback? onTap,
+    VoidCallback? onButtonTap,
   }) {
     final bool isNetwork = imageUrl.isNotEmpty;
     return GestureDetector(
@@ -1032,7 +1677,7 @@ class HomepageState extends State<Homepage> {
               if (isNetwork)
                 Image.network(
                   imageUrl,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.fitWidth,
                   loadingBuilder: (_, child, progress) {
                     if (progress == null) return child;
                     return Container(
@@ -1045,13 +1690,25 @@ class HomepageState extends State<Homepage> {
                       ),
                     );
                   },
-                  errorBuilder: (_, __, ___) => Image.asset(
-                    'assets/image/add_image.png',
-                    fit: BoxFit.cover,
-                  ),
+                  errorBuilder: (_, __, ___) =>
+                      bannerImageUrl != null && bannerImageUrl.isNotEmpty
+                          ? Image.network(bannerImageUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Image.asset(
+                                  'assets/image/add_image.png',
+                                  fit: BoxFit.contain))
+                          : Image.asset('assets/image/add_image.png',
+                              fit: BoxFit.contain),
                 )
               else
-                Image.asset('assets/image/add_image.png', fit: BoxFit.cover),
+                bannerImageUrl != null && bannerImageUrl.isNotEmpty
+                    ? Image.network(bannerImageUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                            'assets/image/add_image.png',
+                            fit: BoxFit.contain))
+                    : Image.asset('assets/image/add_image.png',
+                        fit: BoxFit.contain),
               // ── Gradient overlay ──
               // Positioned.fill(
               //   child: Container(
@@ -1069,30 +1726,80 @@ class HomepageState extends State<Homepage> {
               //     ),
               //   ),
               // ),
-              // ── Title overlay (only if admin set a title) ──
-              if (title.isNotEmpty)
+              // ── Title and CTA Button overlay ──
+              if (title.isNotEmpty ||
+                  (buttonText != null &&
+                      buttonText.trim().isNotEmpty &&
+                      buttonText.toLowerCase() != 'no text'))
                 Positioned(
                   left: 16,
                   right: 16,
-                  bottom: 16,
-                  child: Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                      height: 1.3,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black54,
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
+                  bottom: 12,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Expanded(
+                      //   child: title.isNotEmpty
+                      //       ? Text(
+                      //           title,
+                      //           maxLines: 2,
+                      //           overflow: TextOverflow.ellipsis,
+                      //           style: const TextStyle(
+                      //             color: Colors.white,
+                      //             fontSize: 16,
+                      //             fontWeight: FontWeight.w700,
+                      //             letterSpacing: 0.3,
+                      //             height: 1.3,
+                      //             shadows: [
+                      //               Shadow(
+                      //                 color: Colors.black54,
+                      //                 blurRadius: 6,
+                      //                 offset: Offset(0, 2),
+                      //               ),
+                      //             ],
+                      //           ),
+                      //         )
+                      //       : const SizedBox.shrink(),
+                      // ),
+                      if (buttonText != null &&
+                          buttonText.trim().isNotEmpty &&
+                          buttonText.toLowerCase() != 'no text')
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: ElevatedButton(
+                            onPressed: onButtonTap ?? onTap,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _parseHexColor(
+                                buttonBackgroundColor,
+                                const Color(0xFF0F2E5A),
+                              ),
+                              foregroundColor: _ensureReadableTextColor(
+                                _parseHexColor(buttonBackgroundColor,
+                                    const Color(0xFF0F2E5A)),
+                                _parseHexColor(buttonTextColor, Colors.white),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              minimumSize: Size.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              buttonText,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _ensureReadableTextColor(
+                                  _parseHexColor(buttonBackgroundColor,
+                                      const Color(0xFF0F2E5A)),
+                                  _parseHexColor(buttonTextColor, Colors.white),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
             ],
@@ -1182,8 +1889,12 @@ class HomepageState extends State<Homepage> {
     }
   }
 
-  void _showSubcategoriesSheet(BuildContext context, String title,
-      List<String> subcategories, void Function(String) onSelect) {
+  void _showSubcategoriesSheet(
+    BuildContext context,
+    String title,
+    List<String> subcategories,
+    void Function(String) onSelect,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -1246,14 +1957,18 @@ class HomepageState extends State<Homepage> {
                             child: subcategories[index] == "JCB"
                                 ? Padding(
                                     padding: const EdgeInsets.all(12.0),
-                                    child: Image.asset("assets/icons/jcb.png",
-                                        color: const Color(0xFF0F2E5A)),
+                                    child: Image.asset(
+                                      "assets/icons/jcb.png",
+                                      color: const Color(0xFF0F2E5A),
+                                    ),
                                   )
                                 : Icon(
                                     _getIconForSubcategory(
-                                        subcategories[index]),
+                                      subcategories[index],
+                                    ),
                                     color: const Color(0xFF0F2E5A),
-                                    size: 24),
+                                    size: 24,
+                                  ),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -2516,6 +3231,7 @@ class HomepageState extends State<Homepage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 20),
           // 1. "Sadiq, still looking for these?" purple gradient box
           Container(
             width: double.infinity,
@@ -3318,7 +4034,9 @@ class HomepageState extends State<Homepage> {
           }
 
           if (busesSnapshot.docs.isNotEmpty) {
-            print("Driver $driverId has ${busesSnapshot.docs.length} buses");
+            print(
+              "Driver $driverId has ${busesSnapshot.docs.length} buses",
+            );
             for (final busDoc in busesSnapshot.docs) {
               final busData = busDoc.data() as Map<String, dynamic>? ?? {};
 
@@ -3326,7 +4044,8 @@ class HomepageState extends State<Homepage> {
               final busStatus = busData['status']?.toString().toLowerCase();
               if (busStatus != 'inactive' && busStatus != 'false') {
                 print(
-                    "  -> Found active bus inside transports/$driverId/buses: ${busDoc.id}");
+                  "  -> Found active bus inside transports/$driverId/buses: ${busDoc.id}",
+                );
                 print("     Bus Data: $busData");
 
                 combinedBuses.add({
@@ -3417,7 +4136,7 @@ class HomepageState extends State<Homepage> {
                         "name": busData['start_place']?.toString() ??
                             driverData['main_stand']?.toString() ??
                             "Origin",
-                        "time": "Departs ${busData['departure_time'] ?? ''}"
+                        "time": "Departs ${busData['departure_time'] ?? ''}",
                       },
                       {
                         "name":
@@ -3471,10 +4190,9 @@ class HomepageState extends State<Homepage> {
           final matchesGlobal = globalSearch.isEmpty ||
               bus['from'].toString().toLowerCase().contains(globalSearch) ||
               bus['to'].toString().toLowerCase().contains(globalSearch) ||
-              bus['frequency']
-                  .toString()
-                  .toLowerCase()
-                  .contains(globalSearch) ||
+              bus['frequency'].toString().toLowerCase().contains(
+                    globalSearch,
+                  ) ||
               bus['tags'].toString().toLowerCase().contains(globalSearch);
 
           return matchesFrom && matchesTo && matchesGlobal;
@@ -3748,12 +4466,17 @@ class HomepageState extends State<Homepage> {
             // Saved Routes Section
             if (_savedRoutes.isNotEmpty) ...[
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 4,
+                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.bookmark,
-                        size: 14, color: Color(0xFF0F2E5A)),
+                    const Icon(
+                      Icons.bookmark,
+                      size: 14,
+                      color: Color(0xFF0F2E5A),
+                    ),
                     const SizedBox(width: 4),
                     const Text(
                       "Saved Routes",
@@ -3802,8 +4525,9 @@ class HomepageState extends State<Homepage> {
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                side:
-                                    const BorderSide(color: Color(0xFFE2E8F0)),
+                                side: const BorderSide(
+                                  color: Color(0xFFE2E8F0),
+                                ),
                               ),
                             ),
                             child: Text(
@@ -3851,24 +4575,30 @@ class HomepageState extends State<Homepage> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.location_on,
-                      size: 20, color: Color(0xFF0F2E5A)),
+                  const Icon(
+                    Icons.location_on,
+                    size: 20,
+                    color: Color(0xFF0F2E5A),
+                  ),
                   const SizedBox(width: 8),
-                  const Text("District:",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: Color(0xFF0F2E5A))),
+                  const Text(
+                    "District:",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Color(0xFF0F2E5A),
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _districtLoading
                         ? const Align(
                             alignment: Alignment.centerLeft,
                             child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2)),
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           )
                         : Container(
                             height: 48,
@@ -3876,26 +4606,33 @@ class HomepageState extends State<Homepage> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(10),
-                              border:
-                                  Border.all(color: const Color(0xFFE2E8F0)),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                              ),
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 dropdownColor: Colors.white,
                                 isExpanded: true,
                                 value: _selectedDistrict,
-                                icon: const Icon(Icons.keyboard_arrow_down,
-                                    size: 24, color: Color(0xFF475569)),
+                                icon: const Icon(
+                                  Icons.keyboard_arrow_down,
+                                  size: 24,
+                                  color: Color(0xFF475569),
+                                ),
                                 style: const TextStyle(
-                                    fontSize: 15,
-                                    color: Color(0xFF0F2E5A),
-                                    fontWeight: FontWeight.w600),
+                                  fontSize: 15,
+                                  color: Color(0xFF0F2E5A),
+                                  fontWeight: FontWeight.w600,
+                                ),
                                 onChanged: (String? newValue) {
                                   if (newValue != null) {
                                     setState(() {
                                       _selectedDistrict = newValue;
-                                      GetStorage()
-                                          .write('selected_district', newValue);
+                                      GetStorage().write(
+                                        'selected_district',
+                                        newValue,
+                                      );
                                     });
                                   }
                                 },
@@ -3915,14 +4652,15 @@ class HomepageState extends State<Homepage> {
                                     "Kollam",
                                     "Thiruvananthapuram",
                                     "Idukki",
-                                    "Kasaragod"
+                                    "Kasaragod",
                                   ];
                                   if (!districts.contains(_selectedDistrict)) {
                                     districts.add(_selectedDistrict);
                                   }
                                   return districts
-                                      .map<DropdownMenuItem<String>>(
-                                          (String value) {
+                                      .map<DropdownMenuItem<String>>((
+                                    String value,
+                                  ) {
                                     return DropdownMenuItem<String>(
                                       value: value,
                                       child: Text(value),
@@ -3978,8 +4716,10 @@ class HomepageState extends State<Homepage> {
             // List of Cards
             if (_selectedDistrict == "All Districts")
               Container(
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 40,
+                ),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF7ED),
@@ -3996,9 +4736,10 @@ class HomepageState extends State<Homepage> {
                         "Please select a district to view available bus routes.",
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                            color: Colors.orange,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold),
+                          color: Colors.orange,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

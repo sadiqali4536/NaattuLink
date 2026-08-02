@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cherry_toast/cherry_toast.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
@@ -119,9 +120,9 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10.0),
+          child: AppBackButton(),
         ),
         title: Text(widget.isEdit ? 'Edit Bus' : 'Add New Bus',
             style: const TextStyle(
@@ -150,7 +151,8 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
                         label: 'Bus Name',
                         hint: 'Enter bus name',
                         icon: Icons.directions_bus_outlined,
-                        controller: _busNameController),
+                        controller: _busNameController,
+                        textCapitalization: TextCapitalization.characters),
                     const SizedBox(height: 16),
                     _buildTextField(
                         label: 'Bus Registration Number',
@@ -174,16 +176,28 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
                         label: 'Start Place',
                         hint: 'Enter start place',
                         icon: Icons.location_on_outlined,
-                        controller: _startPlaceController),
+                        controller: _startPlaceController,
+                        textCapitalization: TextCapitalization.characters),
                     const SizedBox(height: 16),
                     _buildTextField(
                         label: 'Destination',
                         hint: 'Enter destination',
                         icon: Icons.location_on_outlined,
-                        controller: _destinationController),
+                        controller: _destinationController,
+                        textCapitalization: TextCapitalization.characters),
 
                     const SizedBox(height: 32),
                     _buildSectionTitle('SCHEDULE'),
+                    const SizedBox(height: 16),
+
+                    _buildTextField(
+                        label: 'Arrival Time',
+                        hint: 'Select time',
+                        icon: Icons.access_time,
+                        controller: _arrivalTimeController,
+                        onTap: () =>
+                            _selectTime(context, _arrivalTimeController),
+                        isReadOnly: true),
                     const SizedBox(height: 16),
 
                     _buildTextField(
@@ -193,15 +207,6 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
                         controller: _departureTimeController,
                         onTap: () =>
                             _selectTime(context, _departureTimeController),
-                        isReadOnly: true),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                        label: 'Arrival Time',
-                        hint: 'Select time',
-                        icon: Icons.access_time,
-                        controller: _arrivalTimeController,
-                        onTap: () =>
-                            _selectTime(context, _arrivalTimeController),
                         isReadOnly: true),
 
                     const SizedBox(height: 32),
@@ -438,20 +443,29 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
       context: context,
       initialTime: TimeOfDay.now(),
       builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            primaryColor: const Color(0xFF0C1F41),
-            colorScheme: const ColorScheme.light(primary: Color(0xFF0C1F41)),
-            buttonTheme:
-                const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+          child: Theme(
+            data: ThemeData.light().copyWith(
+              primaryColor: const Color(0xFF0C1F41),
+              colorScheme: const ColorScheme.light(primary: Color(0xFF0C1F41)),
+              buttonTheme:
+                  const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+            ),
+            child: child!,
           ),
-          child: child!,
         );
       },
     );
     if (picked != null) {
+      final h = picked.hour == 0
+          ? 12
+          : (picked.hour > 12 ? picked.hour - 12 : picked.hour);
+      final m = picked.minute.toString().padLeft(2, '0');
+      final period = picked.hour >= 12 ? 'PM' : 'AM';
+      final formatted = '${h.toString().padLeft(2, '0')}:$m $period';
       setState(() {
-        controller.text = picked.format(context);
+        controller.text = formatted;
       });
     }
   }

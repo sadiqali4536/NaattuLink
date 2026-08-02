@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 
 class EditBusWorkerProfile extends StatefulWidget {
   const EditBusWorkerProfile({Key? key}) : super(key: key);
@@ -21,6 +22,8 @@ class _EditBusWorkerProfileState extends State<EditBusWorkerProfile> {
   late TextEditingController _emailController;
   late TextEditingController _experienceController;
   late TextEditingController _roleController;
+  String? _arrivalTime;
+  String? _departureTime;
   bool _isLoading = false;
 
   @override
@@ -34,6 +37,8 @@ class _EditBusWorkerProfileState extends State<EditBusWorkerProfile> {
         TextEditingController(text: data['experience'] ?? '');
     _roleController =
         TextEditingController(text: data['role_with_vehicle'] ?? '');
+    _arrivalTime = data['arrival_time'];
+    _departureTime = data['departure_time'];
   }
 
   @override
@@ -66,6 +71,8 @@ class _EditBusWorkerProfileState extends State<EditBusWorkerProfile> {
         'email': _emailController.text.trim(),
         'experience': _experienceController.text.trim(),
         'role_with_vehicle': _roleController.text.trim(),
+        if (_arrivalTime != null) 'arrival_time': _arrivalTime,
+        if (_departureTime != null) 'departure_time': _departureTime,
       });
 
       // Refresh controller data
@@ -99,6 +106,10 @@ class _EditBusWorkerProfileState extends State<EditBusWorkerProfile> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 10.0),
+          child: AppBackButton(),
+        ),
         title:
             const Text('Edit Profile', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -160,7 +171,33 @@ class _EditBusWorkerProfileState extends State<EditBusWorkerProfile> {
                       label: 'Role with the vehicle',
                       icon: Icons.work_outline,
                     ),
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 24),
+                    const Text('Schedule',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0C1F41))),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTimePicker(
+                            label: 'Arrival Time',
+                            time: _arrivalTime,
+                            onTap: () => _pickTime(true),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTimePicker(
+                            label: 'Departure Time',
+                            time: _departureTime,
+                            onTap: () => _pickTime(false),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
                     SizedBox(
                       width: double.infinity,
                       height: 55,
@@ -226,6 +263,70 @@ class _EditBusWorkerProfileState extends State<EditBusWorkerProfile> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFF0C1F41)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickTime(bool isArrival) async {
+    final p = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+        builder: (ctx, child) => MediaQuery(
+              data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: false),
+              child: Theme(
+                  data: Theme.of(ctx).copyWith(
+                      colorScheme: const ColorScheme.light(
+                          primary: Color(0xFF0A235C),
+                          onSurface: Color(0xFF0A235C))),
+                  child: child!),
+            ));
+    if (p != null) {
+      final h = p.hour == 0 ? 12 : (p.hour > 12 ? p.hour - 12 : p.hour);
+      final m = p.minute.toString().padLeft(2, '0');
+      final period = p.hour >= 12 ? 'PM' : 'AM';
+      final formatted = '${h.toString().padLeft(2, '0')}:$m $period';
+      setState(() {
+        if (isArrival) {
+          _arrivalTime = formatted;
+        } else {
+          _departureTime = formatted;
+        }
+      });
+    }
+  }
+
+  Widget _buildTimePicker(
+      {required String label,
+      required String? time,
+      required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.access_time, color: Color(0xFFF9A825)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text(time ?? '--:--',
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
