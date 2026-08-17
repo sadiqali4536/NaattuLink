@@ -83,8 +83,7 @@ class _EditAddressState extends State<EditAddress> {
                     validator: (String? value) {
                       if (value == null || value.isEmpty) {
                         return "Enter your Phone Number";
-                      } else if (!RegExp(r'^[6-9]\d{9}$')
-                          .hasMatch(value)) {
+                      } else if (!RegExp(r'^[6-9]\d{9}$').hasMatch(value)) {
                         return "Enter a valid 10-digit Indian mobile number";
                       }
                       return null;

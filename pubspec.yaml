@@ -64,6 +64,7 @@ dependencies:
   rxdart: ^0.28.0
   font_awesome_flutter: ^11.0.0
   google_fonts: ^6.2.1
+  firebase_storage: ^12.4.10
 
 dev_dependencies:
   flutter_test:

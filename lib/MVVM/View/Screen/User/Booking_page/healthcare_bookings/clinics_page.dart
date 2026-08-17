@@ -1,15 +1,16 @@
 import 'dart:math';
-import 'package:flutter/material.dart';
-import 'package:naattulink/MVVM/utils/service_functions/distance_service.dart';
-import 'package:naattulink/MVVM/utils/service_functions/location_service.dart';
-import 'package:naattulink/MVVM/utils/formatters/distance_formatter.dart';
 
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:naattulink/MVVM/utils/service_functions/distance_service.dart';
 import 'package:geocoding/geocoding.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
 import 'clinic_doctors_page.dart';
 
 // ─────────────────────────────────────────────────
@@ -27,8 +28,8 @@ class ClinicListing {
   final String availableTime;
   final String quoteText;
 
-  final double latitude;
-  final double longitude;
+  final double? latitude;
+  final double? longitude;
   final int totalReviews;
   final bool isVerified;
 
@@ -43,19 +44,21 @@ class ClinicListing {
     required this.speciality,
     required this.availableTime,
     required this.quoteText,
-    this.latitude = 11.2588,
-    this.longitude = 75.7804,
+    this.latitude,
+    this.longitude,
     this.totalReviews = 0,
     this.isVerified = false,
   });
 
-  double distanceFrom(double userLat, double userLng) {
-    return DistanceService.calculateDistanceInKm(userLat, userLng, latitude, longitude);
+  double? distanceFrom(double userLat, double userLng) {
+    if (latitude == null || longitude == null) return null;
+    return DistanceService.calculateDistanceInKm(
+        userLat, userLng, latitude!, longitude!);
   }
 
-
-  int etaMinutes(double userLat, double userLng) {
+  int? etaMinutes(double userLat, double userLng) {
     final d = distanceFrom(userLat, userLng);
+    if (d == null) return null;
     return max(1, (d / 20.0 * 60).round());
   }
 }
@@ -84,14 +87,7 @@ class _ClinicsPageState extends State<ClinicsPage> {
   String selectedSmartFilter = 'Nearest';
   double searchRadiusKm = 10.0;
 
-  // Location state
-  double _userLat = 11.2588;
-  double _userLng = 75.7804;
-  bool _locationLoading = true;
-  String _locationName = 'Detecting location...';
   bool _isLoadingListings = true;
-
-  final Random _rng = Random();
 
   // ─── Listings ───────────────────────────────────
   List<ClinicListing> _allListings = [];
@@ -106,36 +102,86 @@ class _ClinicsPageState extends State<ClinicsPage> {
     if (!mounted) return;
     setState(() {
       _isLoadingListings = true;
-      _locationLoading = true;
     });
-    
-    await _initLocation();
-    
-    if (!mounted) return;
-    if (_locationName == 'Location access denied') {
-      setState(() {
-        _isLoadingListings = false;
-        _allListings = [];
-      });
-      return;
-    }
-    
+
     await _fetchListingsFromFirestore();
+  }
+
+  String getMainLocality(String location) {
+    return location.trim().toLowerCase().split(',').first.trim();
+  }
+
+  String normalizeAddress(String address) {
+    return address.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  bool isLocationMatch(String userLocation, String providerAddress) {
+    final userLocality = getMainLocality(userLocation);
+    final address = normalizeAddress(providerAddress);
+
+    if (userLocality.isEmpty || address.isEmpty) {
+      return false;
+    }
+
+    return address.contains(userLocality);
   }
 
   Future<void> _fetchListingsFromFirestore() async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('healthcare')
-          .where('healthcare_type', isEqualTo: widget.healthcareType)
-          .get();
+      final locationController = LocationController.to;
+      while (locationController.isLoading.value) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      if (locationController.locationName.value.isEmpty) {
+        await locationController.fetchLocation();
+      }
+
+      final snapshot =
+          await FirebaseFirestore.instance.collection('healthcare').get();
 
       final List<ClinicListing> fetchedListings = [];
+      final userLocationStr = locationController.locationName.value;
+      final selectedHealthcareType = widget.healthcareType;
+
+      print('[HEALTHCARE] Total Firebase records: ${snapshot.docs.length}');
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
 
-        if (data['status']?.toString().toLowerCase() != 'active') {
+        final addressStr = data['address']?.toString() ?? '';
+        final firebaseType =
+            (data['healthcare_type'] ?? '').toString().trim().toLowerCase();
+        final categoryStr =
+            (data['category'] ?? '').toString().trim().toLowerCase();
+        final statusStr =
+            (data['status'] ?? '').toString().trim().toLowerCase();
+
+        final selectedType = selectedHealthcareType.trim().toLowerCase();
+
+        final locationMatch = isLocationMatch(userLocationStr, addressStr);
+        final typeMatch = firebaseType == selectedType;
+        final categoryMatch =
+            categoryStr == 'healthcare' || categoryStr.isEmpty;
+        final statusMatch = statusStr == 'active';
+
+        final shouldShow =
+            locationMatch && typeMatch && categoryMatch && statusMatch;
+
+        final userLocality = getMainLocality(userLocationStr);
+        print('[HEALTHCARE] User location: $userLocationStr');
+        print('[HEALTHCARE] User locality: $userLocality');
+        print('[HEALTHCARE] Facility: ${data['facility_name']}');
+        print('[HEALTHCARE] Address: $addressStr');
+        print('[HEALTHCARE] Location match: $locationMatch');
+        print('[HEALTHCARE] Firebase type: $firebaseType');
+        print('[HEALTHCARE] Selected type: $selectedHealthcareType');
+        print('[HEALTHCARE] Type match: $typeMatch');
+        print('[HEALTHCARE] Category match: $categoryMatch');
+        print('[HEALTHCARE] Status match: $statusMatch');
+        print('[HEALTHCARE] FINAL SHOW: $shouldShow');
+
+        // Skip if conditions don't match
+        if (!shouldShow) {
           continue;
         }
 
@@ -147,20 +193,59 @@ class _ClinicsPageState extends State<ClinicsPage> {
             data['isVerified'] == 1 || data['isVerified'] == true;
 
         String address = data['address'] ?? "Kozhikode";
-        double lat = 11.2588;
-        double lng = 75.7804;
+        double? dbLat = double.tryParse(
+            data['latitude']?.toString() ?? data['lat']?.toString() ?? '');
+        double? dbLng = double.tryParse(data['longitude']?.toString() ??
+            data['lng']?.toString() ??
+            data['long']?.toString() ??
+            '');
 
-        try {
-          List<Location> locations =
-              await locationFromAddress("$address, Kerala, India");
-          if (locations.isNotEmpty) {
-            lat = locations.first.latitude;
-            lng = locations.first.longitude;
+        double? lat;
+        double? lng;
+
+        if (dbLat != null && dbLng != null && dbLat != 0.0 && dbLng != 0.0) {
+          lat = dbLat;
+          lng = dbLng;
+        } else {
+          try {
+            List<Location> locations = await locationFromAddress(address);
+            print('[GEOCODING] Full address: $address');
+            print('[GEOCODING] Result count: ${locations.length}');
+            if (locations.isNotEmpty) {
+              lat = locations.first.latitude;
+              lng = locations.first.longitude;
+              print('[GEOCODING] Latitude: $lat');
+              print('[GEOCODING] Longitude: $lng');
+            }
+          } catch (e) {
+            print('[HEALTHCARE] Geocoding failed for address "$address": $e');
           }
-        } catch (e) {
-          lat += (_rng.nextDouble() - 0.5) * 0.05;
-          lng += (_rng.nextDouble() - 0.5) * 0.05;
         }
+
+        final userLat = locationController.latitude.value;
+        final userLng = locationController.longitude.value;
+        double? distMeters;
+        double? distKm;
+
+        if (userLat != null && userLng != null && lat != null && lng != null) {
+          distMeters = Geolocator.distanceBetween(userLat, userLng, lat, lng);
+          distKm = distMeters / 1000;
+        }
+
+        print('[DISTANCE] -----------------------------');
+        print('[DISTANCE] Facility: ${data['facility_name']}');
+        print('[DISTANCE] Address: $address');
+        print('[DISTANCE] User latitude: $userLat');
+        print('[DISTANCE] User longitude: $userLng');
+        print('[DISTANCE] Provider latitude: $lat');
+        print('[DISTANCE] Provider longitude: $lng');
+        if (distMeters != null) {
+          print('[DISTANCE] Distance meters: $distMeters');
+          print('[DISTANCE] Distance km: ${distKm?.toStringAsFixed(2)}');
+        } else {
+          print('[DISTANCE] Distance calculation failed (missing coordinates)');
+        }
+        print('[DISTANCE] -----------------------------');
 
         String statusText = (data['status']?.toString() ?? "Pending");
         statusText = statusText.isNotEmpty
@@ -209,79 +294,33 @@ class _ClinicsPageState extends State<ClinicsPage> {
     }
   }
 
-  // ─── Location ────────────────────────────────────
-  Future<void> _initLocation() async {
-    try {
-      LocationPermission perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.deniedForever) {
-        setState(() {
-          _locationLoading = false;
-          _locationName = 'Location access denied';
-        });
-        return;
-      }
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-
-      String localityName = 'Kallai';
-      String cityName = 'Kozhikode';
-
-      try {
-        List<Placemark> placemarks =
-            await placemarkFromCoordinates(pos.latitude, pos.longitude);
-        if (placemarks.isNotEmpty) {
-          final pm = placemarks.first;
-          localityName = pm.locality ?? pm.subLocality ?? pm.name ?? 'Kallai';
-          cityName = pm.subAdministrativeArea ?? pm.locality ?? 'Kozhikode';
-        }
-      } catch (e) {
-        // ignore
-      }
-
-      setState(() {
-        _userLat = pos.latitude;
-        _userLng = pos.longitude;
-        _locationLoading = false;
-        _locationName = '$localityName, $cityName';
-      });
-    } catch (_) {
-      setState(() {
-        _locationLoading = false;
-        _locationName = 'Kallai, Kozhikode';
-      });
-    }
-  }
-
   // ─── Filtered + Ranked list ───────────────────────
-  List<ClinicListing> get _rankedListings {
+  List<ClinicListing> _getRankedListings(
+      double userLat, double userLng, String locationName) {
     List<ClinicListing> result = _allListings.where((item) {
-      final locParts = _locationName.split(',');
+      final locParts = locationName.split(',');
       final userLocality = locParts.first.trim().toLowerCase();
       final userCity =
           locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
 
       final itemLoc = item.location.toLowerCase();
+      bool isSameLocality = false;
+
       if (userLocality.isNotEmpty || userCity.isNotEmpty) {
-        if (!itemLoc.contains(userLocality) &&
-            (userCity.isEmpty || !itemLoc.contains(userCity))) {
-          final dist = item.distanceFrom(_userLat, _userLng);
-          if (dist > 5.0) {
-            return false;
-          }
+        if ((userLocality.isNotEmpty && itemLoc.contains(userLocality)) ||
+            (userCity.isNotEmpty && itemLoc.contains(userCity))) {
+          isSameLocality = true;
         }
       }
 
-      final dist = item.distanceFrom(_userLat, _userLng);
-      if (searchRadiusKm >= 99) {
-        if (dist > 25.0) return false;
-      } else {
-        if (dist > searchRadiusKm) return false;
+      final dist = item.distanceFrom(userLat, userLng);
+      if (!isSameLocality) {
+        if (dist == null) return false; // Can't verify radius if no distance
+        if (searchRadiusKm >= 99) {
+          if (dist > 25.0) return false;
+        } else {
+          if (dist > searchRadiusKm) return false;
+        }
       }
 
       if (selectedTypeFilter != 'All' &&
@@ -309,9 +348,12 @@ class _ClinicsPageState extends State<ClinicsPage> {
     }).toList();
 
     result.sort((a, b) {
-      return a
-          .distanceFrom(_userLat, _userLng)
-          .compareTo(b.distanceFrom(_userLat, _userLng));
+      final distA = a.distanceFrom(userLat, userLng);
+      final distB = b.distanceFrom(userLat, userLng);
+      if (distA == null && distB == null) return 0;
+      if (distA == null) return 1; // null goes to bottom
+      if (distB == null) return -1;
+      return distA.compareTo(distB);
     });
 
     return result;
@@ -326,30 +368,68 @@ class _ClinicsPageState extends State<ClinicsPage> {
     }
   }
 
-  // ─── Build ───────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       appBar: _buildAppBar(),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildLocationBanner(),
-          _buildSearchAndRadiusRow(),
-          _buildSmartFilterChips(),
-          _buildListHeader(),
-          Expanded(
-            child: _isLoadingListings
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF0F2E5A),
-                    ),
-                  )
-                : _buildListView(),
-          ),
-        ],
-      ),
+      body: Obx(() {
+        final locCtrl = LocationController.to;
+        final isLoadingLoc = locCtrl.isLoading.value;
+        final lat = locCtrl.latitude.value;
+        final lng = locCtrl.longitude.value;
+        final locName = locCtrl.locationName.value;
+
+        if (isLoadingLoc) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF0F2E5A)),
+          );
+        }
+
+        if (lat == null || lng == null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.location_off_rounded,
+                    size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text('Location unavailable',
+                    style: TextStyle(fontSize: 16, color: Color(0xFF64748B))),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => locCtrl.fetchLocation(forceRefresh: true),
+                  icon:
+                      const Icon(Icons.refresh, color: Colors.white, size: 16),
+                  label: const Text("Retry",
+                      style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F2E5A)),
+                )
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildLocationBanner(locName),
+            _buildSearchAndRadiusRow(),
+            _buildSmartFilterChips(),
+            _buildListHeader(lat, lng, locName),
+            Expanded(
+              child: _isLoadingListings
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF0F2E5A),
+                      ),
+                    )
+                  : _buildListView(lat, lng, locName),
+            ),
+          ],
+        );
+      }),
     );
   }
 
@@ -358,9 +438,9 @@ class _ClinicsPageState extends State<ClinicsPage> {
       backgroundColor: Colors.white,
       elevation: 0,
       leading: const Padding(
-          padding: EdgeInsets.only(left: 10.0),
-          child: AppBackButton(),
-        ),
+        padding: EdgeInsets.only(left: 10.0),
+        child: AppBackButton(),
+      ),
       centerTitle: true,
       title: Text(
         widget.pageTitle,
@@ -373,32 +453,17 @@ class _ClinicsPageState extends State<ClinicsPage> {
     );
   }
 
-  Widget _buildLocationBanner() {
+  Widget _buildLocationBanner(String locationName) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
         children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 400),
-            child: _locationLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF0F2E5A),
-                    ),
-                  )
-                : const Icon(Icons.my_location,
-                    color: Color(0xFF0F2E5A), size: 16),
-          ),
+          const Icon(Icons.my_location, color: Color(0xFF0F2E5A), size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              _locationLoading
-                  ? 'Detecting your location...'
-                  : 'Your location: $_locationName',
+              'Your location: $locationName',
               style: const TextStyle(
                 color: Color(0xFF64748B),
                 fontSize: 12,
@@ -407,7 +472,8 @@ class _ClinicsPageState extends State<ClinicsPage> {
             ),
           ),
           GestureDetector(
-            onTap: () => _initializeData(),
+            onTap: () =>
+                LocationController.to.fetchLocation(forceRefresh: true),
             child:
                 const Icon(Icons.refresh, color: Color(0xFF0F2E5A), size: 16),
           ),
@@ -495,8 +561,8 @@ class _ClinicsPageState extends State<ClinicsPage> {
     );
   }
 
-  Widget _buildListHeader() {
-    final count = _rankedListings.length;
+  Widget _buildListHeader(double userLat, double userLng, String locationName) {
+    final count = _getRankedListings(userLat, userLng, locationName).length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
       child: Row(
@@ -516,8 +582,8 @@ class _ClinicsPageState extends State<ClinicsPage> {
     );
   }
 
-  Widget _buildListView() {
-    final listings = _rankedListings;
+  Widget _buildListView(double userLat, double userLng, String locationName) {
+    final listings = _getRankedListings(userLat, userLng, locationName);
     if (listings.isEmpty) {
       return Center(
         child: Column(
@@ -538,15 +604,18 @@ class _ClinicsPageState extends State<ClinicsPage> {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
       itemCount: listings.length,
-      itemBuilder: (ctx, i) => _buildListingCard(listings[i]),
+      itemBuilder: (ctx, i) => _buildListingCard(listings[i], userLat, userLng),
     );
   }
 
-  Widget _buildListingCard(ClinicListing item) {
-    final dist = item.distanceFrom(_userLat, _userLng);
-    final distStr = dist < 1
-        ? '${(dist * 1000).round()} m away'
-        : '${dist.toStringAsFixed(1)} km away';
+  Widget _buildListingCard(ClinicListing item, double userLat, double userLng) {
+    final dist = item.distanceFrom(userLat, userLng);
+    String distStr = "Distance unavailable";
+    if (dist != null) {
+      distStr = dist < 1
+          ? '${(dist * 1000).round()} m away'
+          : '${dist.toStringAsFixed(1)} km away';
+    }
 
     Color statusBg;
     Color statusText;
@@ -565,197 +634,199 @@ class _ClinicsPageState extends State<ClinicsPage> {
     }
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ClinicDoctorsPage(clinic: item),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ClinicDoctorsPage(clinic: item),
+            ),
+          );
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(
+                      0.03), // Will leave withOpacity to avoid Flutter version compatibility issues if withAlpha isn't perfectly supported in this version's Color API.
+                  blurRadius: 10,
+                  offset: const Offset(0, 4)),
+            ],
+            border: Border.all(color: const Color(0xFFF1F5F9)),
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(
-                    0.03), // Will leave withOpacity to avoid Flutter version compatibility issues if withAlpha isn't perfectly supported in this version's Color API.
-                blurRadius: 10,
-                offset: const Offset(0, 4)),
-          ],
-          border: Border.all(color: const Color(0xFFF1F5F9)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-          // Top row
-          Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: 56,
-                width: 56,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.local_hospital_outlined,
-                    color: Color(0xFF0F2E5A),
-                    size: 28,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            item.facilityName,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF0F2E5A),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        if (item.isVerified)
-                          const Icon(Icons.verified_user_rounded,
-                              color: Color(0xFF4F46E5), size: 14),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.name,
-                      style: const TextStyle(
-                          color: Color(0xFF64748B),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.speciality,
-                      style: const TextStyle(
-                          color: Color(0xFF059669),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star,
-                            color: Color(0xFFFFB800), size: 13),
-                        const SizedBox(width: 3),
-                        Text(
-                          item.rating,
-                          style: const TextStyle(
-                              color: Color(0xFF0F2E5A),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                            width: 1,
-                            height: 10,
-                            color: const Color(0xFFCBD5E1)),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.place_outlined,
-                            size: 12, color: Color(0xFF64748B)),
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            item.location,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Color(0xFF64748B), fontSize: 11),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              // Top row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    height: 56,
+                    width: 56,
                     decoration: BoxDecoration(
-                        color: statusBg,
-                        borderRadius: BorderRadius.circular(8)),
-                    child: Text(item.status,
-                        style: TextStyle(
-                            color: statusText,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold)),
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.local_hospital_outlined,
+                        color: Color(0xFF0F2E5A),
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                item.facilityName,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF0F2E5A),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            if (item.isVerified)
+                              const Icon(Icons.verified_user_rounded,
+                                  color: Color(0xFF4F46E5), size: 14),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.name,
+                          style: const TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.speciality,
+                          style: const TextStyle(
+                              color: Color(0xFF059669),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.star,
+                                color: Color(0xFFFFB800), size: 13),
+                            const SizedBox(width: 3),
+                            Text(
+                              item.rating,
+                              style: const TextStyle(
+                                  color: Color(0xFF0F2E5A),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                                width: 1,
+                                height: 10,
+                                color: const Color(0xFFCBD5E1)),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.place_outlined,
+                                size: 12, color: Color(0xFF64748B)),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                item.location,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: Color(0xFF64748B), fontSize: 11),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                            color: statusBg,
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Text(item.status,
+                            style: TextStyle(
+                                color: statusText,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(color: Color(0xFFF1F5F9), height: 1),
-          ),
-          // Distance + ETA + Location row
-          Row(
-            children: [
-              const Icon(Icons.near_me_outlined,
-                  size: 14, color: Color(0xFF64748B)),
-              const SizedBox(width: 4),
-              Text(distStr,
-                  style: const TextStyle(
-                      color: Color(0xFF0F2E5A),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12)),
-              const SizedBox(width: 12),
-              Container(width: 1, height: 10, color: const Color(0xFFCBD5E1)),
-              const SizedBox(width: 12),
-              const Icon(Icons.access_time, size: 14, color: Color(0xFF64748B)),
-              const SizedBox(width: 4),
-              Text(item.availableTime,
-                  style:
-                      const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Actions
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _makeCall(item.phone),
-                  icon: const Icon(Icons.phone_in_talk,
-                      color: Colors.white, size: 16),
-                  label: const Text("Call Clinic",
-                      style: TextStyle(
-                          color: Colors.white,
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Divider(color: Color(0xFFF1F5F9), height: 1),
+              ),
+              // Distance + ETA + Location row
+              Row(
+                children: [
+                  const Icon(Icons.near_me_outlined,
+                      size: 14, color: Color(0xFF64748B)),
+                  const SizedBox(width: 4),
+                  Text(distStr,
+                      style: const TextStyle(
+                          color: Color(0xFF0F2E5A),
                           fontWeight: FontWeight.bold,
                           fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F2E5A),
-                    elevation: 0,
-                    minimumSize: const Size(double.infinity, 40),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
+                  const SizedBox(width: 12),
+                  Container(
+                      width: 1, height: 10, color: const Color(0xFFCBD5E1)),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.access_time,
+                      size: 14, color: Color(0xFF64748B)),
+                  const SizedBox(width: 4),
+                  Text(item.availableTime,
+                      style: const TextStyle(
+                          color: Color(0xFF64748B), fontSize: 12)),
+                ],
               ),
+              const SizedBox(height: 12),
+              // Actions
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _makeCall(item.phone),
+                      icon: const Icon(Icons.phone_in_talk,
+                          color: Colors.white, size: 16),
+                      label: const Text("Call Clinic",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F2E5A),
+                        elevation: 0,
+                        minimumSize: const Size(double.infinity, 40),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              )
             ],
-          )
-        ],
-      ),
-    ));
+          ),
+        ));
   }
 }

@@ -9,6 +9,7 @@ import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/bus_worker_dashboard.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/healthcare_worker_dashboard.dart';
 
 import 'package:get_storage/get_storage.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
@@ -112,8 +113,12 @@ class AuthController extends GetxController {
           Get.offAll(() => const FindingLocationPage());
         }
       } else if (foundCollection == 'healthcare') {
-        // Healthcare Dashboard placeholder
-        Get.offAll(() => const FindingLocationPage());
+        final profession = data['profession'] ?? '';
+        if (profession == 'Pharmacy') {
+          Get.offAll(() => const FindingLocationPage());
+        } else {
+          Get.offAll(() => const HealthcareWorkerDashboard());
+        }
       } else if (foundCollection == 'shops_businesses') {
         // Shops & Businesses Dashboard placeholder
         Get.offAll(() => const FindingLocationPage());

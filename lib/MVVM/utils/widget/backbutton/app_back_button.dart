@@ -4,11 +4,15 @@ import 'package:get/get.dart';
 class AppBackButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final EdgeInsetsGeometry margin;
+  final Color? color;
+  final Color? iconColor;
 
   const AppBackButton({
     super.key,
     this.onPressed,
     this.margin = const EdgeInsets.only(left: 12, top: 8, bottom: 8),
+    this.color,
+    this.iconColor,
   });
 
   @override
@@ -19,7 +23,7 @@ class AppBackButton extends StatelessWidget {
         elevation: 2,
         borderRadius: BorderRadius.circular(12),
         shadowColor: Colors.black.withOpacity(0.1),
-        color: Colors.white,
+        color: color ?? Colors.white,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: onPressed ??
@@ -37,14 +41,14 @@ class AppBackButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color.fromRGBO(230, 230, 230, 1)),
             ),
-            child: const Center(
+            child: Center(
               child: Padding(
                 padding:
-                    EdgeInsets.only(right: 2.0), // Visually center the chevron
+                    const EdgeInsets.only(right: 2.0), // Visually center the chevron
                 child: Icon(
                   Icons.arrow_back_ios_new,
                   size: 20,
-                  color: Color(0xFF0F2E5A),
+                  color: iconColor ?? const Color(0xFF0F2E5A),
                 ),
               ),
             ),

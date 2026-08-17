@@ -154,40 +154,19 @@ class HomepageState extends State<Homepage> {
     String? savedDistrict = GetStorage().read<String>('selected_district');
 
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      await LocationController.to.fetchLocation();
+
+      String district = LocationController.to.district.value;
+      if (district.isEmpty) {
+        district = "Unknown";
       }
 
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-
-        if (placemarks.isNotEmpty) {
-          String district = placemarks.first.subAdministrativeArea ??
-              placemarks.first.administrativeArea ??
-              "Unknown";
-
-          // Clean up district string (e.g. "Kozhikode District" -> "Kozhikode")
-          if (district.toLowerCase().endsWith(" district")) {
-            district = district.substring(0, district.length - 9).trim();
-          }
-
-          if (mounted) {
-            setState(() {
-              _currentDistrict = district;
-              _selectedDistrict = savedDistrict ?? "All Districts";
-              _districtLoading = false;
-            });
-          }
-          return;
-        }
+      if (mounted) {
+        setState(() {
+          _currentDistrict = district;
+          _selectedDistrict = savedDistrict ?? "All Districts";
+          _districtLoading = false;
+        });
       }
     } catch (e) {
       debugPrint("Error detecting district: $e");
@@ -224,16 +203,33 @@ class HomepageState extends State<Homepage> {
   Future<void> loadUsername() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-      final data = doc.data();
+      final collections = ['users', 'healthcare'];
+      Map<String, dynamic>? data;
+
+      for (String collection in collections) {
+        final doc = await FirebaseFirestore.instance
+            .collection(collection)
+            .doc(userId)
+            .get();
+        if (doc.exists) {
+          data = doc.data();
+          break;
+        }
+      }
+
       if (data != null && mounted) {
         setState(() {
-          username = data['username'];
+          username = data!['username'] ?? data!['facility_name'] ?? 'User';
+        });
+      } else if (mounted) {
+        setState(() {
+          username = 'User';
         });
       }
+    } else if (mounted) {
+      setState(() {
+        username = 'User';
+      });
     }
   }
 
@@ -908,8 +904,6 @@ class HomepageState extends State<Homepage> {
                                             as Map<String, dynamic>?;
 
                                     if (globalContactData != null &&
-                                        globalContactData['status'] ==
-                                            'active' &&
                                         globalContactData['bannerImageUrl'] !=
                                             null &&
                                         globalContactData['bannerImageUrl']
@@ -919,20 +913,8 @@ class HomepageState extends State<Homepage> {
                                           imageUrl: globalContactData[
                                               'bannerImageUrl'],
                                           onTap: () {
-                                            if (globalContactData['status'] ==
-                                                'active') {
-                                              _showGlobalContactSheet(
-                                                  context, globalContactData);
-                                            } else {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                      "Contact support is currently unavailable."),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
+                                            _showGlobalContactSheet(
+                                                context, globalContactData);
                                           }));
                                     }
 
@@ -1635,20 +1617,6 @@ class HomepageState extends State<Homepage> {
     return fallback;
   }
 
-  /// Returns [textColor] if it has sufficient contrast against [bgColor].
-  /// Otherwise auto-picks white or black for readability.
-  Color _ensureReadableTextColor(Color bgColor, Color textColor) {
-    final bgLuminance = bgColor.computeLuminance();
-    final textLuminance = textColor.computeLuminance();
-    final lighter = bgLuminance > textLuminance ? bgLuminance : textLuminance;
-    final darker = bgLuminance > textLuminance ? textLuminance : bgLuminance;
-    final contrastRatio = (lighter + 0.05) / (darker + 0.05);
-    // WCAG AA requires at least 4.5:1 for normal text
-    if (contrastRatio >= 3.0) return textColor;
-    // Fall back: choose white or black based on background luminance
-    return bgLuminance > 0.5 ? Colors.black : Colors.white;
-  }
-
   /// Builds a promotional banner card.
   /// [imageUrl] — network URL from Firestore; falls back to asset placeholder if empty.
   /// [title]    — optional overlay text set by the admin.
@@ -1773,10 +1741,9 @@ class HomepageState extends State<Homepage> {
                                 buttonBackgroundColor,
                                 const Color(0xFF0F2E5A),
                               ),
-                              foregroundColor: _ensureReadableTextColor(
-                                _parseHexColor(buttonBackgroundColor,
-                                    const Color(0xFF0F2E5A)),
-                                _parseHexColor(buttonTextColor, Colors.white),
+                              foregroundColor: _parseHexColor(
+                                buttonTextColor,
+                                Colors.white,
                               ),
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 8),
@@ -1790,10 +1757,9 @@ class HomepageState extends State<Homepage> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: _ensureReadableTextColor(
-                                  _parseHexColor(buttonBackgroundColor,
-                                      const Color(0xFF0F2E5A)),
-                                  _parseHexColor(buttonTextColor, Colors.white),
+                                color: _parseHexColor(
+                                  buttonTextColor,
+                                  Colors.white,
                                 ),
                               ),
                             ),

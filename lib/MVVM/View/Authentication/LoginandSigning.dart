@@ -119,6 +119,7 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
                                   borderColor: const Color(0xFFE2E8F0),
                                   borderRadius: 15,
                                   hinttext: "Email or Phone Number",
+                                  keyboardType: TextInputType.emailAddress,
                                   hintstyle:
                                       const TextStyle(color: Color(0xFF94A3B8)),
                                   prefixicon: const Icon(Icons.mail_outline,

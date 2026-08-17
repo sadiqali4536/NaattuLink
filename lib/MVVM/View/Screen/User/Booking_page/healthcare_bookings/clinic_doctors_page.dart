@@ -18,37 +18,9 @@ class ClinicDoctorsPage extends StatelessWidget {
     }
   }
 
-  // Mock list of doctors based on clinic specialty
-  List<Map<String, dynamic>> _getMockDoctors() {
-    return [
-      {
-        "name": "Dr. Sarah Johnson",
-        "speciality": "Gynecologist",
-        "qualifications": "MBBS, MD",
-        "experience": "12 Years Exp",
-        "timing": "09:00 AM - 01:00 PM",
-        "rating": "4.9",
-        "availability": "Mon, Tue, Sat"
-      },
-      {
-        "name": "Dr. Ramesh Menon",
-        "speciality": "Pediatrician",
-        "qualifications": "MBBS, MD (Pediatrics)",
-        "experience": "8 Years Exp",
-        "timing": "04:00 PM - 08:00 PM",
-        "rating": "4.7",
-        "availability": "30/07/2026"
-      },
-      {
-        "name": "Dr. Emily Chen",
-        "speciality": "General Physician",
-        "qualifications": "MBBS, DNB",
-        "experience": "5 Years Exp",
-        "timing": "10:00 AM - 02:00 PM",
-        "rating": "4.8",
-        "availability": "Available Tomorrow"
-      }
-    ];
+  // Fetch doctors (currently empty until backend is integrated)
+  List<Map<String, dynamic>> _getDoctors() {
+    return [];
   }
 
   @override
@@ -57,7 +29,7 @@ class ClinicDoctorsPage extends StatelessWidget {
     final textGrey = const Color(0xFF64748B);
     final bgLight = const Color(0xFFF8FAFC);
     final goldColor = const Color(0xFFFFB800);
-    final doctors = _getMockDoctors();
+    final doctors = _getDoctors();
 
     return Scaffold(
       backgroundColor: bgLight,
@@ -151,199 +123,222 @@ class ClinicDoctorsPage extends StatelessWidget {
 
           // Doctors List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: doctors.length,
-              itemBuilder: (context, index) {
-                final doc = doctors[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                    border: Border.all(color: const Color(0xFFF1F5F9)),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: 64,
-                            width: 64,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEEF2FF),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.person_outline,
-                                color: Color(0xFF4F46E5),
-                                size: 32,
-                              ),
-                            ),
+            child: doctors.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.person_off_outlined,
+                            size: 64, color: Colors.grey.shade300),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "No doctors available right now.",
+                          style: TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: doctors.length,
+                    itemBuilder: (context, index) {
+                      final doc = doctors[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: Border.all(color: const Color(0xFFF1F5F9)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        doc['name'],
-                                        style: TextStyle(
-                                          color: primaryColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
+                                Container(
+                                  height: 64,
+                                  width: 64,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEEF2FF),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.person_outline,
+                                      color: Color(0xFF4F46E5),
+                                      size: 32,
                                     ),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.star,
-                                            color: goldColor, size: 14),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          doc['rating'],
-                                          style: TextStyle(
-                                            color: primaryColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                                const SizedBox(height: 4),
-                                Wrap(
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 6,
-                                  runSpacing: 4,
-                                  children: [
-                                    Text(
-                                      doc['qualifications'],
-                                      style: TextStyle(
-                                        color: textGrey,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              doc['name'],
+                                              style: TextStyle(
+                                                color: primaryColor,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.star,
+                                                  color: goldColor, size: 14),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                doc['rating'],
+                                                style: TextStyle(
+                                                  color: primaryColor,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFDCFCE7),
-                                        borderRadius: BorderRadius.circular(6),
+                                      const SizedBox(height: 4),
+                                      Wrap(
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        children: [
+                                          Text(
+                                            doc['qualifications'],
+                                            style: TextStyle(
+                                              color: textGrey,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFDCFCE7),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              doc['speciality'],
+                                              style: const TextStyle(
+                                                color: Color(0xFF059669),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      child: Text(
-                                        doc['speciality'],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        doc['experience'],
                                         style: const TextStyle(
                                           color: Color(0xFF059669),
-                                          fontSize: 10,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  doc['experience'],
-                                  style: const TextStyle(
-                                    color: Color(0xFF059669),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Divider(color: Color(0xFFF1F5F9), height: 1),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.access_time,
-                                  color: textGrey, size: 14),
-                              const SizedBox(width: 6),
-                              Text(
-                                doc['timing'],
-                                style: TextStyle(
-                                  color: textGrey,
-                                  fontSize: 12,
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child:
+                                  Divider(color: Color(0xFFF1F5F9), height: 1),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.access_time,
+                                        color: textGrey, size: 14),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      doc['timing'],
+                                      style: TextStyle(
+                                        color: textGrey,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Flexible(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEEF2FF),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      doc['availability'],
+                                      style: const TextStyle(
+                                        color: Color(0xFF4F46E5),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: ElevatedButton(
+                                onPressed: () =>
+                                    _makeCall(context, clinic.phone),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Book Appointment",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
-                          Flexible(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2FF),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                doc['availability'],
-                                style: const TextStyle(
-                                  color: Color(0xFF4F46E5),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: ElevatedButton(
-                          onPressed: () => _makeCall(context, clinic.phone),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            "Book Appointment",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),

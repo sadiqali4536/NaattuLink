@@ -17,10 +17,55 @@ class FirebaseAuthServices {
 
   // Sign in with Email and Password
   Future<UserCredential?> signIn(
-      BuildContext context, String email, String password) async {
+      BuildContext context, String identifier, String password) async {
     try {
+      String emailToLogin = identifier.trim();
+
+      // Check if identifier is not an email (assumed to be a phone number)
+      if (!emailToLogin.contains('@')) {
+        String rawPhone = emailToLogin.replaceAll(' ', '');
+        String phoneWithPrefix = rawPhone;
+        if (!rawPhone.startsWith('+91')) {
+          phoneWithPrefix = '+91$rawPhone';
+        } else {
+          rawPhone = rawPhone.replaceFirst('+91', '');
+        }
+
+        // Search for the user by phone number across all collections
+        final collections = [
+          'users',
+          'workers',
+          'transports',
+          'healthcare',
+          'shops_businesses'
+        ];
+
+        String? foundEmail;
+        for (var collection in collections) {
+          final querySnapshot = await db
+              .collection(collection)
+              .where('phone', whereIn: [rawPhone, phoneWithPrefix])
+              .limit(1)
+              .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            foundEmail = querySnapshot.docs.first.data()['email'];
+            break;
+          }
+        }
+
+        if (foundEmail == null || foundEmail.isEmpty) {
+          if (context.mounted) {
+            toastError("No account found with this phone number.");
+          }
+          return null;
+        }
+
+        emailToLogin = foundEmail;
+      }
+
       UserCredential credential = await _auth.signInWithEmailAndPassword(
-          email: email, password: password);
+          email: emailToLogin, password: password);
       return credential;
     } catch (e) {
       final message = FirebaseErrorHandler.getReadableErrorMessage(e);

@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/healthcare_worker_dashboard.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
@@ -84,35 +85,45 @@ class _FindingLocationPageState extends State<FindingLocationPage>
         } else {
           // Step 3: Get position
           print('[LOC] Fetching position...');
-          final Position position = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.high,
-              timeLimit: Duration(seconds: 10),
-            ),
-          );
-          print(
-              '[LOC] Got position: ${position.latitude}, ${position.longitude}');
-
-          // Step 4: Reverse geocode
-          print('[LOC] Reverse geocoding...');
-          final List<Placemark> placemarks = await placemarkFromCoordinates(
-            position.latitude,
-            position.longitude,
-          );
-          print('[LOC] Placemarks count: ${placemarks.length}');
-
-          if (placemarks.isNotEmpty) {
-            final Placemark place = placemarks.first;
+          Position? position;
+          try {
+            position = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.high,
+                timeLimit: Duration(seconds: 10),
+              ),
+            );
+          } catch (e) {
             print(
-                '[LOC] subLocality=${place.subLocality} locality=${place.locality} adminArea=${place.administrativeArea}');
-            final parts = <String>[
-              if ((place.subLocality ?? '').isNotEmpty) place.subLocality!,
-              if ((place.locality ?? '').isNotEmpty) place.locality!,
-              if ((place.administrativeArea ?? '').isNotEmpty)
-                place.administrativeArea!,
-            ];
-            placeName =
-                parts.isNotEmpty ? parts.take(2).join(', ') : 'My Location';
+                '[LOC] Timeout or error getting current position, trying last known position: $e');
+            position = await Geolocator.getLastKnownPosition();
+          }
+
+          if (position != null) {
+            print(
+                '[LOC] Got position: ${position.latitude}, ${position.longitude}');
+
+            // Step 4: Reverse geocode
+            print('[LOC] Reverse geocoding...');
+            final List<Placemark> placemarks = await placemarkFromCoordinates(
+              position.latitude,
+              position.longitude,
+            );
+            print('[LOC] Placemarks count: ${placemarks.length}');
+
+            if (placemarks.isNotEmpty) {
+              final Placemark place = placemarks.first;
+              print(
+                  '[LOC] subLocality=${place.subLocality} locality=${place.locality} adminArea=${place.administrativeArea}');
+              final parts = <String>[
+                if ((place.subLocality ?? '').isNotEmpty) place.subLocality!,
+                if ((place.locality ?? '').isNotEmpty) place.locality!,
+                if ((place.administrativeArea ?? '').isNotEmpty)
+                  place.administrativeArea!,
+              ];
+              placeName =
+                  parts.isNotEmpty ? parts.take(2).join(', ') : 'My Location';
+            }
           }
         }
       }
@@ -162,6 +173,16 @@ class _FindingLocationPageState extends State<FindingLocationPage>
         Get.offAll(() => WorkerDashboard());
       } else {
         Get.offAll(() => const LoginAndSigning());
+      }
+    } else if (role == 'healthcare') {
+      final hcDoc = await FirebaseFirestore.instance
+          .collection('healthcare')
+          .doc(user.uid)
+          .get();
+      if (hcDoc.data()?['profession'] == 'Pharmacy') {
+        Get.offAll(() => user_Dashboard());
+      } else {
+        Get.offAll(() => const HealthcareWorkerDashboard());
       }
     } else {
       Get.offAll(() => const LoginAndSigning());

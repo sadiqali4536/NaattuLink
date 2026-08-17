@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
+import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
 
 class BusinessWorkerRegistrationPage extends StatefulWidget {
   const BusinessWorkerRegistrationPage({super.key});
@@ -21,6 +22,8 @@ class _BusinessWorkerRegistrationPageState
 
   final _nameCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
 
   final _businessNameCtrl = TextEditingController();
@@ -34,6 +37,8 @@ class _BusinessWorkerRegistrationPageState
   void dispose() {
     _nameCtrl.dispose();
     _mobileCtrl.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
     _addressCtrl.dispose();
     _businessNameCtrl.dispose();
     _contactNumberCtrl.dispose();
@@ -54,14 +59,44 @@ class _BusinessWorkerRegistrationPageState
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      final email = "${_mobileCtrl.text.trim()}@naattulink.com";
-      final password = "NL${_mobileCtrl.text.trim()}";
+      final email = _emailCtrl.text.trim();
+      final password = _passwordCtrl.text;
 
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      if (email.isEmpty || password.isEmpty) {
+        _toastError("Email and Password are required.");
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      print('[BUSINESS AUTH] Email entered: ${_emailCtrl.text.trim()}');
+      print('[BUSINESS AUTH] Phone: ${_mobileCtrl.text.trim()}');
+      print('[BUSINESS AUTH] Firebase email: $email');
+
+      UserCredential userCredential;
+      try {
+        userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'email-already-in-use') {
+          try {
+            userCredential =
+                await FirebaseAuth.instance.signInWithEmailAndPassword(
+              email: email,
+              password: password,
+            );
+          } catch (signInError) {
+            _toastError(
+                "This email is already registered. Please use the correct password, or try a different email.");
+            setState(() => _isLoading = false);
+            return;
+          }
+        } else {
+          rethrow;
+        }
+      }
       final uid = userCredential.user!.uid;
 
       await FirebaseFirestore.instance.collection("businesses").doc(uid).set({
@@ -87,7 +122,7 @@ class _BusinessWorkerRegistrationPageState
       });
 
       _toastSuccess("Account created successfully. Awaiting admin approval.");
-      Get.back();
+      Get.offAll(() => const WorkerDashboard());
     } on FirebaseAuthException catch (e) {
       _toastError(FirebaseErrorHandler.getReadableErrorMessage(e));
     } catch (e) {
@@ -174,6 +209,15 @@ class _BusinessWorkerRegistrationPageState
                     if (val != null) _availableTime = val;
                   });
                 }),
+                const SizedBox(height: 24),
+                _buildDivider("ACCOUNT DETAILS"),
+                const SizedBox(height: 16),
+                _buildTextField("Email Address", "Enter your email",
+                    Icons.email_outlined, _emailCtrl,
+                    type: TextInputType.emailAddress),
+                _buildTextField("Password", "Create a secure password",
+                    Icons.lock_outline, _passwordCtrl,
+                    isPassword: true),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,

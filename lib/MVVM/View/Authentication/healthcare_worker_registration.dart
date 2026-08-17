@@ -5,7 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
-
+import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/healthcare_worker_dashboard.dart';
+import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 class HealthcareWorkerRegistrationPage extends StatefulWidget {
   const HealthcareWorkerRegistrationPage({super.key});
 
@@ -29,8 +30,8 @@ class _HealthcareWorkerRegistrationPageState
   final _contactNumberCtrl = TextEditingController();
 
   String _category = "Hospital"; // Hospital, Clinic, Pharmacy, Laboratory
-  String _availableTime = "9 AM - 8 PM";
-  String _speciality = "General, Dental";
+  TimeOfDay? _openTime;
+  TimeOfDay? _closeTime;
 
   @override
   void dispose() {
@@ -54,18 +55,92 @@ class _HealthcareWorkerRegistrationPageState
         backgroundColor: Colors.red, colorText: Colors.white);
   }
 
+  Future<void> _selectTime(BuildContext context, bool isOpen) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF0A235C),
+            ),
+            timePickerTheme: const TimePickerThemeData(
+              backgroundColor: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        if (isOpen) {
+          _openTime = picked;
+        } else {
+          _closeTime = picked;
+        }
+      });
+    }
+  }
+
+  String _formatTime(TimeOfDay? time) {
+    if (time == null) return '--:--';
+    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $period';
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      final email = "${_mobileCtrl.text.trim()}@naattulink.com";
-      final password = "NL${_mobileCtrl.text.trim()}";
+      final email = _emailCtrl.text.trim();
+      final password = _passwordCtrl.text;
 
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      if (email.isEmpty || password.isEmpty) {
+        _toastError("Email and Password are required.");
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (_openTime == null || _closeTime == null) {
+        _toastError("Open Time and Close Time are required.");
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      print('[HEALTHCARE AUTH] Email entered: ${_emailCtrl.text.trim()}');
+      print('[HEALTHCARE AUTH] Phone: ${_mobileCtrl.text.trim()}');
+      print('[HEALTHCARE AUTH] Firebase email: $email');
+
+      UserCredential userCredential;
+      try {
+        userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'email-already-in-use') {
+          // Attempt to sign in if the email already exists
+          try {
+            userCredential =
+                await FirebaseAuth.instance.signInWithEmailAndPassword(
+              email: email,
+              password: password,
+            );
+          } catch (signInError) {
+            _toastError(
+                "This email is already registered. Please use the correct password, or try a different email.");
+            setState(() => _isLoading = false);
+            return;
+          }
+        } else {
+          rethrow;
+        }
+      }
       final uid = userCredential.user!.uid;
 
       await FirebaseFirestore.instance.collection("healthcare").doc(uid).set({
@@ -77,8 +152,8 @@ class _HealthcareWorkerRegistrationPageState
         "profession": _category,
         "facility_name": _facilityNameCtrl.text.trim(),
         "contact_number": "+91${_contactNumberCtrl.text.trim()}",
-        "available_time": _availableTime,
-        "speciality": _speciality,
+        "available_time":
+            "${_formatTime(_openTime)} - ${_formatTime(_closeTime)}",
         "profile_img": "",
         "created_at": FieldValue.serverTimestamp(),
         "updated_at": FieldValue.serverTimestamp(),
@@ -92,7 +167,11 @@ class _HealthcareWorkerRegistrationPageState
       });
 
       _toastSuccess("Account created successfully. Awaiting admin approval.");
-      Get.back();
+      if (_category == 'Pharmacy') {
+        Get.offAll(() => const user_Dashboard());
+      } else {
+        Get.offAll(() => const HealthcareWorkerDashboard());
+      }
     } on FirebaseAuthException catch (e) {
       _toastError(FirebaseErrorHandler.getReadableErrorMessage(e));
     } catch (e) {
@@ -170,34 +249,31 @@ class _HealthcareWorkerRegistrationPageState
                   return null;
                 }),
                 const SizedBox(height: 8),
+                const Text(
+                  "Available Time",
+                  style: TextStyle(
+                      color: Color(0xFF0A235C),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(
-                      child: _buildDropdownField(
-                          "Available Time",
-                          _availableTime,
-                          Icons.access_time_outlined,
-                          ["9 AM - 8 PM", "24 Hours", "Other"], (val) {
-                        setState(() {
-                          if (val != null) _availableTime = val;
-                        });
-                      }),
-                    ),
+                    Expanded(child: _buildTimePickerBox(true)),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildDropdownField(
-                          "Speciality",
-                          _speciality,
-                          Icons.medical_services_outlined,
-                          ["General, Dental", "Cardiology", "Pediatrics"],
-                          (val) {
-                        setState(() {
-                          if (val != null) _speciality = val;
-                        });
-                      }),
-                    ),
+                    Expanded(child: _buildTimePickerBox(false)),
                   ],
                 ),
+                const SizedBox(height: 24),
+                _buildDivider("ACCOUNT DETAILS"),
+                const SizedBox(height: 16),
+                _buildTextField("Email Address", "Enter your email",
+                    Icons.email_outlined, _emailCtrl,
+                    type: TextInputType.emailAddress),
+                _buildTextField("Password", "Create a secure password",
+                    Icons.lock_outline, _passwordCtrl,
+                    isPassword: true),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
@@ -571,6 +647,36 @@ class _HealthcareWorkerRegistrationPageState
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTimePickerBox(bool isOpen) {
+    return GestureDetector(
+      onTap: () => _selectTime(context, isOpen),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              isOpen ? "Open" : "Close",
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            ),
+            Text(
+              _formatTime(isOpen ? _openTime : _closeTime),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: Colors.black87),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

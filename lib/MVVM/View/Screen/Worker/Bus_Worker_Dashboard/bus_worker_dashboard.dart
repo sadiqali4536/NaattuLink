@@ -44,13 +44,29 @@ class _BusWorkerDashboardState extends State<BusWorkerDashboard> {
           unselectedItemColor: Colors.grey,
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
-          items: const [
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home),
+              icon: const Icon(Icons.home),
+              activeIcon: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9A825).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.home, color: Color(0xFFF9A825)),
+              ),
               label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person),
+              icon: const Icon(Icons.person),
+              activeIcon: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9A825).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.person, color: Color(0xFFF9A825)),
+              ),
               label: 'Profile',
             ),
           ],

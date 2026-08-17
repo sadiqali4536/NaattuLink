@@ -12,7 +12,8 @@ class HelperFunctions {
     );
   }
 
-  static void navigateToScreenPushReplaceAll(BuildContext context, Widget screen) {
+  static void navigateToScreenPushReplaceAll(
+      BuildContext context, Widget screen) {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => screen),
@@ -20,7 +21,7 @@ class HelperFunctions {
     );
   }
 
-   // Navigate to another screen
+  // Navigate to another screen
   static void navigateToScreenPop(BuildContext context, Widget screen) {
     Navigator.pop(
       context,
@@ -41,18 +42,24 @@ String formatDate(Timestamp? timestamp) {
   return formatter.format(dateTime);
 }
 
-
-
 Future<String?> getRole(String? uid) async {
-  final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-  if (userDoc.exists && userDoc.data()!.containsKey('role')) {
-    return userDoc['role'];
+  if (uid == null) return null;
+
+  final collections = [
+    'users',
+    'workers',
+    'healthcare',
+    'transports',
+    'shops_businesses'
+  ];
+
+  for (String collection in collections) {
+    final doc =
+        await FirebaseFirestore.instance.collection(collection).doc(uid).get();
+    if (doc.exists && doc.data()!.containsKey('role')) {
+      return doc['role'];
+    }
   }
 
-  final workerDoc = await FirebaseFirestore.instance.collection('workers').doc(uid).get();
-  if (workerDoc.exists && workerDoc.data()!.containsKey('role')) {
-    return workerDoc['role'];
-  }
-
-  return null; 
+  return null;
 }
