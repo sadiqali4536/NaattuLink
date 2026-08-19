@@ -11,9 +11,9 @@ class LocationController extends GetxController {
   final longitude = Rxn<double>();
   final locationName = ''.obs;
   final district = ''.obs;
-  
+
   // To keep backward compatibility with existing codebase that reads currentLocation
-  final currentLocation = ''.obs; 
+  final currentLocation = ''.obs;
 
   final isLoading = false.obs;
 
@@ -43,11 +43,10 @@ class LocationController extends GetxController {
 
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
-        
         Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
         );
-        
+
         latitude.value = position.latitude;
         longitude.value = position.longitude;
 
@@ -58,16 +57,30 @@ class LocationController extends GetxController {
 
         if (placemarks.isNotEmpty) {
           final pm = placemarks.first;
-          String locality = pm.locality ?? pm.subLocality ?? pm.name ?? 'Kallai';
-          String city = pm.subAdministrativeArea ?? pm.locality ?? 'Kozhikode';
-          
-          String distStr = pm.subAdministrativeArea ?? pm.administrativeArea ?? "Unknown";
+
+          // Construct placeName as "subLocality, locality"
+          String subLocalityPart =
+              (pm.subLocality != null && pm.subLocality!.isNotEmpty)
+                  ? pm.subLocality!
+                  : (pm.name ?? '----');
+
+          String localityPart = (pm.locality != null && pm.locality!.isNotEmpty)
+              ? pm.locality!
+              : (pm.subAdministrativeArea ?? '----');
+
+          String distStr =
+              pm.subAdministrativeArea ?? pm.administrativeArea ?? "-----";
           if (distStr.toLowerCase().endsWith(" district")) {
             distStr = distStr.substring(0, distStr.length - 9).trim();
           }
           district.value = distStr;
-          
-          locationName.value = '$locality, $city';
+
+          if (subLocalityPart.toLowerCase() == localityPart.toLowerCase()) {
+            locationName.value = localityPart;
+          } else {
+            locationName.value = '$subLocalityPart, $localityPart';
+          }
+
           currentLocation.value = locationName.value;
         } else {
           locationName.value = 'Kallai, Kozhikode';

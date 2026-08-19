@@ -7,16 +7,19 @@ import 'package:geocoding/geocoding.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
+import 'package:naattulink/MVVM/utils/service_functions/availability_utils.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
-import 'clinic_doctors_page.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
+import 'healthcare_doctors_page.dart';
 
 // ─────────────────────────────────────────────────
 // Model
 // ─────────────────────────────────────────────────
 class ClinicListing {
+  final String uid;
   final String name;
   final String facilityName;
   final String rating;
@@ -34,6 +37,7 @@ class ClinicListing {
   final bool isVerified;
 
   ClinicListing({
+    required this.uid,
     required this.name,
     required this.facilityName,
     required this.rating,
@@ -66,21 +70,21 @@ class ClinicListing {
 // ─────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────
-class ClinicsPage extends StatefulWidget {
+class HealthcarePage extends StatefulWidget {
   final String healthcareType;
   final String pageTitle;
 
-  const ClinicsPage({
+  const HealthcarePage({
     Key? key,
     this.healthcareType = 'Clinic',
     this.pageTitle = 'Clinics',
   }) : super(key: key);
 
   @override
-  State<ClinicsPage> createState() => _ClinicsPageState();
+  State<HealthcarePage> createState() => _HealthcarePageState();
 }
 
-class _ClinicsPageState extends State<ClinicsPage> {
+class _HealthcarePageState extends State<HealthcarePage> {
   // UI state
   String searchQuery = '';
   String selectedTypeFilter = 'All';
@@ -105,6 +109,15 @@ class _ClinicsPageState extends State<ClinicsPage> {
     });
 
     await _fetchListingsFromFirestore();
+  }
+
+  String _getSingular(String plural) {
+    if (plural.toLowerCase() == 'pharmacies') return 'pharmacy';
+    if (plural.toLowerCase() == 'laboratories') return 'laboratory';
+    if (plural.toLowerCase().endsWith('s')) {
+      return plural.substring(0, plural.length - 1).toLowerCase();
+    }
+    return plural.toLowerCase();
   }
 
   String getMainLocality(String location) {
@@ -150,7 +163,10 @@ class _ClinicsPageState extends State<ClinicsPage> {
 
         final addressStr = data['address']?.toString() ?? '';
         final firebaseType =
-            (data['healthcare_type'] ?? '').toString().trim().toLowerCase();
+            (data['profession'] ?? data['healthcare_type'] ?? '')
+                .toString()
+                .trim()
+                .toLowerCase();
         final categoryStr =
             (data['category'] ?? '').toString().trim().toLowerCase();
         final statusStr =
@@ -164,15 +180,8 @@ class _ClinicsPageState extends State<ClinicsPage> {
             categoryStr == 'healthcare' || categoryStr.isEmpty;
         final statusMatch = statusStr == 'active';
 
-        final shouldShow =
-            locationMatch && typeMatch && categoryMatch && statusMatch;
+        final shouldShow = typeMatch && categoryMatch && statusMatch;
 
-        final userLocality = getMainLocality(userLocationStr);
-        print('[HEALTHCARE] User location: $userLocationStr');
-        print('[HEALTHCARE] User locality: $userLocality');
-        print('[HEALTHCARE] Facility: ${data['facility_name']}');
-        print('[HEALTHCARE] Address: $addressStr');
-        print('[HEALTHCARE] Location match: $locationMatch');
         print('[HEALTHCARE] Firebase type: $firebaseType');
         print('[HEALTHCARE] Selected type: $selectedHealthcareType');
         print('[HEALTHCARE] Type match: $typeMatch');
@@ -208,17 +217,20 @@ class _ClinicsPageState extends State<ClinicsPage> {
           lng = dbLng;
         } else {
           try {
-            List<Location> locations = await locationFromAddress(address);
-            print('[GEOCODING] Full address: $address');
-            print('[GEOCODING] Result count: ${locations.length}');
+            // Append context to avoid ambiguous address timeouts
+            final searchAddress = "$address";
+            List<Location> locations = await locationFromAddress(searchAddress)
+                .timeout(const Duration(seconds: 2));
+
             if (locations.isNotEmpty) {
               lat = locations.first.latitude;
               lng = locations.first.longitude;
-              print('[GEOCODING] Latitude: $lat');
-              print('[GEOCODING] Longitude: $lng');
+              print(
+                  '[GEOCODING] Success for "$searchAddress" -> lat: $lat, lng: $lng');
             }
           } catch (e) {
-            print('[HEALTHCARE] Geocoding failed for address "$address": $e');
+            print(
+                '[HEALTHCARE] Geocoding failed or timed out for "$address": $e');
           }
         }
 
@@ -259,6 +271,7 @@ class _ClinicsPageState extends State<ClinicsPage> {
 
         fetchedListings.add(
           ClinicListing(
+            uid: doc.id,
             name: data['username'] ?? "Clinic Doctor",
             facilityName: data['facility_name'] ?? "Clinic",
             rating: ratingStr,
@@ -298,37 +311,18 @@ class _ClinicsPageState extends State<ClinicsPage> {
   List<ClinicListing> _getRankedListings(
       double userLat, double userLng, String locationName) {
     List<ClinicListing> result = _allListings.where((item) {
-      final locParts = locationName.split(',');
-      final userLocality = locParts.first.trim().toLowerCase();
-      final userCity =
-          locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
-
-      final itemLoc = item.location.toLowerCase();
-      bool isSameLocality = false;
-
-      if (userLocality.isNotEmpty || userCity.isNotEmpty) {
-        if ((userLocality.isNotEmpty && itemLoc.contains(userLocality)) ||
-            (userCity.isNotEmpty && itemLoc.contains(userCity))) {
-          isSameLocality = true;
-        }
-      }
-
-      final dist = item.distanceFrom(userLat, userLng);
-      if (!isSameLocality) {
-        if (dist == null) return false; // Can't verify radius if no distance
-        if (searchRadiusKm >= 99) {
-          if (dist > 25.0) return false;
-        } else {
-          if (dist > searchRadiusKm) return false;
-        }
-      }
-
       if (selectedTypeFilter != 'All' &&
           !item.speciality
               .toLowerCase()
               .contains(selectedTypeFilter.toLowerCase())) {
         return false;
       }
+
+      final locParts = locationName.split(',');
+      final userLocality = locParts.first.trim().toLowerCase();
+      final userCity =
+          locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
+      final itemLoc = item.location.toLowerCase();
 
       if (selectedSmartFilter == 'My Location') {
         if (!itemLoc.contains(userLocality) &&
@@ -337,12 +331,10 @@ class _ClinicsPageState extends State<ClinicsPage> {
         }
       }
 
-      final q = searchQuery.toLowerCase();
+      final q = searchQuery.trim().toLowerCase();
       if (q.isNotEmpty) {
         return item.name.toLowerCase().contains(q) ||
-            item.location.toLowerCase().contains(q) ||
-            item.facilityName.toLowerCase().contains(q) ||
-            item.speciality.toLowerCase().contains(q);
+            item.facilityName.toLowerCase().contains(q);
       }
       return true;
     }).toList();
@@ -356,7 +348,16 @@ class _ClinicsPageState extends State<ClinicsPage> {
       return distA.compareTo(distB);
     });
 
-    return result;
+    // If search is active, bypass the 10km restriction
+    if (searchQuery.trim().isNotEmpty) {
+      return result;
+    }
+
+    // Normal browsing: Show services strictly within 10km
+    return result.where((item) {
+      final dist = item.distanceFrom(userLat, userLng);
+      return dist != null && dist <= 10.0;
+    }).toList();
   }
 
   Future<void> _makeCall(String phoneNumber) async {
@@ -370,8 +371,9 @@ class _ClinicsPageState extends State<ClinicsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+    return PremiumAppBackground(
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: _buildAppBar(),
       body: Obx(() {
         final locCtrl = LocationController.to;
@@ -430,12 +432,12 @@ class _ClinicsPageState extends State<ClinicsPage> {
           ],
         );
       }),
-    );
+    ));
   }
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       elevation: 0,
       leading: const Padding(
         padding: EdgeInsets.only(left: 10.0),
@@ -455,7 +457,7 @@ class _ClinicsPageState extends State<ClinicsPage> {
 
   Widget _buildLocationBanner(String locationName) {
     return Container(
-      color: Colors.white,
+      color: Colors.transparent,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
         children: [
@@ -503,13 +505,15 @@ class _ClinicsPageState extends State<ClinicsPage> {
               ),
               child: TextField(
                 onChanged: (val) => setState(() => searchQuery = val),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   border: InputBorder.none,
-                  hintText: "Search clinics, specialities...",
-                  hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                  prefixIcon:
-                      Icon(Icons.search, color: Color(0xFF0F2E5A), size: 20),
-                  contentPadding: EdgeInsets.symmetric(vertical: 13),
+                  hintText:
+                      "Search ${widget.pageTitle.toLowerCase()}, specialities...",
+                  hintStyle:
+                      const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                  prefixIcon: const Icon(Icons.search,
+                      color: Color(0xFF0F2E5A), size: 20),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
                 ),
               ),
             ),
@@ -569,7 +573,7 @@ class _ClinicsPageState extends State<ClinicsPage> {
         children: [
           Expanded(
             child: Text(
-              "$count ${count == 1 ? 'clinic' : 'clinics'} found",
+              "$count ${count == 1 ? _getSingular(widget.pageTitle) : widget.pageTitle.toLowerCase()} found",
               style: const TextStyle(
                 color: Color(0xFF64748B),
                 fontSize: 12,
@@ -592,9 +596,9 @@ class _ClinicsPageState extends State<ClinicsPage> {
             Icon(Icons.search_off_rounded,
                 size: 64, color: Colors.grey.shade300),
             const SizedBox(height: 12),
-            const Text(
-              "No clinics found in this area",
-              style: TextStyle(
+            Text(
+              "No ${widget.pageTitle.toLowerCase()} found in this area",
+              style: const TextStyle(
                   color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
             ),
           ],
@@ -635,27 +639,31 @@ class _ClinicsPageState extends State<ClinicsPage> {
 
     return GestureDetector(
         onTap: () {
+          if (widget.healthcareType.toLowerCase() == 'pharmacy') {
+            return; // No consultation page for pharmacy
+          }
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ClinicDoctorsPage(clinic: item),
+              builder: (context) => HealthcareDoctorsPage(clinic: item),
             ),
           );
         },
         child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: 18),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(
-                      0.03), // Will leave withOpacity to avoid Flutter version compatibility issues if withAlpha isn't perfectly supported in this version's Color API.
-                  blurRadius: 10,
-                  offset: const Offset(0, 4)),
+                color: const Color(0xFF0F2E5A).withOpacity(0.05),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 8),
+              ),
             ],
-            border: Border.all(color: const Color(0xFFF1F5F9)),
+            border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -703,72 +711,80 @@ class _ClinicsPageState extends State<ClinicsPage> {
                                   color: Color(0xFF4F46E5), size: 14),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item.name,
-                          style: const TextStyle(
-                              color: Color(0xFF64748B),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item.speciality,
-                          style: const TextStyle(
-                              color: Color(0xFF059669),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.star,
-                                color: Color(0xFFFFB800), size: 13),
-                            const SizedBox(width: 3),
-                            Text(
-                              item.rating,
-                              style: const TextStyle(
-                                  color: Color(0xFF0F2E5A),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                                width: 1,
-                                height: 10,
-                                color: const Color(0xFFCBD5E1)),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.place_outlined,
-                                size: 12, color: Color(0xFF64748B)),
-                            const SizedBox(width: 3),
-                            Flexible(
-                              child: Text(
-                                item.location,
-                                overflow: TextOverflow.ellipsis,
+                        if (widget.healthcareType.toLowerCase() ==
+                            'pharmacy') ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.phone_outlined,
+                                  color: Color(0xFF64748B), size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                item.phone.replaceAll('tel:', ''),
                                 style: const TextStyle(
-                                    color: Color(0xFF64748B), fontSize: 11),
+                                    color: Color(0xFF64748B),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            item.name,
+                            style: const TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.speciality,
+                            style: const TextStyle(
+                                color: Color(0xFF059669),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.star,
+                                  color: Color(0xFFFFB800), size: 13),
+                              const SizedBox(width: 3),
+                              Text(
+                                item.rating,
+                                style: const TextStyle(
+                                    color: Color(0xFF0F2E5A),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                  width: 1,
+                                  height: 10,
+                                  color: const Color(0xFFCBD5E1)),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.place_outlined,
+                                  size: 12, color: Color(0xFF64748B)),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  item.location,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Color(0xFF64748B), fontSize: 11),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                            color: statusBg,
-                            borderRadius: BorderRadius.circular(8)),
-                        child: Text(item.status,
-                            style: TextStyle(
-                                color: statusText,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold)),
-                      ),
+                      AvailabilityBadge(scheduleString: item.availableTime),
                     ],
                   ),
                 ],

@@ -24,8 +24,21 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
   final _titleCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _categoryCtrl = TextEditingController();
+  final _pointsCtrl = TextEditingController();
 
+  List<String> _points = [];
   String _currentDocId = '';
+
+  bool get _isLaboratory {
+    if (Get.isRegistered<HealthcareDashboardController>()) {
+      final user = HealthcareDashboardController.to.userData;
+      final profession = user['profession']?.toString().toLowerCase() ?? '';
+      return profession == 'laboratory';
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -42,6 +55,14 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
       }
       _descCtrl.text =
           widget.editData!['description'] ?? widget.editData!['notes'] ?? '';
+      _priceCtrl.text = widget.editData!['price']?.toString() ?? '';
+      _categoryCtrl.text = widget.editData!['category'] ?? '';
+
+      if (widget.editData!['points'] is List) {
+        _points = List<String>.from(widget.editData!['points']);
+      } else if (widget.editData!['points'] != null) {
+        _pointsCtrl.text = widget.editData!['points'].toString();
+      }
     }
   }
 
@@ -50,6 +71,9 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
     _titleCtrl.dispose();
     _mobileCtrl.dispose();
     _descCtrl.dispose();
+    _priceCtrl.dispose();
+    _categoryCtrl.dispose();
+    _pointsCtrl.dispose();
     super.dispose();
   }
 
@@ -64,11 +88,18 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
 
       final data = {
         "title": _titleCtrl.text.trim(),
-        "description": _descCtrl.text.trim(),
-        "mobile": "+91${_mobileCtrl.text.trim()}",
         "status": "scheduled",
         "updated_at": FieldValue.serverTimestamp(),
       };
+
+      if (_isLaboratory) {
+        data["category"] = _categoryCtrl.text.trim();
+        data["price"] = _priceCtrl.text.trim();
+        data["points"] = _points;
+      } else {
+        data["description"] = _descCtrl.text.trim();
+        data["mobile"] = "+91${_mobileCtrl.text.trim()}";
+      }
 
       if (_currentDocId.isNotEmpty) {
         await FirebaseFirestore.instance
@@ -135,7 +166,9 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          widget.editDocId != null ? "Edit Consultation" : "New Consultation",
+          widget.editDocId != null
+              ? (_isLaboratory ? "Edit Test" : "Edit Consultation")
+              : (_isLaboratory ? "Add New Test" : "New Consultation"),
           style: const TextStyle(
               color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
@@ -148,29 +181,52 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildTextField(
-                  "CONSULTATION NAME / TITLE",
-                  "e.g. General Consultation",
-                  Icons.title,
-                  _titleCtrl,
-                ),
-                _buildTextField(
-                  "MOBILE NUMBER",
-                  "00000 00000",
-                  Icons.phone_outlined,
-                  _mobileCtrl,
-                  type: TextInputType.phone,
-                  prefixText: "+91 ",
-                  maxLength: 10,
-                ),
-                _buildTextField(
-                  "DESCRIPTION",
-                  "Enter symptoms, preliminary diagnosis, or special instructions...",
-                  null,
-                  _descCtrl,
-                  maxLines: 4,
-                  isRequired: false,
-                ),
+                if (_isLaboratory) ...[
+                  _buildTextField(
+                    "TEST NAME",
+                    "e.g. Complete Blood Count (CBC)",
+                    Icons.biotech,
+                    _titleCtrl,
+                  ),
+                  _buildTextField(
+                    "TEST CATEGORY",
+                    "e.g. Hematology",
+                    Icons.category,
+                    _categoryCtrl,
+                  ),
+                  _buildTextField(
+                    "PRICE (₹)",
+                    "e.g. 500",
+                    Icons.currency_rupee,
+                    _priceCtrl,
+                    type: TextInputType.number,
+                  ),
+                  _buildPointsInput(),
+                ] else ...[
+                  _buildTextField(
+                    "CONSULTATION NAME / TITLE",
+                    "e.g. General Consultation",
+                    Icons.title,
+                    _titleCtrl,
+                  ),
+                  _buildTextField(
+                    "MOBILE NUMBER",
+                    "00000 00000",
+                    Icons.phone_outlined,
+                    _mobileCtrl,
+                    type: TextInputType.phone,
+                    prefixText: "+91 ",
+                    maxLength: 10,
+                  ),
+                  _buildTextField(
+                    "DESCRIPTION",
+                    "Enter symptoms, preliminary diagnosis, or special instructions...",
+                    null,
+                    _descCtrl,
+                    maxLines: 4,
+                    isRequired: false,
+                  ),
+                ],
                 const SizedBox(height: 24),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,7 +236,9 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        "By creating this consultation, you verify that patient information is handled according to NaattuLink Clinic's healthcare privacy protocols.",
+                        _isLaboratory
+                            ? "By creating this test, you verify that patient information is handled according to NaattuLink Laboratory's privacy protocols."
+                            : "By creating this consultation, you verify that patient information is handled according to NaattuLink Clinic's healthcare privacy protocols.",
                         style: TextStyle(
                             color: Colors.grey[600], fontSize: 11, height: 1.4),
                       ),
@@ -206,8 +264,12 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
                             children: [
                               Text(
                                 widget.editDocId != null
-                                    ? 'Update Consultation'
-                                    : 'Create Consultation',
+                                    ? (_isLaboratory
+                                        ? 'Update Test'
+                                        : 'Update Consultation')
+                                    : (_isLaboratory
+                                        ? 'Add New Test'
+                                        : 'Create Consultation'),
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 15,
@@ -225,6 +287,109 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPointsInput() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RichText(
+            text: const TextSpan(
+              text: "INCLUDES",
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _pointsCtrl,
+                  decoration: InputDecoration(
+                    hintText: "Enter include...",
+                    hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                    prefixIcon: Icon(Icons.star_outline_rounded,
+                        color: Colors.grey[400], size: 20),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: Colors.grey[300]!)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: Colors.grey[300]!)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: const BorderSide(color: Color(0xFF0A235C))),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: () {
+                  final point = _pointsCtrl.text.trim();
+                  if (point.isNotEmpty) {
+                    setState(() {
+                      _points.add(point);
+                      _pointsCtrl.clear();
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A235C),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                child: const Text("Add", style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+          if (_points.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text(
+              "Added Includes:",
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _points.asMap().entries.map((entry) {
+                int idx = entry.key;
+                String point = entry.value;
+                return Chip(
+                  label: Text(point, style: const TextStyle(fontSize: 13)),
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                  onDeleted: () {
+                    setState(() {
+                      _points.removeAt(idx);
+                    });
+                  },
+                  backgroundColor: const Color(0xFFF1F5F9),
+                  side: BorderSide(color: Colors.grey[300]!),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -301,7 +466,8 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
   void _toastSuccess(String msg) {
     if (Get.context != null) {
       CherryToast.success(
-        title: const Text("Success", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Success",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         description: Text(msg),
         animationDuration: const Duration(milliseconds: 500),
         toastDuration: const Duration(seconds: 3),
@@ -312,7 +478,8 @@ class _NewConsultationPageState extends State<NewConsultationPage> {
   void _toastError(String msg) {
     if (Get.context != null) {
       CherryToast.error(
-        title: const Text("Error", style: TextStyle(fontWeight: FontWeight.bold)),
+        title:
+            const Text("Error", style: TextStyle(fontWeight: FontWeight.bold)),
         description: Text(msg),
         animationDuration: const Duration(milliseconds: 500),
         toastDuration: const Duration(seconds: 3),

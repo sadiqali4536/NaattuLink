@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
+import 'package:naattulink/MVVM/utils/service_functions/availability_utils.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'vehicles_auto_taxi_bookings/vehicle_details_page.dart';
 import 'vehicles_auto_taxi_bookings/agency_packages_page.dart';
@@ -47,6 +48,7 @@ class JcbsListing {
   final bool isOnline;
   final bool isVerified;
   final int farePerKm;
+  final String availableTime;
 
   JcbsListing({
     required this.name,
@@ -75,12 +77,13 @@ class JcbsListing {
     this.isOnline = true,
     this.isVerified = true,
     this.farePerKm = 15,
+    this.availableTime = "",
   });
 
   double distanceFrom(double userLat, double userLng) {
-    return DistanceService.calculateDistanceInKm(userLat, userLng, latitude, longitude);
+    return DistanceService.calculateDistanceInKm(
+        userLat, userLng, latitude, longitude);
   }
-
 
   int etaMinutes(double userLat, double userLng) {
     final d = distanceFrom(userLat, userLng);
@@ -224,9 +227,9 @@ class _JcbsPageState extends State<JcbsPage>
       _isLoadingListings = true;
       _locationLoading = true;
     });
-    
+
     await _initLocation();
-    
+
     if (!mounted) return;
     if (_locationName == 'Location access denied') {
       setState(() {
@@ -235,7 +238,7 @@ class _JcbsPageState extends State<JcbsPage>
       });
       return;
     }
-    
+
     await _fetchListingsFromFirestore();
   }
 
@@ -255,6 +258,12 @@ class _JcbsPageState extends State<JcbsPage>
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
+
+        // Ensure the service is active
+        final status = (data['status'] ?? '').toString().trim().toLowerCase();
+        if (status != 'active') {
+          continue;
+        }
 
         // Extracting rating info safely
         final rawRating = data['ratings'] ?? 0;
@@ -310,11 +319,17 @@ class _JcbsPageState extends State<JcbsPage>
             quoteText: "സുരക്ഷിതമായ യാത്ര ഉറപ്പ് നൽകുന്നു.",
             latitude: lat,
             longitude: lng,
-            completedTrips: 0,
-            isOnline: true,
+            completedTrips: data['completed_trips'] ?? 0,
+            isOnline: data['isOnline'] ?? false,
             farePerKm:
                 int.tryParse(data['min_charge']?.toString() ?? '15') ?? 15,
             isVerified: isVerifiedFlag,
+            isElectric:
+                data['vehicle_type']?.toString().toLowerCase() == 'electric',
+            isWomenDriver: data['gender']?.toString().toLowerCase() == 'female',
+            availableTime: data['available_time']?.toString() ??
+                data['operating_hours']?.toString() ??
+                "",
           ),
         );
       }
@@ -366,6 +381,7 @@ class _JcbsPageState extends State<JcbsPage>
         isOnline: v.isOnline,
         isVerified: v.isVerified,
         farePerKm: v.farePerKm,
+        availableTime: v.availableTime,
       );
     }).toList();
   }
@@ -422,35 +438,14 @@ class _JcbsPageState extends State<JcbsPage>
   // ─── Filtered + Ranked list ───────────────────────
   List<JcbsListing> get _rankedListings {
     List<JcbsListing> result = _allListings.where((item) {
-      // Show ONLY data that matches the user's current location strictly (String match)
-      final locParts = _locationName.split(',');
-      final userLocality = locParts.first.trim().toLowerCase();
-      final userCity =
-          locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
-
-      final itemLoc = item.location.toLowerCase();
-      // Enforce strict location filtering based on current location
-      // Allow fallback if both are empty (which shouldn't happen unless loading)
-      if (userLocality.isNotEmpty || userCity.isNotEmpty) {
-        if (!itemLoc.contains(userLocality) &&
-            (userCity.isEmpty || !itemLoc.contains(userCity))) {
-          // Additional fallback: checking if item distance is within 5km for strictly nearby stands
-          // if they used a different spellings.
-          final dist = item.distanceFrom(_userLat, _userLng);
-          if (dist > 5.0) {
-            return false;
-          }
-        }
+      final q = searchQuery.trim().toLowerCase();
+      if (q.isNotEmpty) {
+        return item.name.toLowerCase().contains(q);
       }
 
-      // Radius filter
+      // Normal browsing: Show services strictly within 10km
       final dist = item.distanceFrom(_userLat, _userLng);
-      if (searchRadiusKm >= 99) {
-        // Entire City: limit to 25 km to exclude neighboring cities/distant stands (e.g. Thalayad)
-        if (dist > 25.0) return false;
-      } else {
-        if (dist > searchRadiusKm) return false;
-      }
+      if (dist > 10.0) return false;
 
       // Type filter
       if (selectedTypeFilter != 'All' &&
@@ -459,6 +454,12 @@ class _JcbsPageState extends State<JcbsPage>
 
       // Smart filter
       if (selectedSmartFilter == 'My Location') {
+        final locParts = _locationName.split(',');
+        final userLocality = locParts.first.trim().toLowerCase();
+        final userCity =
+            locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
+        final itemLoc = item.location.toLowerCase();
+
         if (!itemLoc.contains(userLocality) &&
             (userCity.isEmpty || !itemLoc.contains(userCity))) {
           return false;
@@ -473,13 +474,6 @@ class _JcbsPageState extends State<JcbsPage>
           item.status.toLowerCase() != 'available' &&
           item.status.toLowerCase() != 'open now') return false;
 
-      // Search query
-      final q = searchQuery.toLowerCase();
-      if (q.isNotEmpty) {
-        return item.name.toLowerCase().contains(q) ||
-            item.location.toLowerCase().contains(q) ||
-            item.vehicleDetails.toLowerCase().contains(q);
-      }
       return true;
     }).toList();
 
@@ -550,9 +544,9 @@ class _JcbsPageState extends State<JcbsPage>
       backgroundColor: Colors.white,
       elevation: 0,
       leading: const Padding(
-          padding: EdgeInsets.only(left: 10.0),
-          child: AppBackButton(),
-        ),
+        padding: EdgeInsets.only(left: 10.0),
+        child: AppBackButton(),
+      ),
       centerTitle: true,
       title: const Text(
         "JCB ",
@@ -1010,18 +1004,7 @@ class _JcbsPageState extends State<JcbsPage>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                          color: statusBg,
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Text(item.status,
-                          style: TextStyle(
-                              color: statusText,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
-                    ),
+                    AvailabilityBadge(scheduleString: item.availableTime),
                     const SizedBox(height: 6),
                     Text(
                       '₹${item.farePerKm}/Hour',

@@ -38,45 +38,50 @@ class Profile extends StatelessWidget {
     }
   }
 
+  Future<Map<String, String>?> _resolveUserIdentity() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    var doc = await getUserDocument(user, 'users');
+    if (doc != null && doc.exists) return {'id': doc.id, 'collection': 'users'};
+
+    doc = await getUserDocument(user, 'healthcare');
+    if (doc != null && doc.exists)
+      return {'id': doc.id, 'collection': 'healthcare'};
+
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context).size;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-
-    if (uid == null) {
-      return const Scaffold(body: Center(child: Text("Not logged in")));
-    }
 
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 239, 239, 239),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream:
-            FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
-        builder: (context, userSnapshot) {
-          if (userSnapshot.connectionState == ConnectionState.waiting) {
+      body: FutureBuilder<Map<String, String>?>(
+        future: _resolveUserIdentity(),
+        builder: (context, futureSnapshot) {
+          if (futureSnapshot.connectionState == ConnectionState.waiting) {
             return const ProfileSkeleton();
           }
 
-          if (userSnapshot.hasData && userSnapshot.data!.exists) {
-            final data = userSnapshot.data!.data() as Map<String, dynamic>?;
-            if (data != null) {
-              return _buildProfileUI(context, mq, data);
-            }
+          if (!futureSnapshot.hasData || futureSnapshot.data == null) {
+            return const Center(child: Text('User not found'));
           }
 
-          // If not found in users, check healthcare
+          final identity = futureSnapshot.data!;
           return StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance
-                .collection('healthcare')
-                .doc(uid)
+                .collection(identity['collection']!)
+                .doc(identity['id'])
                 .snapshots(),
-            builder: (context, hcSnapshot) {
-              if (hcSnapshot.connectionState == ConnectionState.waiting) {
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
                 return const ProfileSkeleton();
               }
 
-              if (hcSnapshot.hasData && hcSnapshot.data!.exists) {
-                final data = hcSnapshot.data!.data() as Map<String, dynamic>?;
+              if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                final data = userSnapshot.data!.data() as Map<String, dynamic>?;
                 if (data != null) {
                   return _buildProfileUI(context, mq, data);
                 }

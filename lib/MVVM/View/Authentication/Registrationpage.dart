@@ -1498,6 +1498,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -1984,21 +1985,6 @@ class _RegistrationpageState extends State<Registrationpage> {
         },
       ),
       RegistrationInputField(
-        label: "EMAIL",
-        hintText: "Enter your email",
-        prefixIcon: Icons.mail_outline,
-        controller: userEmailController,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter your email';
-          }
-          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-            return 'Please enter a valid email';
-          }
-          return null;
-        },
-      ),
-      RegistrationInputField(
         label: "PHONE NUMBER",
         hintText: "Enter your phone number",
         prefixIcon: Icons.phone_outlined,
@@ -2015,6 +2001,30 @@ class _RegistrationpageState extends State<Registrationpage> {
           }
           if (!RegExp(r'^[6-9]\d{9}$').hasMatch(value)) {
             return 'Please enter a valid 10-digit Indian mobile number';
+          }
+          return null;
+        },
+      ),
+      RegistrationInputField(
+        label: "EMAIL",
+        hintText: "Enter your email",
+        prefixIcon: Icons.mail_outline,
+        controller: userEmailController,
+        suffixIcon: InkWell(
+          onTap: _handleGoogleEmailFetch,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+            child: Image.asset("assets/icons/google_logo.png",
+                height: 24, width: 24),
+          ),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter your email';
+          }
+          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+            return 'Please enter a valid email';
           }
           return null;
         },
@@ -2731,6 +2741,41 @@ class _RegistrationpageState extends State<Registrationpage> {
         );
       }
     }
+  }
+
+  Future<void> _handleGoogleEmailFetch() async {
+    debugPrint("=== GOOGLE SIGN-IN PROCESS STARTED (Registration Page) ===");
+    try {
+      debugPrint("Initializing GoogleSignIn...");
+      final googleSignIn = GoogleSignIn();
+
+      debugPrint("Calling googleSignIn.signIn()...");
+      try {
+        await googleSignIn.disconnect();
+      } catch (_) {} // Ignored if not previously signed in
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser != null) {
+        debugPrint("Google Sign-In Success: User fetched successfully");
+        debugPrint("Google User Email: ${googleUser.email}");
+        debugPrint("Google User Display Name: ${googleUser.displayName}");
+
+        setState(() {
+          userEmailController.text = googleUser.email;
+        });
+        debugPrint(
+            "Successfully populated email controller with ${googleUser.email}");
+      } else {
+        debugPrint("Google Sign-In Cancelled by the user.");
+      }
+    } catch (e, stackTrace) {
+      debugPrint("!!! GOOGLE SIGN-IN ERROR !!!");
+      debugPrint("Error Details: $e");
+      debugPrint("Stack Trace: $stackTrace");
+      Get.snackbar("Error", "Failed to fetch Google Account",
+          backgroundColor: Colors.red, colorText: Colors.white);
+    }
+    debugPrint("=== GOOGLE SIGN-IN PROCESS FINISHED (Registration Page) ===");
   }
 }
 

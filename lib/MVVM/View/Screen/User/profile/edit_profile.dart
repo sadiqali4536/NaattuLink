@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
+import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
 import 'package:naattulink/MVVM/utils/widget/formfield/customformfield.dart';
 
@@ -153,27 +154,32 @@ class _EditProfileState extends State<EditProfile> {
   }
 
   Future<void> _updateProfile() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
     String imageUrl = widget.image;
 
-    // if (_image != null) {
-    //   final ref = FirebaseStorage.instance
-    //       .ref()
-    //       .child('profile_images')
-    //       .child('$uid.jpg');
-    //   await ref.putFile(_image!);
-    //   imageUrl = await ref.getDownloadURL();
-    // }
-
-    await FirebaseFirestore.instance.collection("users").doc(uid).update({
-      "username": username.text.trim(),
-      "phone": "+91${phone.text.trim()}",
-      "email": email.text.trim(),
-      "profile_img": imageUrl,
-      "updated_at": FieldValue.serverTimestamp(),
-    });
+    var doc = await getUserDocument(user, 'users');
+    if (doc != null && doc.exists) {
+      await FirebaseFirestore.instance.collection("users").doc(doc.id).update({
+        "username": username.text.trim(),
+        "phone": "+91${phone.text.trim()}",
+        "email": email.text.trim(),
+        "profile_img": imageUrl,
+        "updated_at": FieldValue.serverTimestamp(),
+      });
+    } else {
+      doc = await getUserDocument(user, 'healthcare');
+      if (doc != null && doc.exists) {
+        await FirebaseFirestore.instance.collection("healthcare").doc(doc.id).update({
+          "username": username.text.trim(),
+          "phone": "+91${phone.text.trim()}",
+          "email": email.text.trim(),
+          "profile_img": imageUrl,
+          "updated_at": FieldValue.serverTimestamp(),
+        });
+      }
+    }
     Navigator.pop(context);
     Navigator.pop(context);
 

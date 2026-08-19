@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
+import 'package:naattulink/MVVM/utils/service_functions/availability_utils.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'vehicle_details_page.dart';
 import 'agency_packages_page.dart';
@@ -45,6 +46,7 @@ class AutoTaxiListing {
   final bool isOnline;
   final bool isVerified;
   final int farePerKm;
+  final String availableTime;
 
   AutoTaxiListing({
     required this.name,
@@ -73,6 +75,7 @@ class AutoTaxiListing {
     this.isOnline = true,
     this.isVerified = true,
     this.farePerKm = 15,
+    this.availableTime = "",
   });
 
   double distanceFrom(double userLat, double userLng) {
@@ -224,6 +227,12 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
       for (var doc in snapshot.docs) {
         final data = doc.data();
 
+        // Ensure the service is active
+        final status = (data['status'] ?? '').toString().trim().toLowerCase();
+        if (status != 'active') {
+          continue;
+        }
+
         // Extracting rating info safely
         final rawRating = data['ratings'] ?? 0;
         final totalReviews = data['total_reviews'] ?? 0;
@@ -278,11 +287,14 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
             quoteText: "സുരക്ഷിതമായ യാത്ര ഉറപ്പ് നൽകുന്നു.",
             latitude: lat,
             longitude: lng,
-            completedTrips: 0,
-            isOnline: true,
+            completedTrips: data['completed_trips'] ?? 0,
+            isElectric: data['vehicle_type']?.toString().toLowerCase() == 'electric',
+            isWomenDriver: data['gender']?.toString().toLowerCase() == 'female',
+            isOnline: data['isOnline'] ?? false,
+            isVerified: isVerifiedFlag,
+            availableTime: data['available_time']?.toString() ?? data['operating_hours']?.toString() ?? "",
             farePerKm:
                 int.tryParse(data['min_charge']?.toString() ?? '15') ?? 15,
-            isVerified: isVerifiedFlag,
           ),
         );
       }
@@ -333,6 +345,7 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
         completedTrips: v.completedTrips,
         isOnline: v.isOnline,
         isVerified: v.isVerified,
+        availableTime: v.availableTime,
         farePerKm: v.farePerKm,
       );
     }).toList();
@@ -390,35 +403,14 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
   // ─── Filtered + Ranked list ───────────────────────
   List<AutoTaxiListing> get _rankedListings {
     List<AutoTaxiListing> result = _allListings.where((item) {
-      // Show ONLY data that matches the user's current location strictly (String match)
-      final locParts = _locationName.split(',');
-      final userLocality = locParts.first.trim().toLowerCase();
-      final userCity =
-          locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
-
-      final itemLoc = item.location.toLowerCase();
-      // Enforce strict location filtering based on current location
-      // Allow fallback if both are empty (which shouldn't happen unless loading)
-      if (userLocality.isNotEmpty || userCity.isNotEmpty) {
-        if (!itemLoc.contains(userLocality) &&
-            (userCity.isEmpty || !itemLoc.contains(userCity))) {
-          // Additional fallback: checking if item distance is within 5km for strictly nearby stands
-          // if they used a different spellings.
-          final dist = item.distanceFrom(_userLat, _userLng);
-          if (dist > 5.0) {
-            return false;
-          }
-        }
+      final q = searchQuery.trim().toLowerCase();
+      if (q.isNotEmpty) {
+        return item.name.toLowerCase().contains(q);
       }
 
-      // Radius filter
+      // Normal browsing: Show services strictly within 10km
       final dist = item.distanceFrom(_userLat, _userLng);
-      if (searchRadiusKm >= 99) {
-        // Entire City: limit to 25 km to exclude neighboring cities/distant stands (e.g. Thalayad)
-        if (dist > 25.0) return false;
-      } else {
-        if (dist > searchRadiusKm) return false;
-      }
+      if (dist > 10.0) return false;
 
       // Type filter
       if (selectedTypeFilter != 'All' &&
@@ -427,6 +419,12 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
 
       // Smart filter
       if (selectedSmartFilter == 'My Location') {
+        final locParts = _locationName.split(',');
+        final userLocality = locParts.first.trim().toLowerCase();
+        final userCity =
+            locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
+        final itemLoc = item.location.toLowerCase();
+
         if (!itemLoc.contains(userLocality) &&
             (userCity.isEmpty || !itemLoc.contains(userCity))) {
           return false;
@@ -441,13 +439,6 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
           item.status.toLowerCase() != 'available' &&
           item.status.toLowerCase() != 'open now') return false;
 
-      // Search query
-      final q = searchQuery.toLowerCase();
-      if (q.isNotEmpty) {
-        return item.name.toLowerCase().contains(q) ||
-            item.location.toLowerCase().contains(q) ||
-            item.vehicleDetails.toLowerCase().contains(q);
-      }
       return true;
     }).toList();
 
@@ -980,18 +971,7 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                          color: statusBg,
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Text(item.status,
-                          style: TextStyle(
-                              color: statusText,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
-                    ),
+                    AvailabilityBadge(scheduleString: item.availableTime),
                     const SizedBox(height: 6),
                     Text(
                       '₹${item.farePerKm}/km',

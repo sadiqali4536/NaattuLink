@@ -122,7 +122,7 @@ class HealthcareWorkerProfile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildNewConsultationCard(),
+                    _buildNewConsultationCard(profession),
                     const SizedBox(height: 32),
                     const Text(
                       "Personal Information",
@@ -213,7 +213,8 @@ class HealthcareWorkerProfile extends StatelessWidget {
     );
   }
 
-  Widget _buildNewConsultationCard() {
+  Widget _buildNewConsultationCard(String profession) {
+    final isLab = profession.toLowerCase() == 'laboratory';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -246,9 +247,9 @@ class HealthcareWorkerProfile extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "New Consultation",
-                  style: TextStyle(
+                Text(
+                  isLab ? "Add New Test" : "New Consultation",
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF0A235C),
@@ -256,7 +257,9 @@ class HealthcareWorkerProfile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Connect your clinic by adding a new consultation to the registry",
+                  isLab
+                      ? "Connect your laboratory by adding a new test to the registry"
+                      : "Connect your clinic by adding a new consultation to the registry",
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.grey[500],

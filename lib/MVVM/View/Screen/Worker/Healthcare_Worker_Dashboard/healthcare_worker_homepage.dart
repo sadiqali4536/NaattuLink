@@ -44,7 +44,9 @@ class HealthcareWorkerHomepage extends StatelessWidget {
                   totalDoctors,
                   availableDoctors,
                   earnings,
-                  scheduledConsultations),
+                  scheduledConsultations,
+                  controller.consultations.length,
+                  user['profession']?.toString().toLowerCase() == 'laboratory'),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
             // Active Consultations List
@@ -88,7 +90,9 @@ class HealthcareWorkerHomepage extends StatelessWidget {
       int totalDoctors,
       int availableDoctors,
       String? earnings,
-      int scheduledConsultations) {
+      int scheduledConsultations,
+      int totalTests,
+      bool isLaboratory) {
     return Container(
       padding: EdgeInsets.fromLTRB(
           20, isKeyboardOpen ? 40 : 50, 20, isKeyboardOpen ? 15 : 30),
@@ -198,49 +202,73 @@ class HealthcareWorkerHomepage extends StatelessWidget {
           if (!isKeyboardOpen) ...[
             const SizedBox(height: 24),
             // Stats Row
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.medical_services_outlined,
-                    value: totalDoctors.toString(),
-                    label: "TOTAL DOCTORS",
-                    isYellow: false,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.person_outline_rounded,
-                    value: availableDoctors.toString(),
-                    label: "AVAILABLE DOCTORS",
-                    isYellow: true,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.event_available,
-                    value: scheduledConsultations.toString(),
-                    label: "SCHEDULED",
-                    isYellow: false,
-                  ),
-                ),
-                if (earnings != null &&
-                    earnings.isNotEmpty &&
-                    earnings != '0') ...[
-                  const SizedBox(width: 12),
+            if (isLaboratory) ...[
+              Row(
+                children: [
                   Expanded(
                     child: _buildStatCard(
-                      icon: Icons.currency_rupee,
-                      value: earnings,
-                      label: "EARNINGS",
+                      icon: Icons.category_outlined,
+                      value: "Laboratory",
+                      label: "CATEGORY",
                       isYellow: false,
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      icon: Icons.biotech,
+                      value: totalTests.toString(),
+                      label: "TOTAL TESTS",
+                      isYellow: true,
+                    ),
+                  ),
                 ],
-              ],
-            ),
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      icon: Icons.medical_services_outlined,
+                      value: totalDoctors.toString(),
+                      label: "TOTAL DOCTORS",
+                      isYellow: false,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      icon: Icons.person_outline_rounded,
+                      value: availableDoctors.toString(),
+                      label: "AVAILABLE DOCTORS",
+                      isYellow: true,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      icon: Icons.event_available,
+                      value: scheduledConsultations.toString(),
+                      label: "SCHEDULED",
+                      isYellow: false,
+                    ),
+                  ),
+                  if (earnings != null &&
+                      earnings.isNotEmpty &&
+                      earnings != '0') ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        icon: Icons.currency_rupee,
+                        value: earnings,
+                        label: "EARNINGS",
+                        isYellow: false,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
           ],
         ],
       ),
@@ -294,9 +322,12 @@ class HealthcareWorkerHomepage extends StatelessWidget {
 
   Widget _buildConsultationCard(
       BuildContext context, Map<String, dynamic> consultation) {
-    final status =
-        consultation['status']?.toString().toLowerCase() ?? 'scheduled';
+    final status = consultation['status']?.toString().toLowerCase() ?? '';
     final isScheduled = status == 'scheduled';
+
+    final user = HealthcareDashboardController.to.userData;
+    final profession = user['profession']?.toString().toLowerCase() ?? '';
+    final isLaboratory = profession == 'laboratory';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -359,6 +390,11 @@ class HealthcareWorkerHomepage extends StatelessWidget {
                     final newStatus = isScheduled ? 'unscheduled' : 'scheduled';
                     HealthcareDashboardController.to.updateConsultationStatus(
                         consultation['id'], newStatus);
+                  } else if (value == 'edit') {
+                    Get.to(() => NewConsultationPage(
+                          editDocId: consultation['id'],
+                          editData: consultation,
+                        ));
                   } else if (value == 'delete') {
                     _showDeleteDialog(context, consultation['id']);
                   }
@@ -384,6 +420,20 @@ class HealthcareWorkerHomepage extends StatelessWidget {
                     ),
                   ),
                   PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: const [
+                        Icon(Icons.edit_outlined,
+                            size: 20, color: Color(0xFF0A235C)),
+                        SizedBox(width: 12),
+                        Text("Edit",
+                            style: TextStyle(
+                                color: Color(0xFF0F172A),
+                                fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
                     value: 'delete',
                     child: Row(
                       children: const [
@@ -400,65 +450,108 @@ class HealthcareWorkerHomepage extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.phone_in_talk_outlined,
-                  size: 18, color: Color(0xFF64748B)),
-              const SizedBox(width: 6),
-              Text(
-                consultation['mobile'] ?? 'N/A',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
-              ),
-            ],
-          ),
-          if (consultation['description'] != null &&
-              consultation['description'].toString().trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
+          if (isLaboratory) ...[
+            const SizedBox(height: 4),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.description_outlined,
+                const Icon(Icons.category_outlined,
                     size: 18, color: Color(0xFF64748B)),
                 const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    consultation['description'],
-                    style:
-                        const TextStyle(color: Color(0xFF64748B), fontSize: 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  consultation['category'] ?? 'N/A',
+                  style:
+                      const TextStyle(color: Color(0xFF64748B), fontSize: 14),
                 ),
               ],
             ),
-          ],
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton(
-              onPressed: () => Get.to(() => AvailableDoctorsList(
-                    consultationId: consultation['id'] ?? '',
-                  )),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0A235C).withOpacity(0.05),
-                //const Color(0xFFEAB308),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.currency_rupee,
+                    size: 18, color: Color(0xFF64748B)),
+                const SizedBox(width: 6),
+                Text(
+                  consultation['price']?.toString() ?? 'N/A',
+                  style:
+                      const TextStyle(color: Color(0xFF64748B), fontSize: 14),
                 ),
+              ],
+            ),
+            Builder(builder: (context) {
+              final points = consultation['points'];
+              final bool hasPoints = points != null &&
+                  ((points is List && points.isNotEmpty) ||
+                      (points is String && points.trim().isNotEmpty));
+              if (!hasPoints) return const SizedBox();
+
+              final pointsText = (points is List)
+                  ? points.map((e) => '• $e').join('\n')
+                  : '• $points';
+              return _ExpandableIncludes(pointsText: pointsText);
+            }),
+          ] else ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.phone_in_talk_outlined,
+                    size: 18, color: Color(0xFF64748B)),
+                const SizedBox(width: 6),
+                Text(
+                  consultation['mobile'] ?? 'N/A',
+                  style:
+                      const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                ),
+              ],
+            ),
+            if (consultation['description'] != null &&
+                consultation['description'].toString().trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.description_outlined,
+                      size: 18, color: Color(0xFF64748B)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      consultation['description'],
+                      style: const TextStyle(
+                          color: Color(0xFF64748B), fontSize: 13),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              child: const Text(
-                "Available Doctors List",
-                style: TextStyle(
-                  color: Color(0xFF0A235C),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+            ],
+          ],
+          if (!isLaboratory) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                onPressed: () => Get.to(() => AvailableDoctorsList(
+                      consultationId: consultation['id'] ?? '',
+                    )),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A235C).withOpacity(0.05),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  "Available Doctors List",
+                  style: TextStyle(
+                    color: Color(0xFF0A235C),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -506,6 +599,90 @@ class HealthcareWorkerHomepage extends StatelessWidget {
             child: const Text("Delete",
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExpandableIncludes extends StatefulWidget {
+  final String pointsText;
+
+  const _ExpandableIncludes({Key? key, required this.pointsText})
+      : super(key: key);
+
+  @override
+  State<_ExpandableIncludes> createState() => _ExpandableIncludesState();
+}
+
+class _ExpandableIncludesState extends State<_ExpandableIncludes> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Includes",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 6),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final span = TextSpan(
+                text: widget.pointsText,
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+              );
+              final tp = TextPainter(
+                text: span,
+                maxLines: 2,
+                textDirection: TextDirection.ltr,
+              );
+              tp.layout(maxWidth: constraints.maxWidth);
+
+              final isOverflowing = tp.didExceedMaxLines;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.pointsText,
+                    style:
+                        const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                    maxLines: _isExpanded ? null : 2,
+                    overflow: _isExpanded
+                        ? TextOverflow.visible
+                        : TextOverflow.ellipsis,
+                  ),
+                  if (isOverflowing || _isExpanded)
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _isExpanded = !_isExpanded;
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Icon(
+                          _isExpanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          color: const Color(0xFF0A235C),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),

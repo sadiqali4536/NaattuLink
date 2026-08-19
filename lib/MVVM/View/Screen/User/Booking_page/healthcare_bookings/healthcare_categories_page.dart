@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'clinics_page.dart';
+import 'healthcare_page.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
 
 class HealthcareCategoriesPage extends StatelessWidget {
   const HealthcareCategoriesPage({Key? key}) : super(key: key);
@@ -9,7 +10,7 @@ class HealthcareCategoriesPage extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ClinicsPage(
+        builder: (_) => HealthcarePage(
           healthcareType: title,
           pageTitle: title,
         ),
@@ -19,10 +20,11 @@ class HealthcareCategoriesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+    return PremiumAppBackground(
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: const Padding(
           padding: EdgeInsets.only(left: 10.0),
@@ -105,7 +107,7 @@ class HealthcareCategoriesPage extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildCategoryCard(
@@ -113,35 +115,47 @@ class HealthcareCategoriesPage extends StatelessWidget {
     required String title,
     required String subtitle,
     required IconData iconData,
-    required Color iconColor,
-    required Color iconBgColor,
     required VoidCallback onTap,
+    Color iconColor = const Color(0xFF0F2E5A),
+    Color iconBgColor = const Color(0xFFEEF2FF),
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.white.withOpacity(0.9),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.06),
+              color: const Color(0xFF0F2E5A).withOpacity(0.04),
               spreadRadius: 2,
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
+          border: Border.all(color: Colors.white, width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              height: 50,
-              width: 50,
+              height: 54,
+              width: 54,
               decoration: BoxDecoration(
-                color: iconBgColor,
                 shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [iconBgColor, const Color(0xFFE2E8F0)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F2E5A).withOpacity(0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Icon(iconData, color: iconColor, size: 28),
             ),
@@ -179,36 +193,62 @@ class HealthcareCategoriesPage extends StatelessWidget {
 
   Widget _buildEmergencyCard(BuildContext context) {
     return GestureDetector(
-      onTap: () => _navigateToListing(context, "Ambulance"),
+      onTap: () {
+        // Add navigation or action here
+      },
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.42,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            colors: [const Color(0xFFFFF0F0), const Color(0xFFFFEAEA)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.red.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+          border: Border.all(color: Colors.red.withOpacity(0.15), width: 1.5),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Icon(Icons.emergency, color: Colors.red.shade700, size: 28),
-            const SizedBox(height: 20),
-            const Text(
-              "Ambulance",
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F2E5A),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.emergency, color: Colors.red, size: 32),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    "Emergency Services",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    "24/7 immediate assistance",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              "24/7 READY",
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
-              ),
-            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.red, size: 16),
           ],
         ),
       ),

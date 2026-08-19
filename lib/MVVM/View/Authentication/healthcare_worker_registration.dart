@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/healthcare_worker_dashboard.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
+
 class HealthcareWorkerRegistrationPage extends StatefulWidget {
   const HealthcareWorkerRegistrationPage({super.key});
 
@@ -230,7 +231,7 @@ class _HealthcareWorkerRegistrationPageState
                 const SizedBox(height: 24),
                 _buildDivider("${_category.toUpperCase()} DETAILS"),
                 const SizedBox(height: 16),
-                _buildTextField("Hospital / Clinic Name", "Enter facility name",
+                _buildTextField("$_category Name", "Enter facility name",
                     Icons.domain_add_outlined, _facilityNameCtrl),
                 _buildTextField(
                     "Contact Number (Landline / Secondary)",

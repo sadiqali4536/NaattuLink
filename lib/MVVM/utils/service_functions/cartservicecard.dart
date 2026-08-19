@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 import 'package:naattulink/MVVM/model/models/cart_model.dart';
 import 'package:naattulink/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';

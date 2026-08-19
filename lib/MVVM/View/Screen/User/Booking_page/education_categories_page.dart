@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/tuition_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
+
 
 class EducationCategoriesPage extends StatelessWidget {
   const EducationCategoriesPage({Key? key}) : super(key: key);
@@ -22,10 +24,11 @@ class EducationCategoriesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+    return PremiumAppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: const Padding(
           padding: EdgeInsets.only(left: 10.0),
@@ -89,7 +92,7 @@ class EducationCategoriesPage extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildCategoryCard(
@@ -104,26 +107,38 @@ class EducationCategoriesPage extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.white.withOpacity(0.9),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.06),
+              color: const Color(0xFF0F2E5A).withOpacity(0.04),
               spreadRadius: 2,
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
+          border: Border.all(color: Colors.white, width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              height: 50,
-              width: 50,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEEF2FF),
+              height: 54,
+              width: 54,
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFEEF2FF), Color(0xFFE2E8F0)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F2E5A).withOpacity(0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Icon(iconData, color: const Color(0xFF0F2E5A), size: 28),
             ),

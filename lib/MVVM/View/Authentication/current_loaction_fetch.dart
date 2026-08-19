@@ -155,18 +155,16 @@ class _FindingLocationPageState extends State<FindingLocationPage>
       return;
     }
 
-    final role = await getRole(user.uid);
+    final role = await getRole(user);
     print('[LOC] User role: $role');
 
     if (role == 'user') {
       Get.offAll(() => user_Dashboard());
     } else if (role == 'worker') {
-      final workerDoc = await FirebaseFirestore.instance
-          .collection('workers')
-          .doc(user.uid)
-          .get();
+      final workerDoc = await getUserDocument(user, 'workers');
 
-      final isVerified = workerDoc.data()?['isVerified'] == 1;
+      final isVerified =
+          (workerDoc?.data() as Map<String, dynamic>?)?['isVerified'] == 1;
       print('[LOC] Worker isVerified: $isVerified');
 
       if (isVerified) {
@@ -175,11 +173,9 @@ class _FindingLocationPageState extends State<FindingLocationPage>
         Get.offAll(() => const LoginAndSigning());
       }
     } else if (role == 'healthcare') {
-      final hcDoc = await FirebaseFirestore.instance
-          .collection('healthcare')
-          .doc(user.uid)
-          .get();
-      if (hcDoc.data()?['profession'] == 'Pharmacy') {
+      final hcDoc = await getUserDocument(user, 'healthcare');
+      if ((hcDoc?.data() as Map<String, dynamic>?)?['profession'] ==
+          'Pharmacy') {
         Get.offAll(() => user_Dashboard());
       } else {
         Get.offAll(() => const HealthcareWorkerDashboard());

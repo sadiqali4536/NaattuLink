@@ -118,7 +118,11 @@ class FirebaseAuthServices {
   // Google Sign In
   Future<String> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final googleSignIn = GoogleSignIn();
+      try {
+        await googleSignIn.disconnect();
+      } catch (_) {} // Ignored if not previously signed in
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return 'Sign-in aborted by user';
 
       final GoogleSignInAuthentication googleAuth =

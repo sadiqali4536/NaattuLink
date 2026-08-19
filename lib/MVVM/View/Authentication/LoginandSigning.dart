@@ -21,7 +21,10 @@ class LoginAndSigning extends StatefulWidget {
 class _LoginAndSigningState extends State<LoginAndSigning> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final formKey = GlobalKey<FormState>();
+
+  bool isPhoneLogin = true;
 
   @override
   Widget build(BuildContext context) {
@@ -113,24 +116,90 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
                                 ),
                                 const SizedBox(height: 25),
 
-                                // Email field
-                                Customformfield(
-                                  color: Colors.white,
-                                  borderColor: const Color(0xFFE2E8F0),
-                                  borderRadius: 15,
-                                  hinttext: "Email or Phone Number",
-                                  keyboardType: TextInputType.emailAddress,
-                                  hintstyle:
-                                      const TextStyle(color: Color(0xFF94A3B8)),
-                                  prefixicon: const Icon(Icons.mail_outline,
-                                      color: Color(0xFF94A3B8)),
-                                  controller: _emailController,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return "Required field";
-                                    }
-                                    return null;
-                                  },
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Customformfield(
+                                        color: Colors.white,
+                                        borderColor: const Color(0xFFE2E8F0),
+                                        borderRadius: 15,
+                                        hinttext: isPhoneLogin
+                                            ? "Mobile Number"
+                                            : "Email Address",
+                                        keyboardType: isPhoneLogin
+                                            ? TextInputType.phone
+                                            : TextInputType.emailAddress,
+                                        maxLength: isPhoneLogin ? 10 : null,
+                                        prefixText:
+                                            isPhoneLogin ? '+91 ' : null,
+                                        hintstyle: const TextStyle(
+                                            color: Color(0xFF94A3B8)),
+                                        prefixicon: Icon(
+                                          isPhoneLogin
+                                              ? Icons.phone_android
+                                              : Icons.mail_outline,
+                                          color: const Color(0xFF94A3B8),
+                                        ),
+                                        controller: isPhoneLogin
+                                            ? _phoneController
+                                            : _emailController,
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return "Required field";
+                                          }
+                                          if (isPhoneLogin &&
+                                              value.length != 10) {
+                                            return "Please enter a valid 10-digit number";
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          isPhoneLogin = !isPhoneLogin;
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(15),
+                                      child: Container(
+                                        height: 58,
+                                        alignment: Alignment.center,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[50],
+                                          borderRadius:
+                                              BorderRadius.circular(15),
+                                          border: Border.all(
+                                              color: const Color(0xFFE2E8F0)),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              isPhoneLogin
+                                                  ? Icons.mail_outline
+                                                  : Icons.phone_android,
+                                              color: const Color(0xFF0A235C),
+                                              size: 20,
+                                            ),
+                                            // const SizedBox(width: 6),
+                                            // Text(
+                                            //   isPhoneLogin ? "Email" : "Phone",
+                                            //   style: const TextStyle(
+                                            //     color: Color(0xFF0A235C),
+                                            //     fontWeight: FontWeight.bold,
+                                            //     fontSize: 14,
+                                            //   ),
+                                            // ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 12),
 
@@ -322,9 +391,13 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
 
   Future<void> _handleLogin() async {
     if (formKey.currentState!.validate()) {
+      final loginId = isPhoneLogin
+          ? _phoneController.text.trim()
+          : _emailController.text.trim();
+
       await AuthController.to.login(
         context,
-        _emailController.text.trim(),
+        loginId,
         _passwordController.text.trim(),
       );
     }

@@ -14,9 +14,8 @@ import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
+import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/healthcare_bookings/clinics_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/education_categories_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/public_services_categories_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/transportation_categories_page.dart';
@@ -201,25 +200,22 @@ class HomepageState extends State<Homepage> {
   }
 
   Future<void> loadUsername() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
       final collections = ['users', 'healthcare'];
       Map<String, dynamic>? data;
 
       for (String collection in collections) {
-        final doc = await FirebaseFirestore.instance
-            .collection(collection)
-            .doc(userId)
-            .get();
-        if (doc.exists) {
-          data = doc.data();
+        final doc = await getUserDocument(user, collection);
+        if (doc != null && doc.exists) {
+          data = doc.data() as Map<String, dynamic>?;
           break;
         }
       }
 
       if (data != null && mounted) {
         setState(() {
-          username = data!['username'] ?? data!['facility_name'] ?? 'User';
+          username = data!['username'] ?? data!['facility_name'] ?? '----';
         });
       } else if (mounted) {
         setState(() {
@@ -1275,59 +1271,76 @@ class HomepageState extends State<Homepage> {
                                                         ),
                                                       ),
                                                       const SizedBox(height: 2),
-                                                      Obx(() {
-                                                        final loc =
-                                                            LocationController
-                                                                .to
-                                                                .currentLocation
-                                                                .value;
-                                                        if (loc.isEmpty)
-                                                          return const SizedBox
-                                                              .shrink();
-                                                        return Row(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            const Icon(
-                                                              Icons
-                                                                  .location_on_outlined,
-                                                              color: Colors
-                                                                  .white70,
-                                                              size: 12,
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 4,
-                                                            ),
-                                                            Flexible(
-                                                              child: Text(
-                                                                loc,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                                style:
-                                                                    const TextStyle(
-                                                                  color: Colors
-                                                                      .white70,
-                                                                  fontSize: 11,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
+                                                      GestureDetector(
+                                                        onTap: () async {
+                                                          ScaffoldMessenger.of(
+                                                                  context)
+                                                              .showSnackBar(
+                                                            const SnackBar(
+                                                                content: Text(
+                                                                    'Fetching location...')),
+                                                          );
+                                                          await LocationController
+                                                              .to
+                                                              .fetchLocation(
+                                                                  forceRefresh:
+                                                                      true);
+                                                        },
+                                                        child: Obx(() {
+                                                          final loc =
+                                                              LocationController
+                                                                  .to
+                                                                  .currentLocation
+                                                                  .value;
+                                                          final displayText = loc
+                                                                  .isEmpty
+                                                              ? 'Fetch Location'
+                                                              : loc;
+                                                          return Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              const Icon(
+                                                                Icons
+                                                                    .location_on_outlined,
+                                                                color: Colors
+                                                                    .white70,
+                                                                size: 12,
+                                                              ),
+                                                              const SizedBox(
+                                                                  width: 4),
+                                                              Flexible(
+                                                                child: Text(
+                                                                  displayText,
+                                                                  overflow:
+                                                                      TextOverflow
+                                                                          .ellipsis,
+                                                                  style:
+                                                                      const TextStyle(
+                                                                    color: Colors
+                                                                        .white70,
+                                                                    fontSize:
+                                                                        11,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w500,
+                                                                  ),
                                                                 ),
                                                               ),
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 2,
-                                                            ),
-                                                            const Icon(
-                                                              Icons
-                                                                  .keyboard_arrow_down,
-                                                              color: Colors
-                                                                  .white70,
-                                                              size: 12,
-                                                            ),
-                                                          ],
-                                                        );
-                                                      }),
+                                                              const SizedBox(
+                                                                  width: 2),
+                                                              const Icon(
+                                                                Icons
+                                                                    .keyboard_arrow_down,
+                                                                color: Colors
+                                                                    .white70,
+                                                                size: 12,
+                                                              ),
+                                                            ],
+                                                          );
+                                                        }),
+                                                      ),
                                                     ],
                                                   ),
                                                 ),

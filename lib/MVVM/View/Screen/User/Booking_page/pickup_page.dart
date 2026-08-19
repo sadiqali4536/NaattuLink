@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
+import 'package:naattulink/MVVM/utils/service_functions/availability_utils.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'vehicles_auto_taxi_bookings/vehicle_details_page.dart';
 import 'vehicles_auto_taxi_bookings/agency_packages_page.dart';
@@ -47,6 +48,7 @@ class PickupListing {
   final bool isOnline;
   final bool isVerified;
   final int farePerKm;
+  final String availableTime;
 
   PickupListing({
     required this.name,
@@ -75,12 +77,13 @@ class PickupListing {
     this.isOnline = true,
     this.isVerified = true,
     this.farePerKm = 15,
+    this.availableTime = "",
   });
 
   double distanceFrom(double userLat, double userLng) {
-    return DistanceService.calculateDistanceInKm(userLat, userLng, latitude, longitude);
+    return DistanceService.calculateDistanceInKm(
+        userLat, userLng, latitude, longitude);
   }
-
 
   int etaMinutes(double userLat, double userLng) {
     final d = distanceFrom(userLat, userLng);
@@ -123,8 +126,8 @@ class PickupListing {
 // ─────────────────────────────────────────────────
 // Smart Ranking Comparator
 // ─────────────────────────────────────────────────
-int smartRank(PickupListing a, PickupListing b, double userLat,
-    double userLng, String userLocality) {
+int smartRank(PickupListing a, PickupListing b, double userLat, double userLng,
+    String userLocality) {
   final dA = a.distanceFrom(userLat, userLng);
   final dB = b.distanceFrom(userLat, userLng);
 
@@ -224,9 +227,9 @@ class _PickupPageState extends State<PickupPage>
       _isLoadingListings = true;
       _locationLoading = true;
     });
-    
+
     await _initLocation();
-    
+
     if (!mounted) return;
     if (_locationName == 'Location access denied') {
       setState(() {
@@ -235,7 +238,7 @@ class _PickupPageState extends State<PickupPage>
       });
       return;
     }
-    
+
     await _fetchListingsFromFirestore();
   }
 
@@ -256,6 +259,12 @@ class _PickupPageState extends State<PickupPage>
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
+
+        // Ensure the service is active
+        final status = (data['status'] ?? '').toString().trim().toLowerCase();
+        if (status != 'active') {
+          continue;
+        }
 
         // Extracting rating info safely
         final rawRating = data['ratings'] ?? 0;
@@ -311,11 +320,17 @@ class _PickupPageState extends State<PickupPage>
             quoteText: "സുരക്ഷിതമായ യാത്ര ഉറപ്പ് നൽകുന്നു.",
             latitude: lat,
             longitude: lng,
-            completedTrips: 0,
-            isOnline: true,
+            completedTrips: data['completed_trips'] ?? 0,
+            isOnline: data['isOnline'] ?? true,
+            isElectric:
+                data['vehicle_type']?.toString().toLowerCase() == 'electric',
+            isWomenDriver: data['gender']?.toString().toLowerCase() == 'female',
             farePerKm:
                 int.tryParse(data['min_charge']?.toString() ?? '15') ?? 15,
             isVerified: isVerifiedFlag,
+            availableTime: data['available_time']?.toString() ??
+                data['operating_hours']?.toString() ??
+                "",
           ),
         );
       }
@@ -367,6 +382,7 @@ class _PickupPageState extends State<PickupPage>
         isOnline: v.isOnline,
         isVerified: v.isVerified,
         farePerKm: v.farePerKm,
+        availableTime: v.availableTime,
       );
     }).toList();
   }
@@ -426,35 +442,14 @@ class _PickupPageState extends State<PickupPage>
   // ─── Filtered + Ranked list ───────────────────────
   List<PickupListing> get _rankedListings {
     List<PickupListing> result = _allListings.where((item) {
-      // Show ONLY data that matches the user's current location strictly (String match)
-      final locParts = _locationName.split(',');
-      final userLocality = locParts.first.trim().toLowerCase();
-      final userCity =
-          locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
-
-      final itemLoc = item.location.toLowerCase();
-      // Enforce strict location filtering based on current location
-      // Allow fallback if both are empty (which shouldn't happen unless loading)
-      if (userLocality.isNotEmpty || userCity.isNotEmpty) {
-        if (!itemLoc.contains(userLocality) &&
-            (userCity.isEmpty || !itemLoc.contains(userCity))) {
-          // Additional fallback: checking if item distance is within 5km for strictly nearby stands
-          // if they used a different spellings.
-          final dist = item.distanceFrom(_userLat, _userLng);
-          if (dist > 5.0) {
-            return false;
-          }
-        }
+      final q = searchQuery.trim().toLowerCase();
+      if (q.isNotEmpty) {
+        return item.name.toLowerCase().contains(q);
       }
 
-      // Radius filter
+      // Normal browsing: Show services strictly within 10km
       final dist = item.distanceFrom(_userLat, _userLng);
-      if (searchRadiusKm >= 99) {
-        // Entire City: limit to 25 km to exclude neighboring cities/distant stands (e.g. Thalayad)
-        if (dist > 25.0) return false;
-      } else {
-        if (dist > searchRadiusKm) return false;
-      }
+      if (dist > 10.0) return false;
 
       // Type filter
       if (selectedTypeFilter != 'All' &&
@@ -463,6 +458,12 @@ class _PickupPageState extends State<PickupPage>
 
       // Smart filter
       if (selectedSmartFilter == 'My Location') {
+        final locParts = _locationName.split(',');
+        final userLocality = locParts.first.trim().toLowerCase();
+        final userCity =
+            locParts.length > 1 ? locParts.last.trim().toLowerCase() : '';
+        final itemLoc = item.location.toLowerCase();
+
         if (!itemLoc.contains(userLocality) &&
             (userCity.isEmpty || !itemLoc.contains(userCity))) {
           return false;
@@ -477,13 +478,6 @@ class _PickupPageState extends State<PickupPage>
           item.status.toLowerCase() != 'available' &&
           item.status.toLowerCase() != 'open now') return false;
 
-      // Search query
-      final q = searchQuery.toLowerCase();
-      if (q.isNotEmpty) {
-        return item.name.toLowerCase().contains(q) ||
-            item.location.toLowerCase().contains(q) ||
-            item.vehicleDetails.toLowerCase().contains(q);
-      }
       return true;
     }).toList();
 
@@ -554,9 +548,9 @@ class _PickupPageState extends State<PickupPage>
       backgroundColor: Colors.white,
       elevation: 0,
       leading: const Padding(
-          padding: EdgeInsets.only(left: 10.0),
-          child: AppBackButton(),
-        ),
+        padding: EdgeInsets.only(left: 10.0),
+        child: AppBackButton(),
+      ),
       centerTitle: true,
       title: const Text(
         "Pickup & Pickup",
@@ -1016,18 +1010,7 @@ class _PickupPageState extends State<PickupPage>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                          color: statusBg,
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Text(item.status,
-                          style: TextStyle(
-                              color: statusText,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
-                    ),
+                    AvailabilityBadge(scheduleString: item.availableTime),
                     const SizedBox(height: 6),
                     Text(
                       '₹${item.farePerKm}/km',
@@ -1203,8 +1186,11 @@ class _PickupPageState extends State<PickupPage>
   }
 
   void _openDetails(PickupListing item) {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => VehicleDetailsPage(listing: item.toAutoTaxiListing())));
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                VehicleDetailsPage(listing: item.toAutoTaxiListing())));
   }
 
   void _showRadiusSheet() {

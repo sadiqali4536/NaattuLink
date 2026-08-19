@@ -12,6 +12,7 @@ import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/custom_image_banner2.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/custom_image_banner.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
+import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
 
 class ProfilePage extends StatefulWidget {
   String? username;
@@ -40,7 +41,8 @@ class _ProfilePageState extends State<ProfilePage> {
     if (user == null) return;
 
     try {
-      final isEmailUser = user.providerData.any((p) => p.providerId == 'password');
+      final isEmailUser =
+          user.providerData.any((p) => p.providerId == 'password');
 
       if (isEmailUser) {
         final password = await _showPasswordPromptDialog();
@@ -54,10 +56,21 @@ class _ProfilePageState extends State<ProfilePage> {
       }
 
       // Delete Firestore document first
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .delete();
+      var doc = await getUserDocument(user, 'users');
+      if (doc != null && doc.exists) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(doc.id)
+            .delete();
+      } else {
+        doc = await getUserDocument(user, 'healthcare');
+        if (doc != null && doc.exists) {
+          await FirebaseFirestore.instance
+              .collection('healthcare')
+              .doc(doc.id)
+              .delete();
+        }
+      }
 
       // Delete Firebase Auth user
       await user.delete();
@@ -86,7 +99,8 @@ class _ProfilePageState extends State<ProfilePage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Please enter your password to confirm account deletion:'),
+              const Text(
+                  'Please enter your password to confirm account deletion:'),
               const SizedBox(height: 12),
               TextField(
                 controller: passwordController,

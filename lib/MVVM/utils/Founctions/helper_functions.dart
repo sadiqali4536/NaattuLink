@@ -42,8 +42,49 @@ String formatDate(Timestamp? timestamp) {
   return formatter.format(dateTime);
 }
 
-Future<String?> getRole(String? uid) async {
-  if (uid == null) return null;
+Future<DocumentSnapshot?> getUserDocument(
+    User firebaseUser, String collection) async {
+  // 1. By UID
+  final doc = await FirebaseFirestore.instance
+      .collection(collection)
+      .doc(firebaseUser.uid)
+      .get();
+  if (doc.exists) return doc;
+
+  // 2. By Email
+  if (firebaseUser.email != null && firebaseUser.email!.isNotEmpty) {
+    final emailQuery = await FirebaseFirestore.instance
+        .collection(collection)
+        .where('email', isEqualTo: firebaseUser.email!.trim().toLowerCase())
+        .limit(1)
+        .get();
+    if (emailQuery.docs.isNotEmpty) return emailQuery.docs.first;
+  }
+
+  // 3. By Phone
+  if (firebaseUser.phoneNumber != null &&
+      firebaseUser.phoneNumber!.isNotEmpty) {
+    String phone = firebaseUser.phoneNumber!;
+    String rawPhone = phone;
+    String phoneWithPrefix = phone;
+    if (!phone.startsWith('+91')) {
+      phoneWithPrefix = '+91$phone';
+    } else {
+      rawPhone = phone.replaceFirst('+91', '');
+    }
+    final phoneQuery = await FirebaseFirestore.instance
+        .collection(collection)
+        .where('phone', whereIn: [rawPhone, phoneWithPrefix])
+        .limit(1)
+        .get();
+    if (phoneQuery.docs.isNotEmpty) return phoneQuery.docs.first;
+  }
+
+  return null;
+}
+
+Future<String?> getRole(User? firebaseUser) async {
+  if (firebaseUser == null) return null;
 
   final collections = [
     'users',
@@ -54,10 +95,11 @@ Future<String?> getRole(String? uid) async {
   ];
 
   for (String collection in collections) {
-    final doc =
-        await FirebaseFirestore.instance.collection(collection).doc(uid).get();
-    if (doc.exists && doc.data()!.containsKey('role')) {
-      return doc['role'];
+    final doc = await getUserDocument(firebaseUser, collection);
+    if (doc != null &&
+        doc.data() != null &&
+        (doc.data() as Map<String, dynamic>).containsKey('role')) {
+      return (doc.data() as Map<String, dynamic>)['role'];
     }
   }
 
