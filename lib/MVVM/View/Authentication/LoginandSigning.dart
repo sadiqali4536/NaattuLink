@@ -399,6 +399,7 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
         context,
         loginId,
         _passwordController.text.trim(),
+        isPhoneLogin,
       );
     }
   }

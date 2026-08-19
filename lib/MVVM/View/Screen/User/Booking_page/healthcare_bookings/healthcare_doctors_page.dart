@@ -198,7 +198,7 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
         ),
         title: Text(
           _selectedConsultation == null
-              ? (widget.clinic.speciality.toLowerCase() == 'laboratory'
+              ? (widget.clinic.profession.toLowerCase() == 'laboratory'
                   ? "Available Tests"
                   : "Consultations")
               : "Available Doctors",
@@ -220,7 +220,7 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: _selectedConsultation == null
-                    ? (widget.clinic.speciality.toLowerCase() == 'laboratory'
+                    ? (widget.clinic.profession.toLowerCase() == 'laboratory'
                         ? "Search tests..."
                         : "Search consultations...")
                     : "Search doctors or specialization...",
@@ -279,7 +279,7 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
       padding: const EdgeInsets.all(20),
       itemCount: _filteredConsultations.length,
       itemBuilder: (context, index) {
-        final isLab = widget.clinic.speciality.toLowerCase() == 'laboratory';
+        final isLab = widget.clinic.profession.toLowerCase() == 'laboratory';
         final cons = _filteredConsultations[index];
         final title =
             cons['title'] ?? (isLab ? 'Unknown Test' : 'Unknown Consultation');
@@ -295,7 +295,7 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
         }
 
         return GestureDetector(
-          onTap: () => _fetchDoctors(cons),
+          onTap: isLab ? null : () => _fetchDoctors(cons),
           child: Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(20),
@@ -337,9 +337,13 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Icon(Icons.assignment_ind_outlined,
-                        color: Color(0xFF4F46E5), size: 26),
+                  child: Center(
+                    child: Icon(
+                        isLab
+                            ? Icons.science_outlined
+                            : Icons.assignment_ind_outlined,
+                        color: const Color(0xFF4F46E5),
+                        size: 26),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -360,23 +364,14 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
                               ),
                             ),
                           ),
-                          if (price.isNotEmpty)
-                            Text(
-                              "₹$price",
-                              style: const TextStyle(
-                                color: Color(0xFF22C55E),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
                         ],
                       ),
-                      if (category.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: [
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          if (category.isNotEmpty)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
@@ -393,31 +388,44 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 10),
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 12,
-                        runSpacing: 4,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.phone_outlined,
-                                  color: textGrey, size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                mobile,
-                                style: TextStyle(
-                                  color: textGrey,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                          if (price.isNotEmpty)
+                            Text(
+                              "₹$price",
+                              style: const TextStyle(
+                                color: Color(0xFF22C55E),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
                               ),
-                            ],
-                          ),
+                            ),
+                          if (['hospital', 'clinic']
+                              .contains(widget.clinic.profession.toLowerCase()))
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.medical_services_outlined,
+                                    color: Color(0xFF059669),
+                                    size: 12,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "$doctorCount Available Doctor${doctorCount == 1 ? '' : 's'}",
+                                    style: const TextStyle(
+                                      color: Color(0xFF059669),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                       if (pointsList.isNotEmpty) ...[
@@ -488,10 +496,11 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
                     ],
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(left: 8.0, top: 16),
-                  child: Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
-                ),
+                if (!isLab)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8.0, top: 16),
+                    child: Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  ),
               ],
             ),
           ),

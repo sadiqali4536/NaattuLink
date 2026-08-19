@@ -174,8 +174,9 @@ class _FindingLocationPageState extends State<FindingLocationPage>
       }
     } else if (role == 'healthcare') {
       final hcDoc = await getUserDocument(user, 'healthcare');
-      if ((hcDoc?.data() as Map<String, dynamic>?)?['profession'] ==
-          'Pharmacy') {
+      final profession =
+          (hcDoc?.data() as Map<String, dynamic>?)?['profession'];
+      if (profession == 'Pharmacy' || profession == 'Emergency Services') {
         Get.offAll(() => user_Dashboard());
       } else {
         Get.offAll(() => const HealthcareWorkerDashboard());

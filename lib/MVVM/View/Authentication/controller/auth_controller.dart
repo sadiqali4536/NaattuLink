@@ -10,6 +10,7 @@ import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashb
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/bus_worker_dashboard.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/healthcare_worker_dashboard.dart';
+import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 
 import 'package:get_storage/get_storage.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
@@ -150,8 +151,9 @@ class AuthController extends GetxController {
         }
       } else if (foundCollection == 'healthcare') {
         final profession = data['profession'] ?? '';
-        if (profession == 'Pharmacy') {
-          Get.offAll(() => const FindingLocationPage());
+        debugPrint("ROUTING HEALTHCARE USER. Profession is: '\$profession'");
+        if (profession == 'Pharmacy' || profession == 'Emergency Services') {
+          Get.offAll(() => const user_Dashboard());
         } else {
           Get.offAll(() => const HealthcareWorkerDashboard());
         }
@@ -165,27 +167,32 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<void> login(
-      BuildContext context, String identifier, String password) async {
+  Future<void> login(BuildContext context, String identifier, String password,
+      bool isPhoneLogin) async {
     _isLoading.value = true;
     try {
       String loginId = identifier.trim().toLowerCase();
-      bool isEmail = loginId.contains('@');
+      bool isEmail = !isPhoneLogin;
 
-      debugPrint("=== NORMAL LOGIN STARTED ===");
-      debugPrint("Identifier: $loginId, isEmail: $isEmail");
+      debugPrint("=== LOGIN STARTED ===");
+      debugPrint("Current Login Mode: ${isPhoneLogin ? 'PHONE' : 'EMAIL'}");
+      debugPrint("Entered Identifier: $loginId");
+      debugPrint("Entered Password: [HIDDEN]");
 
       String authEmail = loginId;
 
-      // STEP 1: Search the 'users' collection to verify existence & role
       QuerySnapshot userQuery;
       if (isEmail) {
+        debugPrint("\nEMAIL LOGIN:");
+        debugPrint("Normalized email: $loginId");
+        debugPrint("Checking email in users collection...");
         userQuery = await FirebaseFirestore.instance
             .collection('users')
             .where('email', isEqualTo: loginId)
             .get();
       } else {
-        // Phone login - search by phone number with and without +91 prefix
+        debugPrint("\nPHONE LOGIN:");
+        debugPrint("Checking phone number in users collection...");
         String phoneWithPrefix = loginId;
         String rawPhone = loginId;
         if (!loginId.startsWith('+91')) {
@@ -199,11 +206,12 @@ class AuthController extends GetxController {
             .where('phone', whereIn: [rawPhone, phoneWithPrefix]).get();
       }
 
-      if (userQuery.docs.isNotEmpty) {
+      bool userFound = userQuery.docs.isNotEmpty;
+      debugPrint("User found: $userFound");
+
+      if (userFound) {
         final userDoc = userQuery.docs.first;
         final userData = userDoc.data() as Map<String, dynamic>;
-
-        debugPrint("User found in 'users' collection. ID: ${userDoc.id}");
 
         if (userData['role'] != 'user') {
           debugPrint("Access Denied: Role is ${userData['role']}, not 'user'");
@@ -212,90 +220,45 @@ class AuthController extends GetxController {
         }
 
         if (!isEmail) {
-          // If it was a phone login, we need to extract their actual email
-          // to perform Firebase Authentication
           authEmail = userData['email'] ?? '';
-          debugPrint("Mapped phone to email: $authEmail");
+          debugPrint("Registered email found: $authEmail");
           if (authEmail.isEmpty) {
             toastError("No email associated with this phone number.");
             return;
           }
         }
+        debugPrint("Starting Firebase authentication...");
       } else {
-        // User not found in 'users' collection.
-        // Let's check if they exist in another collection to show the right error.
-        debugPrint(
-            "User not found in 'users' collection. Checking other collections...");
-        bool isOtherRole = false;
-        final collections = [
-          'workers',
-          'transports',
-          'healthcare',
-          'shops_businesses'
-        ];
-
-        for (var col in collections) {
-          QuerySnapshot otherQuery;
-          if (isEmail) {
-            otherQuery = await FirebaseFirestore.instance
-                .collection(col)
-                .where('email', isEqualTo: loginId)
-                .get();
-          } else {
-            String phoneWithPrefix = loginId;
-            String rawPhone = loginId;
-            if (!loginId.startsWith('+91')) {
-              phoneWithPrefix = '+91$loginId';
-            } else {
-              rawPhone = loginId.replaceFirst('+91', '');
-            }
-
-            otherQuery = await FirebaseFirestore.instance
-                .collection(col)
-                .where('phone', whereIn: [rawPhone, phoneWithPrefix]).get();
-          }
-
-          if (otherQuery.docs.isNotEmpty) {
-            isOtherRole = true;
-            break;
-          }
-        }
-
-        if (isOtherRole) {
-          debugPrint(
-              "Final Login Decision: ACCESS DENIED (User is in another collection)");
-          toastError("Access Denied. This login is for normal users only.");
-        } else {
-          debugPrint("Final Login Decision: USER NOT FOUND");
-          toastError("User not found. Please register first.");
-          Get.to(() => const Registrationpage());
-        }
+        debugPrint("Final Navigation: REGISTRATION");
+        toastError("User not found. Please register first.");
+        Get.to(() => const Registrationpage());
         return; // Stop login process
       }
 
       // STEP 2: Authenticate with Firebase Auth
-      debugPrint(
-          "Proceeding to Firebase Authentication with email: $authEmail");
       final userCredential =
           await _authServices.signIn(context, authEmail, password);
 
       if (userCredential != null && userCredential.user != null) {
         final user = userCredential.user!;
-        debugPrint("Firebase Authentication SUCCESS! UID: ${user.uid}");
+        debugPrint("Firebase Authentication Result: SUCCESS");
+        debugPrint("Firebase UID: ${user.uid}");
+        debugPrint("User Role: user");
+        debugPrint("Final Navigation: USER HOME");
         toastSuccess("Login Successful!");
         await routeAuthenticatedUser(user);
       } else {
-        debugPrint("Firebase Authentication FAILED.");
+        debugPrint("Firebase Authentication Result: FAILED");
+        debugPrint("Final Navigation: LOGIN ERROR");
       }
     } catch (e, stackTrace) {
       final message = FirebaseErrorHandler.getReadableErrorMessage(e);
-      debugPrint("!!! NORMAL LOGIN EXCEPTION !!!");
+      debugPrint("Firebase Authentication Result: FAILED");
       debugPrint("Error Details: $e");
-      debugPrint("Stack Trace: $stackTrace");
+      debugPrint("Final Navigation: LOGIN ERROR");
       toastError(message);
     } finally {
       _isLoading.value = false;
-      debugPrint("=== NORMAL LOGIN FINISHED ===");
     }
   }
 
@@ -319,78 +282,51 @@ class AuthController extends GetxController {
       debugPrint("Normalized Email: $selectedEmail");
       debugPrint("Checking users collection...");
 
-      // STEP 3: Check users collection FIRST by email
-      final userQuery = await FirebaseFirestore.instance
-          .collection('users')
-          .where('email', isEqualTo: selectedEmail)
-          .get();
+      // Check all collections for the email
+      final collections = [
+        'users',
+        'workers',
+        'transports',
+        'healthcare',
+        'shops_businesses'
+      ];
 
-      debugPrint("Users Found Count: \${userQuery.docs.length}");
-
-      if (userQuery.docs.isNotEmpty) {
-        final userDoc = userQuery.docs.first;
-        final userData = userDoc.data();
-
-        debugPrint("User Document ID: \${userDoc.id}");
-        debugPrint("User Data: \$userData");
-        debugPrint("User Role: \${userData['role']}");
-
-        if (userData['role'] == 'user') {
-          // Proceed with Firebase Auth
-          debugPrint("Firebase Authentication Started...");
-          final GoogleSignInAuthentication googleAuth =
-              await googleUser.authentication;
-          final credential = GoogleAuthProvider.credential(
-            accessToken: googleAuth.accessToken,
-            idToken: googleAuth.idToken,
-          );
-
-          final userCredential =
-              await FirebaseAuth.instance.signInWithCredential(credential);
-
-          debugPrint("Firebase UID: \${userCredential.user?.uid}");
-          debugPrint("Final Login Decision: SUCCESS");
-
-          toastSuccess("Google Login Successful!");
-          await routeAuthenticatedUser(userCredential.user!);
-        } else {
-          // Existing user but not role 'user'
-          debugPrint("Final Login Decision: ACCESS DENIED");
-          toastError("Access Denied. This login is for normal users only.");
-          await googleSignIn.signOut();
+      bool found = false;
+      for (var col in collections) {
+        final query = await FirebaseFirestore.instance
+            .collection(col)
+            .where('email', isEqualTo: selectedEmail)
+            .get();
+        if (query.docs.isNotEmpty) {
+          found = true;
+          debugPrint("User found in collection: \$col");
+          break;
         }
+      }
+
+      if (found) {
+        // Proceed with Firebase Auth
+        debugPrint("Firebase Authentication Started...");
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        final userCredential =
+            await FirebaseAuth.instance.signInWithCredential(credential);
+
+        debugPrint("Firebase UID: \${userCredential.user?.uid}");
+        debugPrint("Final Login Decision: SUCCESS");
+
+        toastSuccess("Google Login Successful!");
+        await routeAuthenticatedUser(userCredential.user!);
       } else {
-        // User not found in 'users' collection.
-        // Let's check other collections just to show specific error message.
-        bool isOtherRole = false;
-        final collections = [
-          'workers',
-          'transports',
-          'healthcare',
-          'shops_businesses'
-        ];
-
-        for (var col in collections) {
-          final otherQuery = await FirebaseFirestore.instance
-              .collection(col)
-              .where('email', isEqualTo: selectedEmail)
-              .get();
-          if (otherQuery.docs.isNotEmpty) {
-            isOtherRole = true;
-            break;
-          }
-        }
-
         await googleSignIn.signOut();
-
-        if (isOtherRole) {
-          debugPrint("Final Login Decision: ACCESS DENIED");
-          toastError("Access Denied. This login is for normal users only.");
-        } else {
-          debugPrint("Final Login Decision: USER NOT FOUND");
-          toastError("User not found. Please register first.");
-          Get.to(() => const Registrationpage());
-        }
+        debugPrint("Final Login Decision: USER NOT FOUND");
+        toastError("User not found. Please register first.");
+        Get.to(() => const Registrationpage());
       }
     } catch (e, stackTrace) {
       final message = FirebaseErrorHandler.getReadableErrorMessage(e);

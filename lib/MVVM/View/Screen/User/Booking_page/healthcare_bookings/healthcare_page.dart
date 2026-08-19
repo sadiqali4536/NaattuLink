@@ -35,6 +35,7 @@ class ClinicListing {
   final double? longitude;
   final int totalReviews;
   final bool isVerified;
+  final String profession;
 
   ClinicListing({
     required this.uid,
@@ -48,6 +49,7 @@ class ClinicListing {
     required this.speciality,
     required this.availableTime,
     required this.quoteText,
+    required this.profession,
     this.latitude,
     this.longitude,
     this.totalReviews = 0,
@@ -288,6 +290,7 @@ class _HealthcarePageState extends State<HealthcarePage> {
             longitude: lng,
             totalReviews: int.tryParse(totalReviews.toString()) ?? 0,
             isVerified: isVerifiedFlag,
+            profession: firebaseType,
           ),
         );
       }
@@ -507,8 +510,9 @@ class _HealthcarePageState extends State<HealthcarePage> {
                 onChanged: (val) => setState(() => searchQuery = val),
                 decoration: InputDecoration(
                   border: InputBorder.none,
-                  hintText:
-                      "Search ${widget.pageTitle.toLowerCase()}, specialities...",
+                  hintText: widget.healthcareType == "Emergency Services"
+                      ? "Search emergency services..."
+                      : "Search ${widget.pageTitle.toLowerCase()}, specialities...",
                   hintStyle:
                       const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                   prefixIcon: const Icon(Icons.search,

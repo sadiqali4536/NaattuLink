@@ -20,13 +20,17 @@ class ProfilePage extends StatefulWidget {
   String? email;
   String? phone;
   String? image;
+  String? role;
+  String? profession;
   ProfilePage(
       {super.key,
       required this.username,
       required this.createDate,
       required this.email,
       required this.phone,
-      required this.image});
+      required this.image,
+      this.role,
+      this.profession});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -187,6 +191,36 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
               ),
             ),
+            if (widget.role == 'healthcare' &&
+                widget.profession == 'Emergency Services') ...[
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.only(left: 60),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade700,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.emergency_outlined,
+                          color: Colors.white, size: 14),
+                      SizedBox(width: 4),
+                      Text(
+                        "Emergency Services",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 15),
             Expanded(
               child: Container(

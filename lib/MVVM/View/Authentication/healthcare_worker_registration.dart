@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/healthcare_worker_dashboard.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
@@ -25,6 +26,7 @@ class _HealthcareWorkerRegistrationPageState
   final _mobileCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
 
   final _facilityNameCtrl = TextEditingController();
@@ -40,6 +42,7 @@ class _HealthcareWorkerRegistrationPageState
     _mobileCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     _addressCtrl.dispose();
     _facilityNameCtrl.dispose();
     _contactNumberCtrl.dispose();
@@ -106,7 +109,8 @@ class _HealthcareWorkerRegistrationPageState
         return;
       }
 
-      if (_openTime == null || _closeTime == null) {
+      if (_category != 'Emergency Services' &&
+          (_openTime == null || _closeTime == null)) {
         _toastError("Open Time and Close Time are required.");
         setState(() => _isLoading = false);
         return;
@@ -168,7 +172,7 @@ class _HealthcareWorkerRegistrationPageState
       });
 
       _toastSuccess("Account created successfully. Awaiting admin approval.");
-      if (_category == 'Pharmacy') {
+      if (_category == 'Pharmacy' || _category == 'Emergency Services') {
         Get.offAll(() => const user_Dashboard());
       } else {
         Get.offAll(() => const HealthcareWorkerDashboard());
@@ -228,53 +232,82 @@ class _HealthcareWorkerRegistrationPageState
                 ),
                 const SizedBox(height: 12),
                 _buildCategorySelector(),
-                const SizedBox(height: 24),
-                _buildDivider("${_category.toUpperCase()} DETAILS"),
-                const SizedBox(height: 16),
-                _buildTextField("$_category Name", "Enter facility name",
-                    Icons.domain_add_outlined, _facilityNameCtrl),
-                _buildTextField(
-                    "Contact Number (Landline / Secondary)",
-                    "00000 00000",
-                    Icons.phone_in_talk_outlined,
-                    _contactNumberCtrl,
-                    type: TextInputType.phone,
-                    prefixText: '+91 ',
-                    maxLength: 10,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    validator: (v) {
-                  if (v == null || v.isEmpty) return 'Required field';
-                  if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v)) {
-                    return 'Invalid 10-digit Indian mobile number';
-                  }
-                  return null;
-                }),
-                const SizedBox(height: 8),
-                const Text(
-                  "Available Time",
-                  style: TextStyle(
-                      color: Color(0xFF0A235C),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(child: _buildTimePickerBox(true)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildTimePickerBox(false)),
-                  ],
-                ),
+                if (_category != 'Emergency Services') ...[
+                  const SizedBox(height: 24),
+                  _buildDivider("${_category.toUpperCase()} DETAILS"),
+                  const SizedBox(height: 16),
+                  _buildTextField("$_category Name", "Enter facility name",
+                      Icons.domain_add_outlined, _facilityNameCtrl),
+                  _buildTextField(
+                      "Contact Number (Landline / Secondary)",
+                      "00000 00000",
+                      Icons.phone_in_talk_outlined,
+                      _contactNumberCtrl,
+                      type: TextInputType.phone,
+                      prefixText: '+91 ',
+                      maxLength: 10,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: (v) {
+                    if (v == null || v.isEmpty) return 'Required field';
+                    if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v)) {
+                      return 'Invalid 10-digit Indian mobile number';
+                    }
+                    return null;
+                  }),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Available Time",
+                    style: TextStyle(
+                        color: Color(0xFF0A235C),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(child: _buildTimePickerBox(true)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildTimePickerBox(false)),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 24),
                 _buildDivider("ACCOUNT DETAILS"),
                 const SizedBox(height: 16),
                 _buildTextField("Email Address", "Enter your email",
                     Icons.email_outlined, _emailCtrl,
-                    type: TextInputType.emailAddress),
+                    type: TextInputType.emailAddress,
+                    suffixIcon: IconButton(
+                      icon: Image.asset('assets/icons/google_logo.png',
+                          width: 24, height: 24),
+                      onPressed: () async {
+                        try {
+                          final googleSignIn = GoogleSignIn();
+                          try {
+                            await googleSignIn.disconnect();
+                          } catch (_) {}
+                          final googleUser = await googleSignIn.signIn();
+                          if (googleUser != null) {
+                            setState(() {
+                              _emailCtrl.text = googleUser.email;
+                            });
+                          }
+                        } catch (e) {
+                          debugPrint("Google Sign In Error: $e");
+                        }
+                      },
+                    )),
                 _buildTextField("Password", "Create a secure password",
                     Icons.lock_outline, _passwordCtrl,
                     isPassword: true),
+                _buildTextField("Confirm Password", "Re-enter your password",
+                    Icons.lock_outline, _confirmPasswordCtrl, isPassword: true,
+                    validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required field';
+                  if (v != _passwordCtrl.text) return 'Passwords do not match';
+                  return null;
+                }),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
@@ -459,7 +492,8 @@ class _HealthcareWorkerRegistrationPageState
       String? prefixText,
       int? maxLength,
       List<TextInputFormatter>? inputFormatters,
-      String? Function(String?)? validator}) {
+      String? Function(String?)? validator,
+      Widget? suffixIcon}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -490,6 +524,7 @@ class _HealthcareWorkerRegistrationPageState
               prefixIcon: icon != null
                   ? Icon(icon, color: Colors.grey[400], size: 20)
                   : null,
+              suffixIcon: suffixIcon,
               filled: true,
               fillColor: Colors.white,
               contentPadding:
@@ -529,6 +564,12 @@ class _HealthcareWorkerRegistrationPageState
             Expanded(child: _buildRadioOption("Pharmacy")),
             const SizedBox(width: 12),
             Expanded(child: _buildRadioOption("Laboratory")),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _buildRadioOption("Emergency Services")),
           ],
         ),
       ],

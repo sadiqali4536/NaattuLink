@@ -194,7 +194,15 @@ class HealthcareCategoriesPage extends StatelessWidget {
   Widget _buildEmergencyCard(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Add navigation or action here
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HealthcarePage(
+              healthcareType: "Emergency Services",
+              pageTitle: "Emergency Services",
+            ),
+          ),
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(20),

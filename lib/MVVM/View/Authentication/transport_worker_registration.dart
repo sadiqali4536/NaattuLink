@@ -11,6 +11,7 @@ import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/bus_worker_dashboard.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
 
@@ -415,7 +416,28 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
           return null;
         }),
         _F('Email Address', 'Enter email', Icons.email_outlined, _emailCtrl,
-            isRequired: true, type: TextInputType.emailAddress),
+            isRequired: true,
+            type: TextInputType.emailAddress,
+            suffixIcon: IconButton(
+              icon: Image.asset('assets/icons/google_logo.png',
+                  width: 24, height: 24),
+              onPressed: () async {
+                try {
+                  final googleSignIn = GoogleSignIn();
+                  try {
+                    await googleSignIn.disconnect();
+                  } catch (_) {}
+                  final googleUser = await googleSignIn.signIn();
+                  if (googleUser != null) {
+                    setState(() {
+                      _emailCtrl.text = googleUser.email;
+                    });
+                  }
+                } catch (e) {
+                  debugPrint("Google Sign In Error: $e");
+                }
+              },
+            )),
         _F('Password', 'Enter password', Icons.lock_outline, _passwordCtrl,
             isRequired: true, isPassword: true),
         _F('Role with the vehicle', 'Enter your role with the vehicle',
@@ -645,7 +667,28 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
           return null;
         }),
         _F('Email Address', 'Enter email', Icons.email_outlined, _emailCtrl,
-            isRequired: true, type: TextInputType.emailAddress),
+            isRequired: true,
+            type: TextInputType.emailAddress,
+            suffixIcon: IconButton(
+              icon: Image.asset('assets/icons/google_logo.png',
+                  width: 24, height: 24),
+              onPressed: () async {
+                try {
+                  final googleSignIn = GoogleSignIn();
+                  try {
+                    await googleSignIn.disconnect();
+                  } catch (_) {}
+                  final googleUser = await googleSignIn.signIn();
+                  if (googleUser != null) {
+                    setState(() {
+                      _emailCtrl.text = googleUser.email;
+                    });
+                  }
+                } catch (e) {
+                  debugPrint("Google Sign In Error: $e");
+                }
+              },
+            )),
         _F('Password', 'Enter password', Icons.lock_outline, _passwordCtrl,
             isRequired: true, isPassword: true),
         _F('Role with the vehicle', 'Enter your role with the vehicle',
@@ -981,8 +1024,10 @@ class _F extends StatefulWidget {
       this.prefixText,
       this.maxLength,
       this.inputFormatters,
+      this.suffixIcon,
       this.textCapitalization = TextCapitalization.none});
 
+  final Widget? suffixIcon;
   final String? prefixText;
   final int? maxLength;
   final List<TextInputFormatter>? inputFormatters;
@@ -1066,7 +1111,9 @@ class _FState extends State<_F> {
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
                   color: const Color(0xFF94A3B8),
-                  size: 18)),
+                  size: 18))
+        else if (widget.suffixIcon != null)
+          widget.suffixIcon!,
       ]),
     );
   }
@@ -1315,7 +1362,28 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
           return null;
         }),
         _F("Email Address", "Enter email", Icons.email_outlined, _emailCtrl,
-            isRequired: true, type: TextInputType.emailAddress),
+            isRequired: true,
+            type: TextInputType.emailAddress,
+            suffixIcon: IconButton(
+              icon: Image.asset('assets/icons/google_logo.png',
+                  width: 24, height: 24),
+              onPressed: () async {
+                try {
+                  final googleSignIn = GoogleSignIn();
+                  try {
+                    await googleSignIn.disconnect();
+                  } catch (_) {}
+                  final googleUser = await googleSignIn.signIn();
+                  if (googleUser != null) {
+                    setState(() {
+                      _emailCtrl.text = googleUser.email;
+                    });
+                  }
+                } catch (e) {
+                  debugPrint("Google Sign In Error: $e");
+                }
+              },
+            )),
         _F("Password", "Enter password", Icons.lock_outline, _passwordCtrl,
             isRequired: true, isPassword: true),
         _F("Role with the vehicle", "Enter your role with the vehicle",

@@ -9,6 +9,7 @@ import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
 import 'package:naattulink/MVVM/utils/widget/formfield/customformfield.dart';
+import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 
 class EditProfile extends StatefulWidget {
   String username;
@@ -171,7 +172,10 @@ class _EditProfileState extends State<EditProfile> {
     } else {
       doc = await getUserDocument(user, 'healthcare');
       if (doc != null && doc.exists) {
-        await FirebaseFirestore.instance.collection("healthcare").doc(doc.id).update({
+        await FirebaseFirestore.instance
+            .collection("healthcare")
+            .doc(doc.id)
+            .update({
           "username": username.text.trim(),
           "phone": "+91${phone.text.trim()}",
           "email": email.text.trim(),
@@ -183,9 +187,7 @@ class _EditProfileState extends State<EditProfile> {
     Navigator.pop(context);
     Navigator.pop(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profile updated successfully")),
-    );
+    toastSuccess("Profile updated successfully");
   }
 
   @override

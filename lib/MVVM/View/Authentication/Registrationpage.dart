@@ -2011,7 +2011,7 @@ class _RegistrationpageState extends State<Registrationpage> {
         prefixIcon: Icons.mail_outline,
         controller: userEmailController,
         suffixIcon: InkWell(
-          onTap: _handleGoogleEmailFetch,
+          onTap: () => _handleGoogleEmailFetch(userEmailController),
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
@@ -2415,6 +2415,10 @@ class _RegistrationpageState extends State<Registrationpage> {
         controller: workerEmailController,
         keyboardType: TextInputType.emailAddress,
         isRequired: true,
+        suffixIcon: IconButton(
+          icon: Image.asset('assets/icons/google_logo.png', width: 24, height: 24),
+          onPressed: () => _handleGoogleEmailFetch(workerEmailController),
+        ),
         validator: (value) {
           if (value == null || value.isEmpty) {
             return 'Please enter your email';
@@ -2743,7 +2747,7 @@ class _RegistrationpageState extends State<Registrationpage> {
     }
   }
 
-  Future<void> _handleGoogleEmailFetch() async {
+  Future<void> _handleGoogleEmailFetch(TextEditingController controller) async {
     debugPrint("=== GOOGLE SIGN-IN PROCESS STARTED (Registration Page) ===");
     try {
       debugPrint("Initializing GoogleSignIn...");
@@ -2761,7 +2765,7 @@ class _RegistrationpageState extends State<Registrationpage> {
         debugPrint("Google User Display Name: ${googleUser.displayName}");
 
         setState(() {
-          userEmailController.text = googleUser.email;
+          controller.text = googleUser.email;
         });
         debugPrint(
             "Successfully populated email controller with ${googleUser.email}");

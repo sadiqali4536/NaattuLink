@@ -255,6 +255,7 @@ class HomepageState extends State<Homepage> {
   /// Called by user_Dashboard via GlobalKey when the Home tab is tapped.
   /// Resets the top category to "For You" and smoothly scrolls to the top.
   void resetToForYou() {
+    loadUsername(); // Refresh the username
     setState(() {
       selectedCategoryIndex = 0;
       _selectedAdCategory = 'All';
@@ -1661,13 +1662,11 @@ class HomepageState extends State<Homepage> {
                   fit: BoxFit.fitWidth,
                   loadingBuilder: (_, child, progress) {
                     if (progress == null) return child;
-                    return Container(
-                      color: const Color(0xFF1E1E1E),
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFFFFB800),
-                        ),
+                    return const ShimmerEffect(
+                      child: SkeletonPlaceholder(
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: 12,
                       ),
                     );
                   },

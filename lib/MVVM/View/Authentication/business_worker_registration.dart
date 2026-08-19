@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
 
@@ -214,7 +215,27 @@ class _BusinessWorkerRegistrationPageState
                 const SizedBox(height: 16),
                 _buildTextField("Email Address", "Enter your email",
                     Icons.email_outlined, _emailCtrl,
-                    type: TextInputType.emailAddress),
+                    type: TextInputType.emailAddress,
+                    suffixIcon: IconButton(
+                      icon: Image.asset('assets/icons/google_logo.png',
+                          width: 24, height: 24),
+                      onPressed: () async {
+                        try {
+                          final googleSignIn = GoogleSignIn();
+                          try {
+                            await googleSignIn.disconnect();
+                          } catch (_) {}
+                          final googleUser = await googleSignIn.signIn();
+                          if (googleUser != null) {
+                            setState(() {
+                              _emailCtrl.text = googleUser.email;
+                            });
+                          }
+                        } catch (e) {
+                          debugPrint("Google Sign In Error: $e");
+                        }
+                      },
+                    )),
                 _buildTextField("Password", "Create a secure password",
                     Icons.lock_outline, _passwordCtrl,
                     isPassword: true),
@@ -409,7 +430,8 @@ class _BusinessWorkerRegistrationPageState
       String? prefixText,
       int? maxLength,
       List<TextInputFormatter>? inputFormatters,
-      String? Function(String?)? validator}) {
+      String? Function(String?)? validator,
+      Widget? suffixIcon}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -440,6 +462,7 @@ class _BusinessWorkerRegistrationPageState
               prefixIcon: icon != null
                   ? Icon(icon, color: Colors.grey[400], size: 20)
                   : null,
+              suffixIcon: suffixIcon,
               filled: true,
               fillColor: Colors.white,
               contentPadding:

@@ -475,6 +475,52 @@ class Profile extends StatelessWidget {
             ),
             const SizedBox(height: 30),
             if (data['role'] == 'healthcare' &&
+                data['profession'] == 'Emergency Services') ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade700,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.shade700.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.emergency_outlined,
+                              color: Colors.white, size: 24),
+                          const SizedBox(width: 12),
+                          const Text(
+                            "Emergency Services",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Registered as an Emergency Service Provider",
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+            ],
+            if (data['role'] == 'healthcare' &&
                 data['profession'] == 'Pharmacy') ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -556,6 +602,8 @@ class Profile extends StatelessWidget {
                               email: data['email'],
                               phone: data['phone'],
                               username: data['username'],
+                              role: data['role'],
+                              profession: data['profession'],
                               createDate: data['created_at'] != null
                                   ? formatDate(data['created_at'] as Timestamp)
                                   : 'N/A',
