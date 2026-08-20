@@ -2124,14 +2124,12 @@ class HomepageState extends State<Homepage> {
               ),
             ),
             const SizedBox(height: 14),
-            SizedBox(
-              height: 185,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: expertServices.length,
-                itemBuilder: (context, index) {
-                  final service = expertServices[index];
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: expertServices.map((service) {
                   final data = service.data() as Map<String, dynamic>? ?? {};
                   final name = data['service_name'] ?? '';
                   final category = data['category'] ?? '';
@@ -2331,7 +2329,7 @@ class HomepageState extends State<Homepage> {
                       ),
                     ),
                   );
-                },
+                }).toList(),
               ),
             ),
             const SizedBox(height: 20),
@@ -2378,13 +2376,29 @@ class HomepageState extends State<Homepage> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    Wrap(
+                      spacing: 0,
+                      runSpacing: 18,
+                      alignment: WrapAlignment.start,
                       children: [
                         buildEssentialItem(
-                          icon: Icons.local_hospital_outlined,
+                          imagePath: "assets/image/online_sevices.png",
+                          label: "Online Services",
+                          bgColor: const Color.fromARGB(255, 255, 255, 255),
+                          iconColor: const Color(0xFF0F2E5A),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const InternetCafePage(),
+                              ),
+                            );
+                          },
+                        ),
+                        buildEssentialItem(
+                          imagePath: 'assets/image/healthcare.png',
                           label: "Healthcare",
-                          bgColor: const Color(0xFFEEF2FF),
+                          bgColor: const Color.fromARGB(255, 251, 251, 251),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
                             Navigator.push(
@@ -2397,9 +2411,9 @@ class HomepageState extends State<Homepage> {
                           },
                         ),
                         buildEssentialItem(
-                          icon: Icons.shopping_bag_outlined,
+                          imagePath: 'assets/image/shops.png',
                           label: "Shops",
-                          bgColor: const Color(0xFFEEF2FF),
+                          bgColor: const Color.fromARGB(255, 255, 255, 255),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
                             Navigator.push(
@@ -2411,9 +2425,9 @@ class HomepageState extends State<Homepage> {
                           },
                         ),
                         buildEssentialItem(
-                          icon: Icons.directions_car_outlined,
+                          imagePath: 'assets/image/tranportation.png',
                           label: "Transportation",
-                          bgColor: const Color(0xFFEEF2FF),
+                          bgColor: const Color.fromARGB(255, 255, 255, 255),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
                             Navigator.push(
@@ -2425,16 +2439,10 @@ class HomepageState extends State<Homepage> {
                             );
                           },
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
                         buildEssentialItem(
-                          icon: Icons.school_outlined,
+                          imagePath: "assets/image/education.png",
                           label: "Education",
-                          bgColor: const Color(0xFFEEF2FF),
+                          bgColor: const Color.fromARGB(255, 255, 255, 255),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
                             Navigator.push(
@@ -2446,9 +2454,9 @@ class HomepageState extends State<Homepage> {
                           },
                         ),
                         buildEssentialItem(
-                          icon: Icons.account_balance_outlined,
+                          imagePath: "assets/image/public_services.png",
                           label: "Public Services",
-                          bgColor: const Color(0xFFEEF2FF),
+                          bgColor: const Color.fromARGB(255, 255, 255, 255),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
                             Navigator.push(
@@ -2460,7 +2468,6 @@ class HomepageState extends State<Homepage> {
                             );
                           },
                         ),
-                        Expanded(child: const SizedBox()),
                       ],
                     ),
                   ],
@@ -2615,7 +2622,8 @@ class HomepageState extends State<Homepage> {
     required Color iconColor,
     required VoidCallback onTap,
   }) {
-    return Expanded(
+    return SizedBox(
+      width: (MediaQuery.of(context).size.width - 64) / 4,
       child: GestureDetector(
         onTap: onTap,
         child: Column(
@@ -2623,14 +2631,18 @@ class HomepageState extends State<Homepage> {
             Container(
               height: 48,
               width: 48,
-              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey[300]!, width: 1),
+              ),
               child: Center(
                 child: imagePath != null
                     ? Image.asset(
                         imagePath,
-                        color: iconColor,
-                        width: 22,
-                        height: 22,
+                        height: 32,
+                        width: 32,
+                        fit: BoxFit.contain,
                       )
                     : Icon(icon, color: iconColor, size: 22),
               ),

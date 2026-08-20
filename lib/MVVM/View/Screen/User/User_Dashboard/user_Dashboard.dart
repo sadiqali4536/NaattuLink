@@ -86,7 +86,12 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
     final color = isActive ? const Color(0xFF0F2E5A) : const Color(0xFF858282);
     switch (index) {
       case 0:
-        return Icon(Icons.home_filled, color: color, size: 24);
+        return Image.asset(
+          "assets/icons/Home.png",
+          color: color,
+          height: 24,
+          width: 24,
+        );
       case 1:
         return Stack(
           clipBehavior: Clip.none,
@@ -136,7 +141,7 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
         return Image.asset(
           "assets/icons/profile_bottombar.png",
           color: color,
-          height: 24,
+          height: 22,
           width: 24,
         );
       default:
@@ -168,7 +173,18 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildIcon(index, isActive),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFF0F2E5A).withOpacity(0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: _buildIcon(index, isActive),
+              ),
               const SizedBox(height: 4),
               Text(
                 label,
@@ -214,43 +230,11 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
           child: Container(
             height: 75,
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final totalWidth = constraints.maxWidth;
-                final tabCount = _bottomBarPages.length;
-                final tabWidth = totalWidth / tabCount;
-
-                const horizontalMargin = 6.0;
-                final pillWidth = tabWidth - (horizontalMargin * 2);
-                const pillHeight = 56.0;
-
-                return Stack(
-                  children: [
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOutCubic,
-                      left: _currentIndex * tabWidth + horizontalMargin,
-                      top: (75 - pillHeight) / 2,
-                      width: pillWidth,
-                      height: pillHeight,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFB800),
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                      ),
-                    ),
-                    Positioned.fill(
-                      child: Row(
-                        children: List.generate(
-                          tabCount,
-                          (index) => _buildTabItem(index),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
+            child: Row(
+              children: List.generate(
+                _bottomBarPages.length,
+                (index) => _buildTabItem(index),
+              ),
             ),
           ),
         ),
