@@ -25,7 +25,7 @@ class _ForgetPasswordState extends State<ForgetPassword> {
           children: [
             /// Background Image
             Image.asset(
-              "assets/image/UserLoginSignin.png",
+              "assets/image/carpet.png",
               width: double.infinity,
               height: mq.height,
               fit: BoxFit.cover,

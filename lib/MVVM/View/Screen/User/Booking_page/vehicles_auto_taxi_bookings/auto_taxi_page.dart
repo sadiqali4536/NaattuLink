@@ -288,11 +288,14 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
             latitude: lat,
             longitude: lng,
             completedTrips: data['completed_trips'] ?? 0,
-            isElectric: data['vehicle_type']?.toString().toLowerCase() == 'electric',
+            isElectric:
+                data['vehicle_type']?.toString().toLowerCase() == 'electric',
             isWomenDriver: data['gender']?.toString().toLowerCase() == 'female',
             isOnline: data['isOnline'] ?? false,
             isVerified: isVerifiedFlag,
-            availableTime: data['available_time']?.toString() ?? data['operating_hours']?.toString() ?? "",
+            availableTime: data['available_time']?.toString() ??
+                data['operating_hours']?.toString() ??
+                "",
             farePerKm:
                 int.tryParse(data['min_charge']?.toString() ?? '15') ?? 15,
           ),
@@ -509,9 +512,9 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
       backgroundColor: Colors.white,
       elevation: 0,
       leading: const Padding(
-          padding: EdgeInsets.only(left: 10.0),
-          child: AppBackButton(),
-        ),
+        padding: EdgeInsets.only(left: 10.0),
+        child: AppBackButton(),
+      ),
       centerTitle: true,
       title: const Text(
         "Auto & Taxi",

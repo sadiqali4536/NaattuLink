@@ -61,6 +61,7 @@ class HealthcareCategoriesPage extends StatelessWidget {
                   iconData: Icons.local_hospital_outlined,
                   iconColor: const Color(0xFF0F2E5A),
                   iconBgColor: const Color(0xFFEEF2FF),
+                  imagePath: 'assets/image/hospital.png',
                   onTap: () => _navigateToListing(context, "Hospital"),
                 ),
                 _buildCategoryCard(
@@ -69,6 +70,7 @@ class HealthcareCategoriesPage extends StatelessWidget {
                   subtitle: "Specialized doctors &\nfamily clinics",
                   iconData: Icons.medical_services_outlined,
                   iconColor: const Color(0xFF0F2E5A),
+                  imagePath: 'assets/image/clinick.png',
                   iconBgColor: const Color(0xFFEEF2FF),
                   onTap: () => _navigateToListing(context, "Clinic"),
                 ),
@@ -79,6 +81,7 @@ class HealthcareCategoriesPage extends StatelessWidget {
                   iconData: Icons.local_pharmacy_outlined,
                   iconColor: const Color(0xFF0F2E5A),
                   iconBgColor: const Color(0xFFEEF2FF),
+                  imagePath: 'assets/image/pharmacy.png',
                   onTap: () => _navigateToListing(context, "Pharmacy"),
                 ),
                 _buildCategoryCard(
@@ -88,6 +91,7 @@ class HealthcareCategoriesPage extends StatelessWidget {
                   iconData: Icons.science_outlined,
                   iconColor: const Color(0xFF0F2E5A),
                   iconBgColor: const Color(0xFFEEF2FF),
+                  imagePath: 'assets/image/laboratory.png',
                   onTap: () => _navigateToListing(context, "Laboratory"),
                 ),
               ],
@@ -118,6 +122,7 @@ class HealthcareCategoriesPage extends StatelessWidget {
     required VoidCallback onTap,
     Color iconColor = const Color(0xFF0F2E5A),
     Color iconBgColor = const Color(0xFFEEF2FF),
+    String? imagePath,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -157,7 +162,16 @@ class HealthcareCategoriesPage extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(iconData, color: iconColor, size: 28),
+              child: imagePath != null
+                  ? ClipOval(
+                      child: Image.asset(
+                        imagePath,
+                        width: 54,
+                        height: 54,
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : Icon(iconData, color: iconColor, size: 28),
             ),
             const SizedBox(height: 16),
             Text(
@@ -225,12 +239,22 @@ class HealthcareCategoriesPage extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(14),
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.12),
+                color: Colors.white,
                 shape: BoxShape.circle,
+                border:
+                    Border.all(color: Colors.red.withOpacity(0.2), width: 1.5),
               ),
-              child: const Icon(Icons.emergency, color: Colors.red, size: 32),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/image/ambulance-emergency.jpg',
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(

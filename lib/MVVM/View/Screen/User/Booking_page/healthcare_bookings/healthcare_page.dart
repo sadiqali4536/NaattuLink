@@ -180,7 +180,8 @@ class _HealthcarePageState extends State<HealthcarePage> {
         final typeMatch = firebaseType == selectedType;
         final categoryMatch =
             categoryStr == 'healthcare' || categoryStr.isEmpty;
-        final statusMatch = statusStr == 'active';
+        final statusMatch =
+            statusStr == 'active' || selectedType == 'emergency services';
 
         final shouldShow = typeMatch && categoryMatch && statusMatch;
 
@@ -274,8 +275,17 @@ class _HealthcarePageState extends State<HealthcarePage> {
         fetchedListings.add(
           ClinicListing(
             uid: doc.id,
-            name: data['username'] ?? "Clinic Doctor",
-            facilityName: data['facility_name'] ?? "Clinic",
+            name: (data['facility_name']?.toString().trim().isEmpty ?? true)
+                ? ""
+                : (data['username']?.toString().trim().isNotEmpty == true
+                    ? data['username']
+                    : "Clinic Doctor"),
+            facilityName:
+                (data['facility_name']?.toString().trim().isNotEmpty == true)
+                    ? data['facility_name']
+                    : (data['username']?.toString().trim().isNotEmpty == true
+                        ? data['username']
+                        : "Emergency Service"),
             rating: ratingStr,
             status: statusText,
             location: address,
@@ -337,7 +347,10 @@ class _HealthcarePageState extends State<HealthcarePage> {
       final q = searchQuery.trim().toLowerCase();
       if (q.isNotEmpty) {
         return item.name.toLowerCase().contains(q) ||
-            item.facilityName.toLowerCase().contains(q);
+            item.facilityName.toLowerCase().contains(q) ||
+            item.speciality.toLowerCase().contains(q) ||
+            item.location.toLowerCase().contains(q) ||
+            item.phone.toLowerCase().contains(q);
       }
       return true;
     }).toList();
@@ -361,6 +374,23 @@ class _HealthcarePageState extends State<HealthcarePage> {
       final dist = item.distanceFrom(userLat, userLng);
       return dist != null && dist <= 10.0;
     }).toList();
+  }
+
+  String _getSectionImage() {
+    switch (widget.healthcareType.toLowerCase()) {
+      case 'hospital':
+        return 'assets/image/hospital.png';
+      case 'clinic':
+        return 'assets/image/clinick.png';
+      case 'pharmacy':
+        return 'assets/image/pharmacy.png';
+      case 'laboratory':
+        return 'assets/image/laboratory.png';
+      case 'emergency services':
+        return 'assets/image/ambulance-emergency.jpg';
+      default:
+        return 'assets/image/hospital.png';
+    }
   }
 
   Future<void> _makeCall(String phoneNumber) async {
@@ -680,14 +710,18 @@ class _HealthcarePageState extends State<HealthcarePage> {
                     height: 56,
                     width: 56,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
+                      border:
+                          Border.all(color: Colors.grey.shade200, width: 1.5),
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.local_hospital_outlined,
-                        color: Color(0xFF0F2E5A),
-                        size: 28,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.asset(
+                        _getSectionImage(),
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
@@ -732,42 +766,67 @@ class _HealthcarePageState extends State<HealthcarePage> {
                               ),
                             ],
                           ),
-                        ] else ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            item.name,
-                            style: const TextStyle(
-                                color: Color(0xFF64748B),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item.speciality,
-                            style: const TextStyle(
-                                color: Color(0xFF059669),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500),
-                          ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.star,
-                                  color: Color(0xFFFFB800), size: 13),
+                              const Icon(Icons.place_outlined,
+                                  size: 12, color: Color(0xFF64748B)),
                               const SizedBox(width: 3),
-                              Text(
-                                item.rating,
-                                style: const TextStyle(
-                                    color: Color(0xFF0F2E5A),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12),
+                              Flexible(
+                                child: Text(
+                                  item.location,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Color(0xFF64748B), fontSize: 12),
+                                ),
                               ),
-                              const SizedBox(width: 8),
-                              Container(
-                                  width: 1,
-                                  height: 10,
-                                  color: const Color(0xFFCBD5E1)),
-                              const SizedBox(width: 8),
+                            ],
+                          ),
+                        ] else ...[
+                          if (item.name.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              item.name,
+                              style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                          if (widget.healthcareType.toLowerCase() !=
+                                  'emergency services' &&
+                              item.speciality.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              item.speciality,
+                              style: const TextStyle(
+                                  color: Color(0xFF059669),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              if (!item.rating.startsWith("0 ") &&
+                                  !item.rating.startsWith("0.0 ")) ...[
+                                const Icon(Icons.star,
+                                    color: Color(0xFFFFB800), size: 13),
+                                const SizedBox(width: 3),
+                                Text(
+                                  item.rating,
+                                  style: const TextStyle(
+                                      color: Color(0xFF0F2E5A),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                    width: 1,
+                                    height: 10,
+                                    color: const Color(0xFFCBD5E1)),
+                                const SizedBox(width: 8),
+                              ],
                               const Icon(Icons.place_outlined,
                                   size: 12, color: Color(0xFF64748B)),
                               const SizedBox(width: 3),
@@ -785,12 +844,14 @@ class _HealthcarePageState extends State<HealthcarePage> {
                       ],
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      AvailabilityBadge(scheduleString: item.availableTime),
-                    ],
-                  ),
+                  if (widget.healthcareType.toLowerCase() !=
+                      'emergency services')
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        AvailabilityBadge(scheduleString: item.availableTime),
+                      ],
+                    ),
                 ],
               ),
               const Padding(
@@ -809,15 +870,18 @@ class _HealthcarePageState extends State<HealthcarePage> {
                           fontWeight: FontWeight.bold,
                           fontSize: 12)),
                   const SizedBox(width: 12),
-                  Container(
-                      width: 1, height: 10, color: const Color(0xFFCBD5E1)),
-                  const SizedBox(width: 12),
-                  const Icon(Icons.access_time,
-                      size: 14, color: Color(0xFF64748B)),
-                  const SizedBox(width: 4),
-                  Text(item.availableTime,
-                      style: const TextStyle(
-                          color: Color(0xFF64748B), fontSize: 12)),
+                  if (widget.healthcareType.toLowerCase() !=
+                      'emergency services') ...[
+                    Container(
+                        width: 1, height: 10, color: const Color(0xFFCBD5E1)),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.access_time,
+                        size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 4),
+                    Text(item.availableTime,
+                        style: const TextStyle(
+                            color: Color(0xFF64748B), fontSize: 12)),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),

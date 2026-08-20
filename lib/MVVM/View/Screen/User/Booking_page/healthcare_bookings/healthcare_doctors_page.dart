@@ -316,191 +316,226 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
               ],
               border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
               children: [
-                Container(
-                  height: 56,
-                  width: 56,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFEEF2FF), Color(0xFFE0E7FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF4F46E5).withOpacity(0.15),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(
-                        isLab
-                            ? Icons.science_outlined
-                            : Icons.assignment_ind_outlined,
-                        color: const Color(0xFF4F46E5),
-                        size: 26),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: TextStyle(
-                                color: primaryColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 56,
+                      width: 56,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFEEF2FF), Color(0xFFE0E7FF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF4F46E5).withOpacity(0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
+                      child: Center(
+                        child: Icon(
+                            isLab
+                                ? Icons.science_outlined
+                                : Icons.assignment_ind_outlined,
+                            color: const Color(0xFF4F46E5),
+                            size: 26),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (category.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2FF),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                category.toUpperCase(),
-                                style: const TextStyle(
-                                  color: Color(0xFF4F46E5),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: TextStyle(
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
                               ),
-                            ),
-                          if (price.isNotEmpty)
-                            Text(
-                              "₹$price",
-                              style: const TextStyle(
-                                color: Color(0xFF22C55E),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          if (['hospital', 'clinic']
-                              .contains(widget.clinic.profession.toLowerCase()))
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.medical_services_outlined,
-                                    color: Color(0xFF059669),
-                                    size: 12,
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              if (category.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEEF2FF),
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    "$doctorCount Available Doctor${doctorCount == 1 ? '' : 's'}",
+                                  child: Text(
+                                    category.toUpperCase(),
                                     style: const TextStyle(
-                                      color: Color(0xFF059669),
+                                      color: Color(0xFF4F46E5),
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (pointsList.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                        const SizedBox(height: 4),
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              if (_expandedPoints.contains(cons['id'])) {
-                                _expandedPoints.remove(cons['id']);
-                              } else {
-                                _expandedPoints.add(cons['id']);
-                              }
-                            });
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Row(
-                              children: [
-                                const Text(
-                                  "Includes:",
-                                  style: TextStyle(
-                                    fontSize: 14,
+                                ),
+                              if (price.isNotEmpty)
+                                Text(
+                                  "₹$price",
+                                  style: const TextStyle(
+                                    color: Color(0xFF22C55E),
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0F2E5A),
+                                    fontSize: 16,
                                   ),
                                 ),
-                                const Spacer(),
-                                Icon(
-                                  _expandedPoints.contains(cons['id'])
-                                      ? Icons.keyboard_arrow_up
-                                      : Icons.keyboard_arrow_down,
-                                  color: const Color(0xFF0F2E5A),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        if (_expandedPoints.contains(cons['id']))
-                          ...pointsList.map((point) => Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          top: 4, right: 8),
-                                      child: Icon(Icons.circle,
-                                          size: 6,
-                                          color: primaryColor.withOpacity(0.5)),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        point.toString(),
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: textGrey,
-                                          height: 1.4,
+                              if (['hospital', 'clinic'].contains(
+                                  widget.clinic.profession.toLowerCase()))
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.medical_services_outlined,
+                                        color: Color(0xFF059669),
+                                        size: 12,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "$doctorCount Available Doctor${doctorCount == 1 ? '' : 's'}",
+                                        style: const TextStyle(
+                                          color: Color(0xFF059669),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (pointsList.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                            const SizedBox(height: 4),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  if (_expandedPoints.contains(cons['id'])) {
+                                    _expandedPoints.remove(cons['id']);
+                                  } else {
+                                    _expandedPoints.add(cons['id']);
+                                  }
+                                });
+                              },
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      "Includes:",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0F2E5A),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Icon(
+                                      _expandedPoints.contains(cons['id'])
+                                          ? Icons.keyboard_arrow_up
+                                          : Icons.keyboard_arrow_down,
+                                      color: const Color(0xFF0F2E5A),
                                     ),
                                   ],
                                 ),
-                              )),
-                      ],
-                    ],
-                  ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (_expandedPoints.contains(cons['id']))
+                              ...pointsList.map((point) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 4, right: 8),
+                                          child: Icon(Icons.circle,
+                                              size: 6,
+                                              color: primaryColor
+                                                  .withOpacity(0.5)),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            point.toString(),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: textGrey,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (!isLab)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 8.0, top: 16),
+                        child:
+                            Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                      ),
+                  ],
                 ),
-                if (!isLab)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8.0, top: 16),
-                    child: Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                if (isLab) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _makeCall(context, widget.clinic.phone),
+                      icon: const Icon(Icons.phone_in_talk,
+                          color: Colors.white, size: 16),
+                      label: const Text(
+                        "Call",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                   ),
+                ],
               ],
             ),
           ),
