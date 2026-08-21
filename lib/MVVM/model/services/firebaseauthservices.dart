@@ -10,6 +10,7 @@ import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
+import 'package:naattulink/MVVM/model/services/notification_service.dart';
 
 class FirebaseAuthServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -143,6 +144,7 @@ class FirebaseAuthServices {
 
   // Sign Out
   Future<void> signOut(BuildContext context) async {
+    await NotificationService.instance.clearFcmTokenFromFirestore();
     await _auth.signOut();
     if (context.mounted) {
       toastSuccess("Logout Successful!");

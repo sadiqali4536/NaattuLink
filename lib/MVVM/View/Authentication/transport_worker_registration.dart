@@ -13,7 +13,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/bus_worker_dashboard.dart';
-import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
+import 'package:naattulink/MVVM/model/models/app_location_model.dart';
+import 'package:naattulink/MVVM/model/services/app_location_service.dart';
+import 'package:naattulink/MVVM/View/Screen/location/select_location_map_page.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry: choose Bus or Taxi
@@ -206,6 +208,22 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
   final _busTypes = ['Private Bus', 'KSRTC'];
 
   String? _selectedDistrict;
+  double? _selectedLat;
+  double? _selectedLng;
+
+  Future<void> _pickLocationOnMap() async {
+    double initialLat = _selectedLat ?? 11.2588;
+    double initialLng = _selectedLng ?? 75.7804;
+    final result = await Get.to(() =>
+        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng));
+    if (result != null) {
+      setState(() {
+        _mainStandCtrl.text = result.formattedAddress ?? "";
+        _selectedLat = result.latitude;
+        _selectedLng = result.longitude;
+      });
+    }
+  }
 
   Widget _buildDistrictDropdown() {
     final List<String> districts = [
@@ -347,6 +365,18 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
       );
       final uid = userCredential.user!.uid;
 
+      // GPS location fallback if not picked via map
+      double? finalLat = _selectedLat;
+      double? finalLng = _selectedLng;
+
+      if (finalLat == null || finalLng == null) {
+        final locationModel = await AppLocationService().getCurrentLocation();
+        if (locationModel != null) {
+          finalLat = locationModel.latitude;
+          finalLng = locationModel.longitude;
+        }
+      }
+
       await FirebaseFirestore.instance.collection("transports").doc(uid).set({
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
@@ -374,6 +404,8 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         "arrival_time": _fmt(_arrivalTime),
         "departure_time": _fmt(_departureTime),
         "district": _selectedDistrict,
+        "lat": finalLat,
+        "lng": finalLng,
       });
 
       toastSuccess('Bus registration successful.');
@@ -447,9 +479,13 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         _secHeader('VEHICLE DETAILS'),
         _buildDistrictDropdown(),
         const SizedBox(height: 14),
-        _F('Main Stand', 'e.g. City Bus Terminal', Icons.location_city_outlined,
+        _F('Main Stand', 'e.g. City Bus Terminal', Icons.map_outlined,
             _mainStandCtrl,
-            textCapitalization: TextCapitalization.characters),
+            textCapitalization: TextCapitalization.characters,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.location_on, color: Colors.red),
+              onPressed: _pickLocationOnMap,
+            )),
         Row(children: [
           Expanded(
               child: _F('Bus Name', 'e.g. Star Travels',
@@ -568,6 +604,23 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
 
   String _vehicleCategory = 'Auto'; // Auto | Car | Van
 
+  double? _selectedLat;
+  double? _selectedLng;
+
+  Future<void> _pickLocationOnMap() async {
+    double initialLat = _selectedLat ?? 11.2588;
+    double initialLng = _selectedLng ?? 75.7804;
+    final result = await Get.to(() =>
+        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng));
+    if (result != null) {
+      setState(() {
+        _mainStandCtrl.text = result.formattedAddress ?? "";
+        _selectedLat = result.latitude;
+        _selectedLng = result.longitude;
+      });
+    }
+  }
+
   @override
   void dispose() {
     for (final c in [
@@ -603,6 +656,18 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
       );
       final uid = userCredential.user!.uid;
 
+      // GPS location fallback if not picked via map
+      double? finalLat = _selectedLat;
+      double? finalLng = _selectedLng;
+
+      if (finalLat == null || finalLng == null) {
+        final locationModel = await AppLocationService().getCurrentLocation();
+        if (locationModel != null) {
+          finalLat = locationModel.latitude;
+          finalLng = locationModel.longitude;
+        }
+      }
+
       await FirebaseFirestore.instance.collection("transports").doc(uid).set({
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
@@ -628,6 +693,8 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
         "main_stand": _mainStandCtrl.text.trim(),
         "vehicle_model": _vehicleModelCtrl.text.trim(),
         "reg_number": _regCtrl.text.trim(),
+        "lat": finalLat,
+        "lng": finalLng,
       });
 
       toastSuccess('Taxi registration successful. Awaiting admin approval.');
@@ -778,9 +845,13 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
         ),
         _F('Luggage Capacity', 'e.g. 10 Large Bags', Icons.luggage_outlined,
             _luggageCtrl),
-        _F('Main Stand', 'e.g. City Bus Terminal', Icons.business_outlined,
+        _F('Main Stand', 'e.g. City Bus Terminal', Icons.map_outlined,
             _mainStandCtrl,
-            textCapitalization: TextCapitalization.characters),
+            textCapitalization: TextCapitalization.characters,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.location_on, color: Colors.red),
+              onPressed: _pickLocationOnMap,
+            )),
         Row(children: [
           Expanded(
               child: _F('Vehicle Model', 'e.g. Maruti Dzire', null,
@@ -1025,6 +1096,8 @@ class _F extends StatefulWidget {
       this.maxLength,
       this.inputFormatters,
       this.suffixIcon,
+      this.readOnly = false,
+      this.onTap,
       this.textCapitalization = TextCapitalization.none});
 
   final Widget? suffixIcon;
@@ -1032,6 +1105,8 @@ class _F extends StatefulWidget {
   final int? maxLength;
   final List<TextInputFormatter>? inputFormatters;
   final TextCapitalization textCapitalization;
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   @override
   State<_F> createState() => _FState();
@@ -1081,6 +1156,8 @@ class _FState extends State<_F> {
                 keyboardType: widget.type,
                 validator: widget.validator,
                 maxLength: widget.maxLength,
+                readOnly: widget.readOnly,
+                onTap: widget.onTap,
                 inputFormatters: widget.inputFormatters,
                 textCapitalization: widget.textCapitalization,
                 style: const TextStyle(
@@ -1113,7 +1190,12 @@ class _FState extends State<_F> {
                   color: const Color(0xFF94A3B8),
                   size: 18))
         else if (widget.suffixIcon != null)
-          widget.suffixIcon!,
+          widget.onTap != null
+              ? GestureDetector(
+                  onTap: widget.onTap,
+                  child: widget.suffixIcon!,
+                )
+              : widget.suffixIcon!,
       ]),
     );
   }
@@ -1265,6 +1347,23 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
 
   String _vehicleType = "Truck"; // Truck | JCB
 
+  double? _selectedLat;
+  double? _selectedLng;
+
+  Future<void> _pickLocationOnMap() async {
+    double initialLat = _selectedLat ?? 11.2588;
+    double initialLng = _selectedLng ?? 75.7804;
+    final result = await Get.to(() =>
+        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng));
+    if (result != null) {
+      setState(() {
+        _mainStandCtrl.text = result.formattedAddress ?? "";
+        _selectedLat = result.latitude;
+        _selectedLng = result.longitude;
+      });
+    }
+  }
+
   @override
   void dispose() {
     for (final c in [
@@ -1299,6 +1398,18 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
       );
       final uid = userCredential.user!.uid;
 
+      // GPS location fallback if not picked via map
+      double? finalLat = _selectedLat;
+      double? finalLng = _selectedLng;
+
+      if (finalLat == null || finalLng == null) {
+        final locationModel = await AppLocationService().getCurrentLocation();
+        if (locationModel != null) {
+          finalLat = locationModel.latitude;
+          finalLng = locationModel.longitude;
+        }
+      }
+
       await FirebaseFirestore.instance.collection("transports").doc(uid).set({
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
@@ -1322,6 +1433,8 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
         "main_stand": _mainStandCtrl.text.trim(),
         "vehicle_model": _vehicleModelCtrl.text.trim(),
         "reg_number": _regCtrl.text.trim(),
+        "lat": finalLat,
+        "lng": finalLng,
       });
 
       toastSuccess(
@@ -1441,9 +1554,13 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
         if (_vehicleType == "Truck")
           _F("Load Capacity", "e.g. 10 Tons", Icons.work_outline,
               _loadCapacityCtrl),
-        _F("Main Stand", "e.g. City Bus Terminal", Icons.business_outlined,
+        _F("Main Stand", "e.g. City Bus Terminal", Icons.map_outlined,
             _mainStandCtrl,
-            textCapitalization: TextCapitalization.characters),
+            textCapitalization: TextCapitalization.characters,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.location_on, color: Colors.red),
+              onPressed: _pickLocationOnMap,
+            )),
         Row(children: [
           Expanded(
               child: _F(

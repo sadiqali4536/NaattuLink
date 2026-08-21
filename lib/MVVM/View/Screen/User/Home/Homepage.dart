@@ -144,6 +144,14 @@ class HomepageState extends State<Homepage> {
     if (_routesBox.get('routes') == null) {
       _routesBox.put('routes', []);
     }
+
+    // Fix: Initialize notification state on fresh install to prevent old notifications from triggering unread badge
+    if (_routesBox.get('app_install_time') == null) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      _routesBox.put('app_install_time', now);
+      _routesBox.put('last_notification_read_time', now);
+    }
+
     _loadSavedRoutes();
 
     _detectUserDistrict();

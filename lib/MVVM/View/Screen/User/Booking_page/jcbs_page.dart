@@ -14,7 +14,6 @@ import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'vehicles_auto_taxi_bookings/vehicle_details_page.dart';
 import 'vehicles_auto_taxi_bookings/agency_packages_page.dart';
 import 'vehicles_auto_taxi_bookings/auto_taxi_page.dart';
-import 'jcbs_map_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ─────────────────────────────────────────────────
@@ -30,7 +29,7 @@ class JcbsListing {
   final String status;
   final String vehicleDetails;
   final String regNo;
-  final String location;
+  String location;
   final String phone;
   final String imageUrl;
   final String seating;
@@ -49,6 +48,9 @@ class JcbsListing {
   final bool isVerified;
   final int farePerKm;
   final String availableTime;
+
+  double? roadDistanceKm;
+  int? roadEtaMinutes;
 
   JcbsListing({
     required this.name,
@@ -69,23 +71,27 @@ class JcbsListing {
     required this.minCharge,
     required this.aboutDriver,
     required this.quoteText,
-    this.latitude = 11.2588,
-    this.longitude = 75.7804,
+    required this.latitude,
+    required this.longitude,
+    this.completedTrips = 0,
     this.isElectric = false,
     this.isWomenDriver = false,
-    this.completedTrips = 0,
     this.isOnline = true,
     this.isVerified = true,
     this.farePerKm = 15,
     this.availableTime = "",
+    this.roadDistanceKm,
+    this.roadEtaMinutes,
   });
 
   double distanceFrom(double userLat, double userLng) {
+    if (roadDistanceKm != null) return roadDistanceKm!;
     return DistanceService.calculateDistanceInKm(
         userLat, userLng, latitude, longitude);
   }
 
   int etaMinutes(double userLat, double userLng) {
+    if (roadEtaMinutes != null) return roadEtaMinutes!;
     final d = distanceFrom(userLat, userLng);
     // Assume avg 20 km/h city speed
     return max(1, (d / 20.0 * 60).round());
@@ -195,7 +201,6 @@ class _JcbsPageState extends State<JcbsPage>
   String selectedTypeFilter = 'All';
   String selectedSmartFilter = 'Nearest';
   double searchRadiusKm = 10.0;
-  bool showMapView = false;
 
   // Location state
   double _userLat = 11.2588;
@@ -208,6 +213,12 @@ class _JcbsPageState extends State<JcbsPage>
   Timer? _liveUpdateTimer;
   final Random _rng = Random();
 
+  // Pagination state
+  DocumentSnapshot? _lastDocument;
+  bool _hasMore = true;
+  bool _isFetchingMore = false;
+  final ScrollController _scrollController = ScrollController();
+
   // ─── Listings ───────────────────────────────────
   List<JcbsListing> _allListings = [];
 
@@ -215,6 +226,14 @@ class _JcbsPageState extends State<JcbsPage>
   void initState() {
     super.initState();
     _initializeData();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !_isFetchingMore &&
+          _hasMore) {
+        _loadMoreListings();
+      }
+    });
     // Simulate live vehicle movement every 5 seconds
     _liveUpdateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted && _allListings.isNotEmpty) setState(() => _driftVehicles());
@@ -245,6 +264,7 @@ class _JcbsPageState extends State<JcbsPage>
   @override
   void dispose() {
     _liveUpdateTimer?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -252,87 +272,17 @@ class _JcbsPageState extends State<JcbsPage>
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('transports')
-          .where('transport_category', whereIn: ['JCB', 'Truck / JCB']).get();
+          .where('transport_category', whereIn: ['JCB', 'Truck / JCB'])
+          .limit(10)
+          .get();
 
-      final List<JcbsListing> fetchedListings = [];
-
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-
-        // Ensure the service is active
-        final status = (data['status'] ?? '').toString().trim().toLowerCase();
-        if (status != 'active') {
-          continue;
-        }
-
-        // Extracting rating info safely
-        final rawRating = data['ratings'] ?? 0;
-        final totalReviews = data['total_reviews'] ?? 0;
-        final ratingStr = "$rawRating ($totalReviews)";
-
-        final isAc = data['air_conditioning'] == true ||
-            data['air_conditioning'] == "true";
-        final isVerifiedFlag =
-            data['isVerified'] == 1 || data['isVerified'] == true;
-
-        String mainStand = data['main_stand'] ?? "Kozhikode";
-        double lat = 11.2588; // Default Kozhikode
-        double lng = 75.7804;
-
-        try {
-          List<Location> locations =
-              await locationFromAddress("$mainStand, Kerala, India");
-          if (locations.isNotEmpty) {
-            lat = locations.first.latitude;
-            lng = locations.first.longitude;
-          }
-        } catch (e) {
-          debugPrint("Geocoding failed for $mainStand: $e");
-          // Add slight random offset if geocoding fails so they don't all stack on map
-          lat += (_rng.nextDouble() - 0.5) * 0.05;
-          lng += (_rng.nextDouble() - 0.5) * 0.05;
-        }
-
-        fetchedListings.add(
-          JcbsListing(
-            name: data['username'] ?? "Unknown",
-            type: data['vehicle_category'] ?? "JCB",
-            isAgency: false, // You can map this if needed
-            rating: ratingStr,
-            experienceOrVehicles: data['role_with_vehicle'] ?? "Driver",
-            subtitle: "Verified Driver", // Adjust based on logic
-            status: (data['status'] == 'active' || data['status'] == 'approved')
-                ? "Available"
-                : "Available", // Simplified status logic
-            vehicleDetails: data['vehicle_model'] ?? "Vehicle",
-            regNo: data['reg_number'] ?? "N/A",
-            location: mainStand,
-            phone: "tel:${data['phone'] ?? ''}",
-            imageUrl: data['profile_img']?.isNotEmpty == true
-                ? data['profile_img']
-                : "assets/image/JCB_car.png",
-            seating: "${data['seating_capacity'] ?? '4'} Passengers",
-            acStatus: isAc ? "AC" : "Non-AC",
-            luggage: data['luggage_capacity'] ?? "Standard",
-            minCharge: (data['min_charge'] ?? '0').toString(),
-            aboutDriver: "Driver registered via NaattuLink.",
-            quoteText: "സുരക്ഷിതമായ യാത്ര ഉറപ്പ് നൽകുന്നു.",
-            latitude: lat,
-            longitude: lng,
-            completedTrips: data['completed_trips'] ?? 0,
-            isOnline: data['isOnline'] ?? false,
-            farePerKm:
-                int.tryParse(data['min_charge']?.toString() ?? '15') ?? 15,
-            isVerified: isVerifiedFlag,
-            isElectric:
-                data['vehicle_type']?.toString().toLowerCase() == 'electric',
-            isWomenDriver: data['gender']?.toString().toLowerCase() == 'female',
-            availableTime: data['available_time']?.toString() ??
-                data['operating_hours']?.toString() ??
-                "",
-          ),
-        );
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+      } else {
+        _hasMore = false;
       }
+
+      final fetchedListings = await _processSnapshot(snapshot);
 
       if (mounted) {
         setState(() {
@@ -348,6 +298,158 @@ class _JcbsPageState extends State<JcbsPage>
         });
       }
     }
+  }
+
+  Future<void> _loadMoreListings() async {
+    if (_isFetchingMore || !_hasMore || _lastDocument == null) return;
+
+    setState(() {
+      _isFetchingMore = true;
+    });
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('transports')
+          .where('transport_category', whereIn: ['JCB', 'Truck / JCB'])
+          .startAfterDocument(_lastDocument!)
+          .limit(10)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _hasMore = false;
+          _isFetchingMore = false;
+        });
+        return;
+      }
+
+      _lastDocument = snapshot.docs.last;
+
+      final fetchedListings = await _processSnapshot(snapshot);
+
+      if (mounted) {
+        setState(() {
+          _allListings.addAll(fetchedListings);
+          _isFetchingMore = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading more JCB listings: $e");
+      if (mounted) {
+        setState(() {
+          _isFetchingMore = false;
+        });
+      }
+    }
+  }
+
+  Future<List<JcbsListing>> _processSnapshot(QuerySnapshot snapshot) async {
+    final List<JcbsListing> fetchedListings = [];
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+
+      // Ensure the service is active
+      final status = (data['status'] ?? '').toString().trim().toLowerCase();
+      if (status != 'active') {
+        continue;
+      }
+
+      // Extracting rating info safely
+      final rawRating = data['ratings'] ?? 0;
+      final totalReviews = data['total_reviews'] ?? 0;
+      final ratingStr = "$rawRating ($totalReviews)";
+
+      final isAc = data['air_conditioning'] == true ||
+          data['air_conditioning'] == "true";
+      final isVerifiedFlag =
+          data['isVerified'] == 1 || data['isVerified'] == true;
+
+      String mainStand = data['main_stand'] ?? "Kozhikode";
+      double lat = 11.2588; // Default Kozhikode
+      double lng = 75.7804;
+
+      try {
+        List<Location> locations =
+            await locationFromAddress("$mainStand, Kerala, India");
+        if (locations.isNotEmpty) {
+          lat = locations.first.latitude;
+          lng = locations.first.longitude;
+        }
+      } catch (e) {
+        debugPrint("Geocoding failed for $mainStand: $e");
+        // Add slight random offset if geocoding fails so they don't all stack on map
+        lat += (_rng.nextDouble() - 0.5) * 0.05;
+        lng += (_rng.nextDouble() - 0.5) * 0.05;
+      }
+
+      fetchedListings.add(
+        JcbsListing(
+          name: data['username'] ?? "Unknown",
+          type: data['vehicle_category'] ?? "JCB",
+          isAgency: false, // You can map this if needed
+          rating: ratingStr,
+          experienceOrVehicles: data['role_with_vehicle'] ?? "Driver",
+          subtitle: "Verified Driver", // Adjust based on logic
+          status: (data['status'] == 'active' || data['status'] == 'approved')
+              ? "Available"
+              : "Available", // Simplified status logic
+          vehicleDetails: data['vehicle_model'] ?? "Vehicle",
+          regNo: data['reg_number'] ?? "N/A",
+          location: mainStand,
+          phone: "tel:${data['phone'] ?? ''}",
+          imageUrl: data['profile_img']?.isNotEmpty == true
+              ? data['profile_img']
+              : "assets/image/JCB_car.png",
+          seating: "${data['seating_capacity'] ?? '4'} Passengers",
+          acStatus: isAc ? "AC" : "Non-AC",
+          luggage: data['luggage_capacity'] ?? "Standard",
+          minCharge: (data['min_charge'] ?? '0').toString(),
+          aboutDriver: "Driver registered via NaattuLink.",
+          quoteText: "സുരക്ഷിതമായ യാത്ര ഉറപ്പ് നൽകുന്നു.",
+          latitude: lat,
+          longitude: lng,
+          completedTrips: data['completed_trips'] ?? 0,
+          isOnline: data['isOnline'] ?? false,
+          farePerKm: int.tryParse(data['min_charge']?.toString() ?? '15') ?? 15,
+          isVerified: isVerifiedFlag,
+          isElectric:
+              data['vehicle_type']?.toString().toLowerCase() == 'electric',
+          isWomenDriver: data['gender']?.toString().toLowerCase() == 'female',
+          availableTime: data['available_time']?.toString() ??
+              data['operating_hours']?.toString() ??
+              "",
+        ),
+      );
+    }
+
+    // Pre-fetch road distances in bulk from Google Maps API
+    if (fetchedListings.isNotEmpty) {
+      final destinations = fetchedListings
+          .map((e) => {'lat': e.latitude, 'lng': e.longitude})
+          .toList();
+      final roadResults = await DistanceService.fetchBulkRoadDistances(
+          _userLat, _userLng, destinations);
+
+      for (int i = 0; i < fetchedListings.length; i++) {
+        if (roadResults[i] != null) {
+          fetchedListings[i].roadDistanceKm = roadResults[i]!['distanceKm'];
+          fetchedListings[i].roadEtaMinutes = roadResults[i]!['etaMinutes'];
+          if (roadResults[i]!['address'] != null) {
+            final addrParts = (roadResults[i]!['address'] as String)
+                .split(',')
+                .map((s) => s.trim())
+                .where((s) => !s.contains('+'))
+                .toList();
+            if (addrParts.isNotEmpty) {
+              fetchedListings[i].location = addrParts.first;
+            }
+          }
+        }
+      }
+    }
+
+    return fetchedListings;
   }
 
   // Simulates small GPS drift for live vehicle movement
@@ -524,15 +626,7 @@ class _JcbsPageState extends State<JcbsPage>
                       color: Color(0xFF0F2E5A),
                     ),
                   )
-                : showMapView
-                    ? JcbsMapView(
-                        listings: _rankedListings,
-                        userLat: _userLat,
-                        userLng: _userLng,
-                        onCallTap: _makeCall,
-                        onDetailsTap: (item) => _openDetails(item),
-                      )
-                    : _buildListView(),
+                : _buildListView(),
           ),
         ],
       ),
@@ -640,36 +734,7 @@ class _JcbsPageState extends State<JcbsPage>
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          _buildRadiusButton(),
         ],
-      ),
-    );
-  }
-
-  Widget _buildRadiusButton() {
-    final label =
-        searchRadiusKm >= 99 ? 'City' : '${searchRadiusKm.toInt()} km';
-    return GestureDetector(
-      onTap: _showRadiusSheet,
-      child: Container(
-        height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F2E5A),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.radar, color: Colors.white, size: 16),
-            const SizedBox(width: 6),
-            Text(label,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12)),
-          ],
-        ),
       ),
     );
   }
@@ -836,9 +901,20 @@ class _JcbsPageState extends State<JcbsPage>
       );
     }
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-      itemCount: listings.length,
-      itemBuilder: (ctx, i) => _buildListingCard(listings[i]),
+      itemCount: listings.length + (_isFetchingMore ? 1 : 0),
+      itemBuilder: (ctx, i) {
+        if (i == listings.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFF0F2E5A)),
+            ),
+          );
+        }
+        return _buildListingCard(listings[i]);
+      },
     );
   }
 
@@ -969,28 +1045,13 @@ class _JcbsPageState extends State<JcbsPage>
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.star,
-                              color: Color(0xFFFFB800), size: 13),
-                          const SizedBox(width: 3),
-                          Text(
-                            item.rating,
-                            style: const TextStyle(
-                                color: Color(0xFF0F2E5A),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                              width: 1,
-                              height: 10,
-                              color: const Color(0xFFCBD5E1)),
-                          const SizedBox(width: 8),
                           const Icon(Icons.place_outlined,
                               size: 12, color: Color(0xFF64748B)),
                           const SizedBox(width: 3),
-                          Flexible(
+                          Expanded(
                             child: Text(
                               item.location,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   color: Color(0xFF64748B), fontSize: 11),
@@ -1042,17 +1103,22 @@ class _JcbsPageState extends State<JcbsPage>
                 Text('ETA ~$eta min',
                     style: const TextStyle(
                         color: Color(0xFF64748B), fontSize: 12)),
-                const Spacer(),
-                const Icon(Icons.place_outlined,
-                    size: 13, color: Color(0xFF94A3B8)),
-                const SizedBox(width: 3),
-                Flexible(
-                  child: Text(
-                    item.location,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                Expanded(
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      const Icon(Icons.star,
+                          size: 13, color: Color(0xFFFFB800)),
+                      const SizedBox(width: 3),
+                      Text(
+                        item.rating,
+                        style: const TextStyle(
+                            color: Color(0xFF0F2E5A),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
               ],

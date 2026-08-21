@@ -24,7 +24,7 @@ class ClinicListing {
   final String facilityName;
   final String rating;
   final String status;
-  final String location;
+  String location;
   final String phone;
   final String imageUrl;
   final String speciality;
@@ -36,6 +36,9 @@ class ClinicListing {
   final int totalReviews;
   final bool isVerified;
   final String profession;
+
+  double? roadDistanceKm;
+  int? roadEtaMinutes;
 
   ClinicListing({
     required this.uid,
@@ -54,17 +57,20 @@ class ClinicListing {
     this.longitude,
     this.totalReviews = 0,
     this.isVerified = false,
+    this.roadDistanceKm,
+    this.roadEtaMinutes,
   });
 
-  double? distanceFrom(double userLat, double userLng) {
-    if (latitude == null || longitude == null) return null;
+  double distanceFrom(double userLat, double userLng) {
+    if (roadDistanceKm != null) return roadDistanceKm!;
+    if (latitude == null || longitude == null) return 999.0;
     return DistanceService.calculateDistanceInKm(
         userLat, userLng, latitude!, longitude!);
   }
 
-  int? etaMinutes(double userLat, double userLng) {
+  int etaMinutes(double userLat, double userLng) {
+    if (roadEtaMinutes != null) return roadEtaMinutes!;
     final d = distanceFrom(userLat, userLng);
-    if (d == null) return null;
     return max(1, (d / 20.0 * 60).round());
   }
 }
@@ -95,6 +101,12 @@ class _HealthcarePageState extends State<HealthcarePage> {
 
   bool _isLoadingListings = true;
 
+  // Pagination state
+  DocumentSnapshot? _lastDocument;
+  bool _hasMore = true;
+  bool _isFetchingMore = false;
+  final ScrollController _scrollController = ScrollController();
+
   // ─── Listings ───────────────────────────────────
   List<ClinicListing> _allListings = [];
 
@@ -102,6 +114,20 @@ class _HealthcarePageState extends State<HealthcarePage> {
   void initState() {
     super.initState();
     _initializeData();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !_isFetchingMore &&
+          _hasMore) {
+        _loadMoreListings();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeData() async {
@@ -152,158 +178,15 @@ class _HealthcarePageState extends State<HealthcarePage> {
       }
 
       final snapshot =
-          await FirebaseFirestore.instance.collection('healthcare').get();
+          await FirebaseFirestore.instance.collection('healthcare').limit(20).get();
 
-      final List<ClinicListing> fetchedListings = [];
-      final userLocationStr = locationController.locationName.value;
-      final selectedHealthcareType = widget.healthcareType;
-
-      print('[HEALTHCARE] Total Firebase records: ${snapshot.docs.length}');
-
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-
-        final addressStr = data['address']?.toString() ?? '';
-        final firebaseType =
-            (data['profession'] ?? data['healthcare_type'] ?? '')
-                .toString()
-                .trim()
-                .toLowerCase();
-        final categoryStr =
-            (data['category'] ?? '').toString().trim().toLowerCase();
-        final statusStr =
-            (data['status'] ?? '').toString().trim().toLowerCase();
-
-        final selectedType = selectedHealthcareType.trim().toLowerCase();
-
-        final locationMatch = isLocationMatch(userLocationStr, addressStr);
-        final typeMatch = firebaseType == selectedType;
-        final categoryMatch =
-            categoryStr == 'healthcare' || categoryStr.isEmpty;
-        final statusMatch =
-            statusStr == 'active' || selectedType == 'emergency services';
-
-        final shouldShow = typeMatch && categoryMatch && statusMatch;
-
-        print('[HEALTHCARE] Firebase type: $firebaseType');
-        print('[HEALTHCARE] Selected type: $selectedHealthcareType');
-        print('[HEALTHCARE] Type match: $typeMatch');
-        print('[HEALTHCARE] Category match: $categoryMatch');
-        print('[HEALTHCARE] Status match: $statusMatch');
-        print('[HEALTHCARE] FINAL SHOW: $shouldShow');
-
-        // Skip if conditions don't match
-        if (!shouldShow) {
-          continue;
-        }
-
-        final rawRating = data['ratings'] ?? 0;
-        final totalReviews = data['total_reviews'] ?? 0;
-        final ratingStr = "$rawRating ($totalReviews)";
-
-        final isVerifiedFlag =
-            data['isVerified'] == 1 || data['isVerified'] == true;
-
-        String address = data['address'] ?? "Kozhikode";
-        double? dbLat = double.tryParse(
-            data['latitude']?.toString() ?? data['lat']?.toString() ?? '');
-        double? dbLng = double.tryParse(data['longitude']?.toString() ??
-            data['lng']?.toString() ??
-            data['long']?.toString() ??
-            '');
-
-        double? lat;
-        double? lng;
-
-        if (dbLat != null && dbLng != null && dbLat != 0.0 && dbLng != 0.0) {
-          lat = dbLat;
-          lng = dbLng;
-        } else {
-          try {
-            // Append context to avoid ambiguous address timeouts
-            final searchAddress = "$address";
-            List<Location> locations = await locationFromAddress(searchAddress)
-                .timeout(const Duration(seconds: 2));
-
-            if (locations.isNotEmpty) {
-              lat = locations.first.latitude;
-              lng = locations.first.longitude;
-              print(
-                  '[GEOCODING] Success for "$searchAddress" -> lat: $lat, lng: $lng');
-            }
-          } catch (e) {
-            print(
-                '[HEALTHCARE] Geocoding failed or timed out for "$address": $e');
-          }
-        }
-
-        final userLat = locationController.latitude.value;
-        final userLng = locationController.longitude.value;
-        double? distMeters;
-        double? distKm;
-
-        if (userLat != null && userLng != null && lat != null && lng != null) {
-          distMeters = Geolocator.distanceBetween(userLat, userLng, lat, lng);
-          distKm = distMeters / 1000;
-        }
-
-        print('[DISTANCE] -----------------------------');
-        print('[DISTANCE] Facility: ${data['facility_name']}');
-        print('[DISTANCE] Address: $address');
-        print('[DISTANCE] User latitude: $userLat');
-        print('[DISTANCE] User longitude: $userLng');
-        print('[DISTANCE] Provider latitude: $lat');
-        print('[DISTANCE] Provider longitude: $lng');
-        if (distMeters != null) {
-          print('[DISTANCE] Distance meters: $distMeters');
-          print('[DISTANCE] Distance km: ${distKm?.toStringAsFixed(2)}');
-        } else {
-          print('[DISTANCE] Distance calculation failed (missing coordinates)');
-        }
-        print('[DISTANCE] -----------------------------');
-
-        String statusText = (data['status']?.toString() ?? "Pending");
-        statusText = statusText.isNotEmpty
-            ? statusText[0].toUpperCase() +
-                statusText.substring(1).toLowerCase()
-            : "Pending";
-
-        String phoneStr = data['phone']?.toString().isNotEmpty == true
-            ? data['phone'].toString()
-            : (data['contact_number']?.toString() ?? "");
-
-        fetchedListings.add(
-          ClinicListing(
-            uid: doc.id,
-            name: (data['facility_name']?.toString().trim().isEmpty ?? true)
-                ? ""
-                : (data['username']?.toString().trim().isNotEmpty == true
-                    ? data['username']
-                    : "Clinic Doctor"),
-            facilityName:
-                (data['facility_name']?.toString().trim().isNotEmpty == true)
-                    ? data['facility_name']
-                    : (data['username']?.toString().trim().isNotEmpty == true
-                        ? data['username']
-                        : "Emergency Service"),
-            rating: ratingStr,
-            status: statusText,
-            location: address,
-            phone: phoneStr.isNotEmpty ? "tel:$phoneStr" : "",
-            imageUrl: data['profile_img']?.isNotEmpty == true
-                ? data['profile_img']
-                : "assets/image/hospital_icon.png", // fallback icon
-            speciality: data['speciality'] ?? "General",
-            availableTime: data['available_time'] ?? "9 AM - 8 PM",
-            quoteText: "മികച്ച ചികിത്സ ഉറപ്പ് നൽകുന്നു.",
-            latitude: lat,
-            longitude: lng,
-            totalReviews: int.tryParse(totalReviews.toString()) ?? 0,
-            isVerified: isVerifiedFlag,
-            profession: firebaseType,
-          ),
-        );
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+      } else {
+        _hasMore = false;
       }
+
+      final fetchedListings = await _processSnapshot(snapshot);
 
       if (mounted) {
         setState(() {
@@ -318,6 +201,208 @@ class _HealthcarePageState extends State<HealthcarePage> {
         });
       }
     }
+  }
+
+  Future<void> _loadMoreListings() async {
+    if (_isFetchingMore || !_hasMore || _lastDocument == null) return;
+    
+    setState(() {
+      _isFetchingMore = true;
+    });
+    
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('healthcare')
+          .startAfterDocument(_lastDocument!)
+          .limit(20)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _hasMore = false;
+          _isFetchingMore = false;
+        });
+        return;
+      }
+      
+      _lastDocument = snapshot.docs.last;
+      
+      final fetchedListings = await _processSnapshot(snapshot);
+
+      if (mounted) {
+        setState(() {
+          _allListings.addAll(fetchedListings);
+          _isFetchingMore = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading more healthcare listings: $e");
+      if (mounted) {
+        setState(() {
+          _isFetchingMore = false;
+        });
+      }
+    }
+  }
+
+  Future<List<ClinicListing>> _processSnapshot(QuerySnapshot snapshot) async {
+    final locationController = LocationController.to;
+    final List<ClinicListing> fetchedListings = [];
+    final userLocationStr = locationController.locationName.value;
+    final selectedHealthcareType = widget.healthcareType;
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+
+      final addressStr = data['address']?.toString() ?? '';
+      final firebaseType =
+          (data['profession'] ?? data['healthcare_type'] ?? '')
+              .toString()
+              .trim()
+              .toLowerCase();
+      final categoryStr =
+          (data['category'] ?? '').toString().trim().toLowerCase();
+      final statusStr =
+          (data['status'] ?? '').toString().trim().toLowerCase();
+
+      final selectedType = selectedHealthcareType.trim().toLowerCase();
+
+      final locationMatch = isLocationMatch(userLocationStr, addressStr);
+      final typeMatch = firebaseType == selectedType;
+      final categoryMatch =
+          categoryStr == 'healthcare' || categoryStr.isEmpty;
+      final statusMatch =
+          statusStr == 'active' || selectedType == 'emergency services';
+
+      final shouldShow = typeMatch && categoryMatch && statusMatch;
+
+      // Skip if conditions don't match
+      if (!shouldShow) {
+        continue;
+      }
+
+      final rawRating = data['ratings'] ?? 0;
+      final totalReviews = data['total_reviews'] ?? 0;
+      final ratingStr = "$rawRating ($totalReviews)";
+
+      final isVerifiedFlag =
+          data['isVerified'] == 1 || data['isVerified'] == true;
+
+      String address = data['address'] ?? "Kozhikode";
+      double? dbLat = double.tryParse(
+          data['latitude']?.toString() ?? data['lat']?.toString() ?? '');
+      double? dbLng = double.tryParse(data['longitude']?.toString() ??
+          data['lng']?.toString() ??
+          data['long']?.toString() ??
+          '');
+
+      double? lat;
+      double? lng;
+
+      if (dbLat != null && dbLng != null && dbLat != 0.0 && dbLng != 0.0) {
+        lat = dbLat;
+        lng = dbLng;
+      } else {
+        try {
+          // Append context to avoid ambiguous address timeouts
+          final searchAddress = "$address";
+          List<Location> locations = await locationFromAddress(searchAddress)
+              .timeout(const Duration(seconds: 2));
+
+          if (locations.isNotEmpty) {
+            lat = locations.first.latitude;
+            lng = locations.first.longitude;
+          }
+        } catch (e) {
+          print(
+              '[HEALTHCARE] Geocoding failed or timed out for "$address": $e');
+        }
+      }
+
+      final userLat = locationController.latitude.value;
+      final userLng = locationController.longitude.value;
+      double? distMeters;
+      double? distKm;
+
+      if (userLat != null && userLng != null && lat != null && lng != null) {
+        distMeters = Geolocator.distanceBetween(userLat, userLng, lat, lng);
+        distKm = distMeters / 1000;
+      }
+
+      String statusText = (data['status']?.toString() ?? "Pending");
+      statusText = statusText.isNotEmpty
+          ? statusText[0].toUpperCase() +
+              statusText.substring(1).toLowerCase()
+          : "Pending";
+
+      String phoneStr = data['phone']?.toString().isNotEmpty == true
+          ? data['phone'].toString()
+          : (data['contact_number']?.toString() ?? "");
+
+      fetchedListings.add(
+        ClinicListing(
+          uid: doc.id,
+          name: (data['facility_name']?.toString().trim().isEmpty ?? true)
+              ? ""
+              : (data['username']?.toString().trim().isNotEmpty == true
+                  ? data['username']
+                  : "Clinic Doctor"),
+          facilityName:
+              (data['facility_name']?.toString().trim().isNotEmpty == true)
+                  ? data['facility_name']
+                  : (data['username']?.toString().trim().isNotEmpty == true
+                      ? data['username']
+                      : "Emergency Service"),
+          rating: ratingStr,
+          status: statusText,
+          location: address,
+          phone: phoneStr.isNotEmpty ? "tel:$phoneStr" : "",
+          imageUrl: data['profile_img']?.isNotEmpty == true
+              ? data['profile_img']
+              : "assets/image/hospital_icon.png", // fallback icon
+          speciality: data['speciality'] ?? "General",
+          availableTime: data['available_time'] ?? "9 AM - 8 PM",
+          quoteText: "മികച്ച ചികിത്സ ഉറപ്പ് നൽകുന്നു.",
+          latitude: lat,
+          longitude: lng,
+          totalReviews: int.tryParse(totalReviews.toString()) ?? 0,
+          isVerified: isVerifiedFlag,
+          profession: firebaseType,
+        ),
+      );
+    }
+
+    // Pre-fetch road distances in bulk from Google Maps API
+    if (fetchedListings.isNotEmpty) {
+      final destinations = fetchedListings
+          .map((e) => <String, double>{
+                'lat': e.latitude ?? 0.0,
+                'lng': e.longitude ?? 0.0
+              })
+          .toList();
+      final roadResults = await DistanceService.fetchBulkRoadDistances(
+          locationController.latitude.value ?? 11.2588,
+          locationController.longitude.value ?? 75.7804,
+          destinations);
+
+      for (int i = 0; i < fetchedListings.length; i++) {
+        if (roadResults[i] != null) {
+          fetchedListings[i].roadDistanceKm = roadResults[i]!['distanceKm'];
+          fetchedListings[i].roadEtaMinutes = roadResults[i]!['etaMinutes'];
+          if (roadResults[i]!['address'] != null) {
+            final addrParts = (roadResults[i]!['address'] as String)
+                .split(',')
+                .map((s) => s.trim())
+                .where((s) => !s.contains('+'))
+                .toList();
+            if (addrParts.isNotEmpty) {
+              fetchedListings[i].location = addrParts.first;
+            }
+          }
+        }
+      }
+    }
+    return fetchedListings;
   }
 
   // ─── Filtered + Ranked list ───────────────────────
@@ -358,9 +443,6 @@ class _HealthcarePageState extends State<HealthcarePage> {
     result.sort((a, b) {
       final distA = a.distanceFrom(userLat, userLng);
       final distB = b.distanceFrom(userLat, userLng);
-      if (distA == null && distB == null) return 0;
-      if (distA == null) return 1; // null goes to bottom
-      if (distB == null) return -1;
       return distA.compareTo(distB);
     });
 
@@ -372,7 +454,7 @@ class _HealthcarePageState extends State<HealthcarePage> {
     // Normal browsing: Show services strictly within 10km
     return result.where((item) {
       final dist = item.distanceFrom(userLat, userLng);
-      return dist != null && dist <= 10.0;
+      return dist <= 10.0;
     }).toList();
   }
 
@@ -640,20 +722,28 @@ class _HealthcarePageState extends State<HealthcarePage> {
       );
     }
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-      itemCount: listings.length,
-      itemBuilder: (ctx, i) => _buildListingCard(listings[i], userLat, userLng),
+      itemCount: listings.length + (_isFetchingMore ? 1 : 0),
+      itemBuilder: (ctx, i) {
+        if (i == listings.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFF0F2E5A)),
+            ),
+          );
+        }
+        return _buildListingCard(listings[i], userLat, userLng);
+      },
     );
   }
 
   Widget _buildListingCard(ClinicListing item, double userLat, double userLng) {
     final dist = item.distanceFrom(userLat, userLng);
-    String distStr = "Distance unavailable";
-    if (dist != null) {
-      distStr = dist < 1
-          ? '${(dist * 1000).round()} m away'
-          : '${dist.toStringAsFixed(1)} km away';
-    }
+    String distStr = dist < 1
+        ? '${(dist * 1000).round()} m away'
+        : '${dist.toStringAsFixed(1)} km away';
 
     Color statusBg;
     Color statusText;
@@ -808,31 +898,13 @@ class _HealthcarePageState extends State<HealthcarePage> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              if (!item.rating.startsWith("0 ") &&
-                                  !item.rating.startsWith("0.0 ")) ...[
-                                const Icon(Icons.star,
-                                    color: Color(0xFFFFB800), size: 13),
-                                const SizedBox(width: 3),
-                                Text(
-                                  item.rating,
-                                  style: const TextStyle(
-                                      color: Color(0xFF0F2E5A),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                    width: 1,
-                                    height: 10,
-                                    color: const Color(0xFFCBD5E1)),
-                                const SizedBox(width: 8),
-                              ],
                               const Icon(Icons.place_outlined,
                                   size: 12, color: Color(0xFF64748B)),
                               const SizedBox(width: 3),
-                              Flexible(
+                              Expanded(
                                 child: Text(
                                   item.location,
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                       color: Color(0xFF64748B), fontSize: 11),
@@ -840,6 +912,28 @@ class _HealthcarePageState extends State<HealthcarePage> {
                               ),
                             ],
                           ),
+                          if (!item.rating.startsWith("0 ") &&
+                              !item.rating.startsWith("0.0 ")) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.star,
+                                    color: Color(0xFFFFB800), size: 13),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    item.rating,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: Color(0xFF0F2E5A),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ],
                     ),

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
+import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
@@ -62,6 +64,7 @@ class NotificationsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: const Text(
           "Notifications",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -87,17 +90,96 @@ class NotificationsPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.notifications_off_outlined,
-                      size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text("No notifications yet",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F2E5A).withOpacity(0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.notifications_off_outlined,
+                      size: 72,
+                      color: Color(0xFF0F2E5A),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    "No notifications yet",
+                    style: TextStyle(
+                      color: Color(0xFF0F2E5A),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "When you receive new updates, offers,\nor alerts, they will appear here.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 15,
+                      height: 1.4,
+                    ),
+                  ),
                 ],
               ),
             );
           }
 
-          final docs = snapshot.data!.docs;
+          var docs = snapshot.data!.docs;
+
+          // Filter out notifications created before the app was installed
+          final installTime = Hive.box('saved_routes_box')
+              .get('app_install_time', defaultValue: 0) as int;
+          if (installTime > 0) {
+            docs = docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final createdAt = data['created_at'] as Timestamp?;
+              if (createdAt == null) return false;
+              return createdAt.millisecondsSinceEpoch >= installTime;
+            }).toList();
+          }
+
+          if (docs.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F2E5A).withOpacity(0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.notifications_off_outlined,
+                      size: 72,
+                      color: Color(0xFF0F2E5A),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    "No notifications yet",
+                    style: TextStyle(
+                      color: Color(0xFF0F2E5A),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "When you receive new updates, offers,\nor alerts, they will appear here.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 15,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),

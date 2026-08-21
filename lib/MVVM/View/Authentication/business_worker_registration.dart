@@ -7,6 +7,8 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
+import 'package:naattulink/MVVM/model/services/app_location_service.dart';
+import 'package:naattulink/MVVM/View/Screen/location/select_location_map_page.dart';
 
 class BusinessWorkerRegistrationPage extends StatefulWidget {
   const BusinessWorkerRegistrationPage({super.key});
@@ -33,6 +35,23 @@ class _BusinessWorkerRegistrationPageState
   String _category =
       "Restaurant"; // Restaurant, Bakery, Grocery, Retail, Supermarket, Online Store
   String _availableTime = "9 AM - 8 PM";
+
+  double? _selectedLat;
+  double? _selectedLng;
+
+  Future<void> _pickLocationOnMap() async {
+    double initialLat = _selectedLat ?? 11.2588;
+    double initialLng = _selectedLng ?? 75.7804;
+    final result = await Get.to(() =>
+        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng));
+    if (result != null) {
+      setState(() {
+        _addressCtrl.text = result.formattedAddress ?? "";
+        _selectedLat = result.latitude;
+        _selectedLng = result.longitude;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -100,6 +119,18 @@ class _BusinessWorkerRegistrationPageState
       }
       final uid = userCredential.user!.uid;
 
+      // GPS location fallback if not picked via map
+      double? finalLat = _selectedLat;
+      double? finalLng = _selectedLng;
+
+      if (finalLat == null || finalLng == null) {
+        final locationModel = await AppLocationService().getCurrentLocation();
+        if (locationModel != null) {
+          finalLat = locationModel.latitude;
+          finalLng = locationModel.longitude;
+        }
+      }
+
       await FirebaseFirestore.instance.collection("businesses").doc(uid).set({
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
@@ -120,6 +151,8 @@ class _BusinessWorkerRegistrationPageState
         "total_reviews": 0,
         "isVerified": 0,
         "password": password,
+        "lat": finalLat,
+        "lng": finalLng,
       });
 
       _toastSuccess("Account created successfully. Awaiting admin approval.");
@@ -167,7 +200,11 @@ class _BusinessWorkerRegistrationPageState
                   return null;
                 }),
                 _buildTextField("Address", "Street name, Area, City",
-                    Icons.location_on_outlined, _addressCtrl),
+                    Icons.location_on_outlined, _addressCtrl,
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.location_on, color: Colors.red),
+                      onPressed: _pickLocationOnMap,
+                    )),
                 const SizedBox(height: 20),
                 const Text(
                   "Business Category",
@@ -431,6 +468,8 @@ class _BusinessWorkerRegistrationPageState
       int? maxLength,
       List<TextInputFormatter>? inputFormatters,
       String? Function(String?)? validator,
+      bool readOnly = false,
+      VoidCallback? onTap,
       Widget? suffixIcon}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -452,6 +491,8 @@ class _BusinessWorkerRegistrationPageState
             keyboardType: type,
             maxLength: maxLength,
             inputFormatters: inputFormatters,
+            readOnly: readOnly,
+            onTap: onTap,
             validator: validator ??
                 (v) => v == null || v.trim().isEmpty ? 'Required field' : null,
             decoration: InputDecoration(

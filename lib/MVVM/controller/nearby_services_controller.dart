@@ -1,10 +1,9 @@
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/model/nearby_service_model.dart';
 import 'package:naattulink/MVVM/model/repository/nearby_services_repository.dart';
-import 'package:naattulink/MVVM/model/services/location_service.dart';
+import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
 
 class NearbyServicesController extends GetxController {
-  final LocationService _locationService = LocationService();
   final NearbyServicesRepository _repository = NearbyServicesRepository();
 
   // States
@@ -27,7 +26,7 @@ class NearbyServicesController extends GetxController {
   void onInit() {
     super.onInit();
     // Warm up cached location on startup
-    _locationService.getCachedLocation();
+    LocationController.to.fetchLocation();
   }
 
   void resetState() {
@@ -53,17 +52,13 @@ class NearbyServicesController extends GetxController {
     isLoading.value = true;
 
     try {
-      // 1. Load cached location instantly if possible
-      var location = await _locationService.getCachedLocation();
+      // 1. Load location
+      await LocationController.to.fetchLocation();
+      final locationModel = LocationController.to.currentLocationModel.value;
 
-      // 2. If no cache, fetch current exact GPS
-      if (!location.isSuccess) {
-        location = await _locationService.fetchCurrentLocation();
-      }
-
-      if (!location.isSuccess) {
+      if (locationModel == null) {
         isError.value = true;
-        errorMessage.value = location.error ?? 'Could not determine location.';
+        errorMessage.value = 'Could not determine location.';
         isLoading.value = false;
         return;
       }
@@ -80,8 +75,8 @@ class NearbyServicesController extends GetxController {
       // 4. Query, calculate, filter, and sort
       final results = await _repository.getNearbyServices(
         collectionName: collectionName,
-        userLat: location.latitude!,
-        userLng: location.longitude!,
+        userLat: locationModel.latitude,
+        userLng: locationModel.longitude,
         maxSearchRadiusKm: 10.0,
         searchQuery: searchQuery.value,
       );
@@ -122,15 +117,15 @@ class NearbyServicesController extends GetxController {
     isLoading.value = true;
 
     // Force refresh GPS
-    final location =
-        await _locationService.fetchCurrentLocation(forceRefresh: true);
+    await LocationController.to.fetchLocation(forceRefresh: true);
+    final locationModel = LocationController.to.currentLocationModel.value;
 
-    if (location.isSuccess) {
+    if (locationModel != null) {
       // Re-query with fresh location
       await fetchNearbyServices(_currentCategory);
     } else {
       isError.value = true;
-      errorMessage.value = location.error ?? 'Failed to refresh location.';
+      errorMessage.value = 'Failed to refresh location.';
       isLoading.value = false;
     }
   }

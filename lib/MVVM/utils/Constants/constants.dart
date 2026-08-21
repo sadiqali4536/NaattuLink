@@ -7,6 +7,8 @@ const String appFullName = 'Naattu Link';
 const String iosVersion = '1.0.0';
 const String androidVersion = '1.0.0';
 
+const String googleMapApiKey = 'AIzaSyAvYHW2X59FfLZyBYbqGiO4DCO8ez1B2TY';
+
 class LocalStorage {
   static final GetStorage _storage = GetStorage();
 

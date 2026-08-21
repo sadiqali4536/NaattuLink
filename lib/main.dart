@@ -13,6 +13,10 @@ import 'package:naattulink/MVVM/View/Authentication/controller/recommendation_co
 import 'package:naattulink/MVVM/Viewmodel/themes_bloc.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/common_controller.dart';
 import 'package:naattulink/firebase_options.dart';
+import 'package:naattulink/MVVM/model/services/notification_service.dart';
+
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 
 class MyHttpOverrides extends HttpOverrides {
   @override
@@ -26,9 +30,19 @@ class MyHttpOverrides extends HttpOverrides {
 late Size mq;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  if (Platform.isAndroid) {
+    final GoogleMapsFlutterPlatform mapsImplementation =
+        GoogleMapsFlutterPlatform.instance;
+    if (mapsImplementation is GoogleMapsFlutterAndroid) {
+      mapsImplementation.useAndroidViewSurface = true;
+    }
+  }
+
   HttpOverrides.global = MyHttpOverrides();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await GetStorage.init();
+  await NotificationService.instance.initialize();
   await Hive.initFlutter();
   await Hive.openBox('saved_routes_box');
 

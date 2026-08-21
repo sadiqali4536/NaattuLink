@@ -1,18 +1,22 @@
 import 'package:get/get.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:flutter/material.dart';
+import 'package:naattulink/MVVM/model/models/app_location_model.dart';
+import 'package:naattulink/MVVM/model/services/app_location_service.dart';
 
-/// Global GetX controller that fetches and caches the user's current GPS location.
+/// Global GetX controller that manages the user's current GPS location and generic distance calculations.
 class LocationController extends GetxController {
   static LocationController get to => Get.find();
 
+  final AppLocationService _locationService = AppLocationService();
+
+  // Current location model
+  final currentLocationModel = Rxn<AppLocationModel>();
+
+  // Backwards compatibility fields
   final latitude = Rxn<double>();
   final longitude = Rxn<double>();
   final locationName = ''.obs;
   final district = ''.obs;
-
-  // To keep backward compatibility with existing codebase that reads currentLocation
   final currentLocation = ''.obs;
 
   final isLoading = false.obs;
@@ -20,73 +24,17 @@ class LocationController extends GetxController {
   Future<void> fetchLocation({bool forceRefresh = false}) async {
     if (isLoading.value) return;
 
-    if (!forceRefresh &&
-        latitude.value != null &&
-        longitude.value != null &&
-        locationName.value.isNotEmpty) {
+    if (!forceRefresh && currentLocationModel.value != null) {
       return; // Already fetched
     }
 
     isLoading.value = true;
 
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        // Location denied forever
-        _setFallbackLocation();
-        return;
-      }
-
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-
-        latitude.value = position.latitude;
-        longitude.value = position.longitude;
-
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-
-        if (placemarks.isNotEmpty) {
-          final pm = placemarks.first;
-
-          // Construct placeName as "subLocality, locality"
-          String subLocalityPart =
-              (pm.subLocality != null && pm.subLocality!.isNotEmpty)
-                  ? pm.subLocality!
-                  : (pm.name ?? '----');
-
-          String localityPart = (pm.locality != null && pm.locality!.isNotEmpty)
-              ? pm.locality!
-              : (pm.subAdministrativeArea ?? '----');
-
-          String distStr =
-              pm.subAdministrativeArea ?? pm.administrativeArea ?? "-----";
-          if (distStr.toLowerCase().endsWith(" district")) {
-            distStr = distStr.substring(0, distStr.length - 9).trim();
-          }
-          district.value = distStr;
-
-          if (subLocalityPart.toLowerCase() == localityPart.toLowerCase()) {
-            locationName.value = localityPart;
-          } else {
-            locationName.value = '$subLocalityPart, $localityPart';
-          }
-
-          currentLocation.value = locationName.value;
-        } else {
-          locationName.value = 'Kallai, Kozhikode';
-          currentLocation.value = locationName.value;
-          district.value = 'Unknown';
-        }
+      final loc = await _locationService.getCurrentLocation();
+      if (loc != null) {
+        currentLocationModel.value = loc;
+        _updateLegacyFields(loc);
       } else {
         _setFallbackLocation();
       }
@@ -98,11 +46,53 @@ class LocationController extends GetxController {
     }
   }
 
+  void updateLocationManually(AppLocationModel loc) {
+    currentLocationModel.value = loc;
+    _updateLegacyFields(loc);
+  }
+
+  void _updateLegacyFields(AppLocationModel loc) {
+    latitude.value = loc.latitude;
+    longitude.value = loc.longitude;
+    district.value = loc.district;
+    locationName.value = loc.formattedAddress;
+    currentLocation.value = loc.formattedAddress;
+  }
+
   void _setFallbackLocation() {
     latitude.value = 11.2588;
     longitude.value = 75.7804;
     locationName.value = 'Kallai, Kozhikode';
     currentLocation.value = 'Kallai, Kozhikode';
     district.value = 'Unknown';
+    currentLocationModel.value = AppLocationModel(
+      latitude: 11.2588,
+      longitude: 75.7804,
+      formattedAddress: 'Kallai, Kozhikode',
+      district: 'Unknown',
+    );
+  }
+
+  /// Expose generic distance string formatter
+  String getFormattedDistanceTo(double? targetLat, double? targetLng) {
+    return _locationService.getFormattedDistance(
+      latitude.value,
+      longitude.value,
+      targetLat,
+      targetLng,
+    );
+  }
+
+  /// Expose raw distance calculation
+  double getDistanceInMetersTo(double? targetLat, double? targetLng) {
+    if (latitude.value == null || longitude.value == null || targetLat == null || targetLng == null) {
+      return double.infinity;
+    }
+    return _locationService.calculateDistanceInMeters(
+      latitude.value!,
+      longitude.value!,
+      targetLat,
+      targetLng,
+    );
   }
 }

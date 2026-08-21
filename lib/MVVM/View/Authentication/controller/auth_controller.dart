@@ -14,6 +14,7 @@ import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.d
 
 import 'package:get_storage/get_storage.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
+import 'package:naattulink/MVVM/model/services/notification_service.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/View/Authentication/Registrationpage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -27,6 +28,7 @@ class AuthController extends GetxController {
 
   Future<void> routeAuthenticatedUser(User firebaseUser) async {
     final userId = firebaseUser.uid;
+    NotificationService.instance.syncCurrentToken();
 
     Future<DocumentSnapshot?> findInCollection(String collection) async {
       // 1. By UID
