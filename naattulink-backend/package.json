@@ -1,0 +1,13 @@
+{
+  "name": "naattulink-backend",
+  "version": "1.0.0",
+  "description": "Backend for NaattuLink password reset",
+  "main": "api/reset-password.js",
+  "scripts": {
+    "start": "node api/reset-password.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "firebase-admin": "^12.0.0"
+  }
+}
