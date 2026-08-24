@@ -1,0 +1,6 @@
+enum SmsAccountType {
+  account1,
+  account2,
+  account3,
+  account4,
+}

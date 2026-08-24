@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:naattulink/MVVM/View/Screen/Worker/Edit_address.dart';
+import 'package:naattulink/MVVM/View/Screen/location/address_form_bottom_sheet.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/check_out_page.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/worker_location_widget.dart';
 import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
@@ -482,11 +482,14 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
                                 ),
                                 GestureDetector(
                                     onTap: () {
-                                      Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  EditAddress()));
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: Colors.transparent,
+                                        useSafeArea: true,
+                                        builder: (_) =>
+                                            const AddressFormBottomSheet(),
+                                      );
                                     },
                                     child: Image.asset("assets/icons/edit.png"))
                               ],

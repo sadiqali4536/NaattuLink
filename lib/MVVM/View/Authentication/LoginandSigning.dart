@@ -7,6 +7,8 @@ import 'package:naattulink/MVVM/View/Authentication/Registrationpage.dart';
 import 'package:naattulink/MVVM/View/Authentication/current_loaction_fetch.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.dart';
 import 'package:naattulink/MVVM/model/services/firebaseauthservices.dart';
+import 'package:naattulink/MVVM/model/services/otp_service.dart';
+import 'package:naattulink/MVVM/View/Authentication/login_verify_otp_page.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
 import 'package:naattulink/MVVM/utils/widget/formfield/customformfield.dart';
@@ -225,7 +227,6 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
                                     return null;
                                   },
                                 ),
-
                                 // Forgot Password
                                 Align(
                                   alignment: Alignment.centerRight,
@@ -391,16 +392,24 @@ class _LoginAndSigningState extends State<LoginAndSigning> {
 
   Future<void> _handleLogin() async {
     if (formKey.currentState!.validate()) {
-      final loginId = isPhoneLogin
-          ? _phoneController.text.trim()
-          : _emailController.text.trim();
-
-      await AuthController.to.login(
-        context,
-        loginId,
-        _passwordController.text.trim(),
-        isPhoneLogin,
-      );
+      if (isPhoneLogin) {
+        final phone = _phoneController.text.trim();
+        await AuthController.to.login(
+          context,
+          phone,
+          _passwordController.text.trim(),
+          true,
+        );
+      } else {
+        // Normal Email/Password Login
+        final email = _emailController.text.trim();
+        await AuthController.to.login(
+          context,
+          email,
+          _passwordController.text.trim(),
+          false,
+        );
+      }
     }
   }
 

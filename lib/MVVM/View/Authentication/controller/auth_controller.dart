@@ -25,9 +25,15 @@ class AuthController extends GetxController {
   final _authServices = FirebaseAuthServices();
   final _isLoading = false.obs;
   bool get isLoading => _isLoading.value;
+  set isLoading(bool value) => _isLoading.value = value;
 
   Future<void> routeAuthenticatedUser(User firebaseUser) async {
     final userId = firebaseUser.uid;
+    debugPrint("=== ROUTING USER ===");
+    debugPrint("Firebase UID: $userId");
+    debugPrint("Email: ${firebaseUser.email}");
+    debugPrint("Phone: ${firebaseUser.phoneNumber}");
+
     NotificationService.instance.syncCurrentToken();
 
     Future<DocumentSnapshot?> findInCollection(String collection) async {
@@ -36,7 +42,10 @@ class AuthController extends GetxController {
           .collection(collection)
           .doc(userId)
           .get();
-      if (doc.exists) return doc;
+      if (doc.exists) {
+        debugPrint("Found in $collection by UID");
+        return doc;
+      }
 
       // 2. By Email
       if (firebaseUser.email != null && firebaseUser.email!.isNotEmpty) {
@@ -45,7 +54,10 @@ class AuthController extends GetxController {
             .where('email', isEqualTo: firebaseUser.email!.trim().toLowerCase())
             .limit(1)
             .get();
-        if (emailQuery.docs.isNotEmpty) return emailQuery.docs.first;
+        if (emailQuery.docs.isNotEmpty) {
+          debugPrint("Found in $collection by Email");
+          return emailQuery.docs.first;
+        }
       }
 
       // 3. By Phone
@@ -64,17 +76,23 @@ class AuthController extends GetxController {
             .where('phone', whereIn: [rawPhone, phoneWithPrefix])
             .limit(1)
             .get();
-        if (phoneQuery.docs.isNotEmpty) return phoneQuery.docs.first;
+        if (phoneQuery.docs.isNotEmpty) {
+          debugPrint("Found in $collection by Phone");
+          return phoneQuery.docs.first;
+        }
       }
       return null;
     }
 
     // Step 1: Check users collection
     DocumentSnapshot? foundDoc = await findInCollection('users');
-    if (foundDoc != null &&
-        (foundDoc.data() as Map<String, dynamic>?)?['role'] == 'user') {
-      Get.offAll(() => const FindingLocationPage());
-      return;
+    if (foundDoc != null) {
+      final role = (foundDoc.data() as Map<String, dynamic>?)?['role'];
+      debugPrint("User found in 'users' collection with role: $role");
+      if (role == 'user') {
+        Get.offAll(() => const FindingLocationPage());
+        return;
+      }
     }
 
     // Step 2: Search worker collections
@@ -90,6 +108,7 @@ class AuthController extends GetxController {
       foundDoc = await findInCollection(collection);
       if (foundDoc != null) {
         foundCollection = collection;
+        debugPrint("Worker found in collection: $foundCollection");
         break;
       }
     }
@@ -237,27 +256,53 @@ class AuthController extends GetxController {
         return; // Stop login process
       }
 
-      // STEP 2: Authenticate with Firebase Auth
-      final userCredential =
-          await _authServices.signIn(context, authEmail, password);
+      // STEP 2: Authenticate with Firebase using Email & Password
+      debugPrint("Authenticating with email: $authEmail");
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: authEmail,
+        password: password,
+      );
 
-      if (userCredential != null && userCredential.user != null) {
-        final user = userCredential.user!;
-        debugPrint("Firebase Authentication Result: SUCCESS");
-        debugPrint("Firebase UID: ${user.uid}");
-        debugPrint("User Role: user");
-        debugPrint("Final Navigation: USER HOME");
+      if (userCredential.user != null) {
         toastSuccess("Login Successful!");
-        await routeAuthenticatedUser(user);
+        await routeAuthenticatedUser(userCredential.user!);
       } else {
         debugPrint("Firebase Authentication Result: FAILED");
         debugPrint("Final Navigation: LOGIN ERROR");
+        toastError("Failed to authenticate.");
       }
     } catch (e, stackTrace) {
       final message = FirebaseErrorHandler.getReadableErrorMessage(e);
       debugPrint("Firebase Authentication Result: FAILED");
       debugPrint("Error Details: $e");
       debugPrint("Final Navigation: LOGIN ERROR");
+      toastError(message);
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  Future<void> loginWithCustomToken(
+      BuildContext context, String customToken) async {
+    _isLoading.value = true;
+    try {
+      debugPrint("=== OTP LOGIN STARTED ===");
+      final userCredential =
+          await FirebaseAuth.instance.signInWithCustomToken(customToken);
+
+      if (userCredential.user != null) {
+        final user = userCredential.user!;
+        debugPrint("Firebase Custom Auth Result: SUCCESS");
+        debugPrint("Firebase UID: ${user.uid}");
+        toastSuccess("Login Successful!");
+        await routeAuthenticatedUser(user);
+      } else {
+        toastError("Failed to authenticate.");
+      }
+    } catch (e) {
+      final message = FirebaseErrorHandler.getReadableErrorMessage(e);
+      debugPrint("Firebase Custom Auth Result: FAILED");
+      debugPrint("Error Details: $e");
       toastError(message);
     } finally {
       _isLoading.value = false;

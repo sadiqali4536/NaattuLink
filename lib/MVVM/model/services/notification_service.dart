@@ -283,7 +283,7 @@ class NotificationService {
       }
       GetStorage().remove('firebase_fcm_token');
     } catch (e) {
-      debugPrint("Error clearing FCM token: \$e");
+      debugPrint("Error clearing FCM token: $e");
     }
   }
 
@@ -293,7 +293,7 @@ class NotificationService {
     if (installId == null) {
       final rand = Random();
       installId =
-          'install_${DateTime.now().millisecondsSinceEpoch}_\${rand.nextInt(100000)}';
+          'install_${DateTime.now().millisecondsSinceEpoch}_${rand.nextInt(100000)}';
       storage.write('installation_id', installId);
     }
     return installId;

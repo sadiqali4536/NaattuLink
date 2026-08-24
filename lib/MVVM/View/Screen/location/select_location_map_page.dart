@@ -7,15 +7,30 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:naattulink/MVVM/utils/Constants/constants.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
+import 'package:naattulink/MVVM/View/Screen/location/address_form_bottom_sheet.dart';
 
 class SelectLocationMapPage extends StatefulWidget {
   final double initialLat;
   final double initialLng;
 
+  /// When [true] (default), tapping "Confirm Location" opens the
+  /// [AddressFormBottomSheet] so the user fills in delivery details before
+  /// the map page closes. Set to [false] when this page is opened from
+  /// *inside* [AddressFormBottomSheet] (the Change button), so only the raw
+  /// [AppLocationModel] is returned — avoiding a nested duplicate form.
+  final bool showAddressFormOnConfirm;
+
+  /// Forwarded to [AddressFormBottomSheet.onAddressSaved] so the original
+  /// caller (e.g. [LocationSelectionPage]) can persist the address to local
+  /// storage and refresh its list without closing itself.
+  final void Function(AppLocationModel saved)? onAddressSaved;
+
   const SelectLocationMapPage({
     super.key,
     required this.initialLat,
     required this.initialLng,
+    this.showAddressFormOnConfirm = true,
+    this.onAddressSaved,
   });
 
   @override
@@ -383,8 +398,32 @@ class _SelectLocationMapPageState extends State<SelectLocationMapPage> {
                     child: ElevatedButton(
                       onPressed: _isLoading || _currentLocationModel == null
                           ? null
-                          : () {
-                              Navigator.pop(context, _currentLocationModel);
+                          : () async {
+                              if (widget.showAddressFormOnConfirm) {
+                                // Show the address form so the user fills in
+                                // delivery details before the map page closes.
+                                final updatedModel =
+                                    await showModalBottomSheet<AppLocationModel>(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  useSafeArea: true,
+                                  showDragHandle: true,
+                                  builder: (_) => AddressFormBottomSheet(
+                                    initialAddress: _currentLocationModel,
+                                    // Forward the callback so LocationSelectionPage
+                                    // can save to local storage and refresh its list.
+                                    onAddressSaved: widget.onAddressSaved,
+                                  ),
+                                );
+                                if (updatedModel != null && context.mounted) {
+                                  Navigator.pop(context, updatedModel);
+                                }
+                              } else {
+                                // Called from inside AddressFormBottomSheet —
+                                // just return the raw location, no nested form.
+                                Navigator.pop(context, _currentLocationModel);
+                              }
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0F2E5A),

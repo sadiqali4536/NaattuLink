@@ -39,6 +39,7 @@ import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.d
 import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Home/notifications_page.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:naattulink/MVVM/View/Screen/location/location_selection_page.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({Key? key}) : super(key: key);
@@ -1045,8 +1046,7 @@ class HomepageState extends State<Homepage> {
                                     bannerItems.addAll(adminBanners);
 
                                     if (bannerItems.isEmpty) {
-                                      bannerItems.add(buildPromoCard(
-                                          imageUrl: '', title: ''));
+                                      return const SizedBox.shrink();
                                     }
 
                                     final bannerCount = bannerItems.length;
@@ -1075,45 +1075,50 @@ class HomepageState extends State<Homepage> {
                                                   },
                                                 ),
                                               ),
-                                              const SizedBox(height: 10),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: List.generate(
-                                                  bannerCount,
-                                                  (index) {
-                                                    return AnimatedContainer(
-                                                      duration: const Duration(
-                                                        milliseconds: 250,
-                                                      ),
-                                                      width: localActiveIndex ==
-                                                              index
-                                                          ? 15
-                                                          : 6,
-                                                      height: 6,
-                                                      margin: const EdgeInsets
-                                                          .symmetric(
-                                                        horizontal: 3,
-                                                      ),
-                                                      decoration: BoxDecoration(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(
-                                                          3,
+                                              if (bannerCount > 1) ...[
+                                                const SizedBox(height: 10),
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: List.generate(
+                                                    bannerCount,
+                                                    (index) {
+                                                      return AnimatedContainer(
+                                                        duration:
+                                                            const Duration(
+                                                          milliseconds: 250,
                                                         ),
-                                                        color:
+                                                        width:
                                                             localActiveIndex ==
                                                                     index
-                                                                ? const Color(
-                                                                    0xFFFFB800,
-                                                                  )
-                                                                : Colors
-                                                                    .grey[300],
-                                                      ),
-                                                    );
-                                                  },
+                                                                ? 15
+                                                                : 6,
+                                                        height: 6,
+                                                        margin: const EdgeInsets
+                                                            .symmetric(
+                                                          horizontal: 3,
+                                                        ),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                            3,
+                                                          ),
+                                                          color:
+                                                              localActiveIndex ==
+                                                                      index
+                                                                  ? const Color(
+                                                                      0xFFFFB800,
+                                                                    )
+                                                                  : Colors.grey[
+                                                                      300],
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
                                                 ),
-                                              ),
+                                              ],
                                             ],
                                           );
                                         },
@@ -1282,18 +1287,38 @@ class HomepageState extends State<Homepage> {
                                                       const SizedBox(height: 2),
                                                       GestureDetector(
                                                         onTap: () async {
-                                                          ScaffoldMessenger.of(
-                                                                  context)
-                                                              .showSnackBar(
-                                                            const SnackBar(
-                                                                content: Text(
-                                                                    'Fetching location...')),
-                                                          );
-                                                          await LocationController
-                                                              .to
-                                                              .fetchLocation(
-                                                                  forceRefresh:
-                                                                      true);
+                                                          final loc =
+                                                              LocationController
+                                                                  .to
+                                                                  .currentLocation
+                                                                  .value;
+                                                          if (loc.isEmpty ||
+                                                              loc ==
+                                                                  'Unknown Location' ||
+                                                              loc ==
+                                                                  'Selected Location') {
+                                                            ScaffoldMessenger
+                                                                    .of(context)
+                                                                .showSnackBar(
+                                                              const SnackBar(
+                                                                  content: Text(
+                                                                      'Fetching location...')),
+                                                            );
+                                                            await LocationController
+                                                                .to
+                                                                .fetchLocation(
+                                                                    forceRefresh:
+                                                                        true);
+                                                          } else {
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                builder:
+                                                                    (context) =>
+                                                                        const LocationSelectionPage(),
+                                                              ),
+                                                            );
+                                                          }
                                                         },
                                                         child: Obx(() {
                                                           final loc =
@@ -1301,10 +1326,37 @@ class HomepageState extends State<Homepage> {
                                                                   .to
                                                                   .currentLocation
                                                                   .value;
+                                                          String shortLoc = loc;
+                                                          if (loc.isNotEmpty &&
+                                                              loc !=
+                                                                  'Unknown Location' &&
+                                                              loc !=
+                                                                  'Selected Location') {
+                                                            List<String> parts =
+                                                                loc.split(',');
+                                                            if (parts
+                                                                .isNotEmpty) {
+                                                              shortLoc =
+                                                                  parts[0]
+                                                                      .trim();
+                                                              if (parts.length >
+                                                                  1) {
+                                                                shortLoc += ", " +
+                                                                    parts[1]
+                                                                        .trim();
+                                                              }
+                                                              if (shortLoc
+                                                                      .length >
+                                                                  25) {
+                                                                shortLoc =
+                                                                    "${shortLoc.substring(0, 25)}...";
+                                                              }
+                                                            }
+                                                          }
                                                           final displayText = loc
                                                                   .isEmpty
                                                               ? 'Fetch Location'
-                                                              : loc;
+                                                              : shortLoc;
                                                           return Row(
                                                             mainAxisSize:
                                                                 MainAxisSize
@@ -1322,6 +1374,7 @@ class HomepageState extends State<Homepage> {
                                                               Flexible(
                                                                 child: Text(
                                                                   displayText,
+                                                                  maxLines: 1,
                                                                   overflow:
                                                                       TextOverflow
                                                                           .ellipsis,
@@ -1458,12 +1511,15 @@ class HomepageState extends State<Homepage> {
                                                     );
                                                   },
                                                 ),
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.menu,
-                                                    color: Colors.white,
+                                                Visibility(
+                                                  visible: false,
+                                                  child: IconButton(
+                                                    icon: const Icon(
+                                                      Icons.menu,
+                                                      color: Colors.white,
+                                                    ),
+                                                    onPressed: () {},
                                                   ),
-                                                  onPressed: () {},
                                                 ),
                                               ],
                                             ),
@@ -1682,21 +1738,24 @@ class HomepageState extends State<Homepage> {
                       bannerImageUrl != null && bannerImageUrl.isNotEmpty
                           ? Image.network(bannerImageUrl,
                               fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => Image.asset(
-                                  'assets/image/add_image.png',
-                                  fit: BoxFit.contain))
-                          : Image.asset('assets/image/add_image.png',
-                              fit: BoxFit.contain),
+                              errorBuilder: (_, __, ___) => const Center(
+                                    child: Icon(Icons.broken_image,
+                                        color: Colors.grey, size: 40),
+                                  ))
+                          : const Center(
+                              child: Icon(Icons.broken_image,
+                                  color: Colors.grey, size: 40),
+                            ),
                 )
               else
                 bannerImageUrl != null && bannerImageUrl.isNotEmpty
                     ? Image.network(bannerImageUrl,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Image.asset(
-                            'assets/image/add_image.png',
-                            fit: BoxFit.contain))
-                    : Image.asset('assets/image/add_image.png',
-                        fit: BoxFit.contain),
+                        errorBuilder: (_, __, ___) => const Center(
+                              child: Icon(Icons.broken_image,
+                                  color: Colors.grey, size: 40),
+                            ))
+                    : const SizedBox.shrink(),
               // ── Gradient overlay ──
               // Positioned.fill(
               //   child: Container(
@@ -2715,10 +2774,21 @@ class HomepageState extends State<Homepage> {
                           height: 115,
                           width: double.infinity,
                           color: const Color(0xFFF1F5F9),
-                          child: const Icon(
-                            Icons.image_outlined,
-                            size: 28,
-                            color: Colors.grey,
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.wifi_off_rounded,
+                                size: 28,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                "No Connection",
+                                style:
+                                    TextStyle(color: Colors.grey, fontSize: 10),
+                              )
+                            ],
                           ),
                         ),
                       )
@@ -2731,10 +2801,21 @@ class HomepageState extends State<Homepage> {
                           height: 115,
                           width: double.infinity,
                           color: const Color(0xFFF1F5F9),
-                          child: const Icon(
-                            Icons.image_outlined,
-                            size: 28,
-                            color: Colors.grey,
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.wifi_off_rounded,
+                                size: 28,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                "No Connection",
+                                style:
+                                    TextStyle(color: Colors.grey, fontSize: 10),
+                              )
+                            ],
                           ),
                         ),
                       ),

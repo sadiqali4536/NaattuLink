@@ -101,10 +101,6 @@ class FirebaseAuthServices {
         await db.collection('users').doc(user.uid).set(userData.toMap());
       }
 
-      if (context.mounted) {
-        toastSuccess("Registration Successful");
-      }
-
       return user;
     } catch (e) {
       final message = FirebaseErrorHandler.getReadableErrorMessage(e);

@@ -41,3 +41,6 @@ class CustColor{
 
 
 var erroriconcolor = const Color.fromARGB(255, 217, 19, 19);
+
+const Color scaffoldBackground = Colors.white;
+const Color buttonColors = Colors.black;

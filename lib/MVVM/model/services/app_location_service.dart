@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart';
@@ -38,28 +39,82 @@ class AppLocationService {
       if (placemarks.isNotEmpty) {
         final pm = placemarks.first;
 
-        String subLocalityPart =
+        String? locality = pm.locality;
+        String? route = pm.thoroughfare;
+        String? subLocality =
             (pm.subLocality != null && pm.subLocality!.isNotEmpty)
-                ? pm.subLocality!
-                : (pm.name ?? '');
+                ? pm.subLocality
+                : pm.subAdministrativeArea;
+        String? postalCode = pm.postalCode;
+        String? country = pm.country;
 
-        String localityPart = (pm.locality != null && pm.locality!.isNotEmpty)
-            ? pm.locality!
-            : (pm.subAdministrativeArea ?? '');
+        debugPrint('========== GEOCODING RAW DATA ==========');
+        debugPrint('Locality: ${pm.locality}');
+        debugPrint('SubLocality: ${pm.subLocality}');
+        debugPrint('SubAdministrativeArea: ${pm.subAdministrativeArea}');
+        debugPrint('AdministrativeArea: ${pm.administrativeArea}');
+        debugPrint('Postal Code: ${pm.postalCode}');
+        debugPrint('Country: ${pm.country}');
+        debugPrint('========================================');
 
-        String distStr =
-            pm.subAdministrativeArea ?? pm.administrativeArea ?? "";
-        if (distStr.toLowerCase().endsWith(" district")) {
-          distStr = distStr.substring(0, distStr.length - 9).trim();
+        final parts = <String?>[
+          locality,
+          route,
+          subLocality,
+          postalCode,
+          country,
+        ].where((e) => e != null && e.trim().isNotEmpty).toSet().toList();
+
+        String formattedAddress = parts.join(', ');
+
+        String? extractDistrict(Placemark place) {
+          // 1. Try subAdministrativeArea (standard Google Maps district field)
+          final district = place.subAdministrativeArea?.trim();
+          if (district != null && district.isNotEmpty) {
+            return district;
+          }
+
+          // 2. Fallback: Sometimes Google puts the district in the Locality field
+          final locality = place.locality?.trim();
+          if (locality != null && locality.isNotEmpty) {
+            const knownKeralaDistricts = [
+              'alappuzha',
+              'ernakulam',
+              'idukki',
+              'kannur',
+              'kasaragod',
+              'kollam',
+              'kottayam',
+              'kozhikode',
+              'malappuram',
+              'palakkad',
+              'pathanamthitta',
+              'thiruvananthapuram',
+              'thrissur',
+              'wayanad'
+            ];
+
+            if (knownKeralaDistricts.contains(locality.toLowerCase())) {
+              // Capitalize first letter
+              return locality[0].toUpperCase() +
+                  locality.substring(1).toLowerCase();
+            }
+          }
+
+          // 3. Fallback: Postal code heuristics (useful for rural areas with no district returned)
+          // 673xxx primarily covers Kozhikode (and parts of Wayanad/Malappuram)
+          final pin = place.postalCode?.trim();
+          if (pin != null && pin.startsWith('673')) {
+            return 'Kozhikode';
+          }
+
+          return null;
         }
 
-        String formattedAddress = '';
-        if (subLocalityPart.toLowerCase() == localityPart.toLowerCase()) {
-          formattedAddress = localityPart;
-        } else {
-          formattedAddress = [subLocalityPart, localityPart]
-              .where((e) => e.isNotEmpty)
-              .join(', ');
+        String distStr = extractDistrict(pm) ?? 'Unknown';
+
+        if (distStr.toLowerCase().endsWith(" district")) {
+          distStr = distStr.substring(0, distStr.length - 9).trim();
         }
 
         return AppLocationModel(

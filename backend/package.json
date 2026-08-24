@@ -1,0 +1,12 @@
+{
+  "name": "naattulink-backend",
+  "version": "1.0.0",
+  "description": "Serverless backend for NaattuLink Firebase operations",
+  "main": "api/reset-password.js",
+  "dependencies": {
+    "firebase-admin": "^12.1.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}

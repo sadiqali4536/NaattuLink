@@ -1411,7 +1411,10 @@ class _RegistrationInputFieldState extends State<RegistrationInputField> {
                   obscureText: widget.isPassword ? _obscureText : false,
                   validator: widget.validator,
                   maxLines: widget.isPassword ? 1 : widget.maxLines,
-                  keyboardType: widget.keyboardType,
+                  keyboardType: widget.keyboardType ??
+                      (widget.isPassword
+                          ? TextInputType.visiblePassword
+                          : null),
                   maxLength: widget.maxLength,
                   inputFormatters: widget.inputFormatters,
                   readOnly: widget.readOnly,
