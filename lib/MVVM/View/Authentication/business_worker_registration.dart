@@ -42,8 +42,10 @@ class _BusinessWorkerRegistrationPageState
   Future<void> _pickLocationOnMap() async {
     double initialLat = _selectedLat ?? 11.2588;
     double initialLng = _selectedLng ?? 75.7804;
-    final result = await Get.to(() =>
-        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng));
+    final result = await Get.to(() => SelectLocationMapPage(
+        initialLat: initialLat,
+        initialLng: initialLng,
+        flow: LocationPickerFlow.registration));
     if (result != null) {
       setState(() {
         _addressCtrl.text = result.formattedAddress ?? "";
@@ -550,7 +552,7 @@ class _BusinessWorkerRegistrationPageState
           children: [
             Expanded(child: _buildRadioOption("Supermarket")),
             const SizedBox(width: 12),
-            Expanded(child: _buildRadioOption("Online Store")),
+            const Spacer(),
           ],
         ),
       ],

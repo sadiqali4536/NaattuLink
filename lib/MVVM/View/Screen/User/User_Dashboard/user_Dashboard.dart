@@ -4,11 +4,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/View/Screen/User/cart/Cartpage.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Home/Homepage.dart';
-import 'package:naattulink/MVVM/View/Screen/User/profile/profile.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/account_profile_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/my_bookings.dart';
 
 class user_Dashboard extends StatefulWidget {
-  const user_Dashboard({super.key});
+  final int initialHomeCategoryIndex;
+  const user_Dashboard({super.key, this.initialHomeCategoryIndex = 0});
 
   @override
   State<user_Dashboard> createState() => _BottomNavigationBarScreenState();
@@ -27,10 +28,12 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
   void initState() {
     super.initState();
     _bottomBarPages = [
-      Homepage(key: _homepageKey),
+      Homepage(
+          key: _homepageKey,
+          initialCategoryIndex: widget.initialHomeCategoryIndex),
       CartPage(),
       const MyBookings(),
-      const Profile(),
+      const AccountProfileScreen(),
     ];
     _getCartItemCount();
   }
@@ -83,25 +86,17 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
   }
 
   Widget _buildIcon(int index, bool isActive) {
-    final color = isActive ? const Color(0xFF0F2E5A) : const Color(0xFF858282);
+    final color = isActive
+        ? Color.fromARGB(255, 18, 56, 110)
+        : const Color(0xFF858282); // Purple for active
     switch (index) {
       case 0:
-        return Image.asset(
-          "assets/icons/Home.png",
-          color: color,
-          height: 24,
-          width: 24,
-        );
+        return Icon(Icons.home_outlined, color: color, size: 26);
       case 1:
         return Stack(
           clipBehavior: Clip.none,
           children: [
-            Image.asset(
-              "assets/icons/cart_bottombar.png",
-              color: color,
-              height: 24,
-              width: 24,
-            ),
+            Icon(Icons.shopping_cart_outlined, color: color, size: 26),
             if (cartCount > 0)
               Positioned(
                 right: -6,
@@ -131,19 +126,9 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
           ],
         );
       case 2:
-        return Image.asset(
-          "assets/icons/booking.png",
-          color: color,
-          height: 24,
-          width: 24,
-        );
+        return Icon(Icons.assignment_outlined, color: color, size: 26);
       case 3:
-        return Image.asset(
-          "assets/icons/profile_bottombar.png",
-          color: color,
-          height: 22,
-          width: 24,
-        );
+        return Icon(Icons.person_outline, color: color, size: 26);
       default:
         return const SizedBox.shrink();
     }
@@ -156,10 +141,6 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          // If tapping Home (index 0): always reset category + scroll to top.
-          // This covers both:
-          //   • Returning from another tab  (switch to Home)
-          //   • Double-tapping Home while already on it
           if (index == 0) {
             _homepageKey.currentState?.resetToForYou();
           }
@@ -176,24 +157,32 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
               AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: isActive
-                      ? const Color(0xFF0F2E5A).withOpacity(0.12)
+                      ? Color.fromARGB(255, 255, 212, 13).withOpacity(0.08)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: _buildIcon(index, isActive),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isActive
-                      ? const Color(0xFF0F2E5A)
-                      : const Color(0xFF858282),
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 10,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildIcon(index, isActive),
+                    const SizedBox(height: 4),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isActive
+                            ? Color(0xFF0F2E5A)
+                            : const Color(0xFF858282),
+                        fontWeight:
+                            isActive ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -211,26 +200,26 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
         children: _bottomBarPages,
       ),
       extendBody: true,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
           child: Container(
             height: 75,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(
                 _bottomBarPages.length,
                 (index) => _buildTabItem(index),

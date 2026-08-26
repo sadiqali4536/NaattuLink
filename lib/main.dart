@@ -14,6 +14,20 @@ import 'package:naattulink/MVVM/Viewmodel/themes_bloc.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/common_controller.dart';
 import 'package:naattulink/firebase_options.dart';
 import 'package:naattulink/MVVM/model/services/notification_service.dart';
+import 'package:naattulink/MVVM/View/Screen/User/services/service_details_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/education_categories_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/public_services_categories_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/transportation_categories_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/shops_categories_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/healthcare_bookings/healthcare_categories_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/helpline_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/tuition_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/food_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/internet_cafe_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pickup_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/jcbs_page.dart';
 
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
@@ -76,6 +90,37 @@ class MyApp extends StatelessWidget {
           darkTheme: ThemeData.dark(),
           themeMode: state.themeMode,
           home: SplashScreen(),
+          getPages: [
+            GetPage(
+              name: '/service/:id',
+              page: () {
+                final args = Get.arguments as Map<String, dynamic>? ?? {};
+                return ServiceDetailsPage(
+                  serviceId: Get.parameters['id'],
+                  category: args['category'] ?? '',
+                  serviceName: args['serviceName'] ?? '',
+                  rating: (args['rating'] ?? 0.0).toDouble(),
+                  originalPrice: args['originalPrice'] ?? 0,
+                  discount: args['discount'] ?? 0,
+                  image: args['image'] ?? '',
+                  discountPrice: args['discountPrice'] ?? 0,
+                );
+              },
+            ),
+            GetPage(name: '/auto-taxi', page: () => const AutoTaxiPage()),
+            GetPage(name: '/education', page: () => const EducationCategoriesPage()),
+            GetPage(name: '/public-services', page: () => const PublicServicesCategoriesPage()),
+            GetPage(name: '/transportation', page: () => const TransportationCategoriesPage()),
+            GetPage(name: '/shops', page: () => const ShopsCategoriesPage()),
+            GetPage(name: '/healthcare', page: () => const HealthcareCategoriesPage()),
+            GetPage(name: '/helpline', page: () => const HelplinePage()),
+            GetPage(name: '/tuition', page: () => const TuitionPage()),
+            GetPage(name: '/generic-listing', page: () => const GenericListingPage(title: "Listing")),
+            GetPage(name: '/food', page: () => const FoodPage()),
+            GetPage(name: '/internet-cafe', page: () => const InternetCafePage()),
+            GetPage(name: '/pickup', page: () => const PickupPage()),
+            GetPage(name: '/truck-jcb', page: () => const JcbsPage()),
+          ],
           //  Bottomnvigationbar(),
           // ExteriorBookingpage(),
           // InteriorBookingPage(),

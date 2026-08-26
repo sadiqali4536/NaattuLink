@@ -45,7 +45,7 @@ class _HealthcareWorkerRegistrationPageState
     double initialLat = _selectedLat ?? 11.2588;
     double initialLng = _selectedLng ?? 75.7804;
     final result = await Get.to(() =>
-        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng));
+        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng, flow: LocationPickerFlow.registration));
     if (result != null) {
       setState(() {
         _addressCtrl.text = result.formattedAddress ?? "";

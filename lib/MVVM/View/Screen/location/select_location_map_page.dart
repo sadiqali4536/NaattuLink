@@ -9,16 +9,15 @@ import 'package:naattulink/MVVM/utils/Constants/constants.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/View/Screen/location/address_form_bottom_sheet.dart';
 
+enum LocationPickerFlow {
+  registration,
+  addAddress,
+}
+
 class SelectLocationMapPage extends StatefulWidget {
   final double initialLat;
   final double initialLng;
-
-  /// When [true] (default), tapping "Confirm Location" opens the
-  /// [AddressFormBottomSheet] so the user fills in delivery details before
-  /// the map page closes. Set to [false] when this page is opened from
-  /// *inside* [AddressFormBottomSheet] (the Change button), so only the raw
-  /// [AppLocationModel] is returned — avoiding a nested duplicate form.
-  final bool showAddressFormOnConfirm;
+  final LocationPickerFlow flow;
 
   /// Forwarded to [AddressFormBottomSheet.onAddressSaved] so the original
   /// caller (e.g. [LocationSelectionPage]) can persist the address to local
@@ -29,7 +28,7 @@ class SelectLocationMapPage extends StatefulWidget {
     super.key,
     required this.initialLat,
     required this.initialLng,
-    this.showAddressFormOnConfirm = true,
+    required this.flow,
     this.onAddressSaved,
   });
 
@@ -399,7 +398,12 @@ class _SelectLocationMapPageState extends State<SelectLocationMapPage> {
                       onPressed: _isLoading || _currentLocationModel == null
                           ? null
                           : () async {
-                              if (widget.showAddressFormOnConfirm) {
+                              if (widget.flow == LocationPickerFlow.registration) {
+                                Navigator.pop(context, _currentLocationModel);
+                                return;
+                              }
+
+                              if (widget.flow == LocationPickerFlow.addAddress) {
                                 // Show the address form so the user fills in
                                 // delivery details before the map page closes.
                                 final updatedModel =
@@ -419,10 +423,6 @@ class _SelectLocationMapPageState extends State<SelectLocationMapPage> {
                                 if (updatedModel != null && context.mounted) {
                                   Navigator.pop(context, updatedModel);
                                 }
-                              } else {
-                                // Called from inside AddressFormBottomSheet —
-                                // just return the raw location, no nested form.
-                                Navigator.pop(context, _currentLocationModel);
                               }
                             },
                       style: ElevatedButton.styleFrom(

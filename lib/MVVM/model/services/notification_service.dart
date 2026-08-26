@@ -5,6 +5,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'dart:typed_data';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -84,14 +87,16 @@ class NotificationService {
     // 6. Handling notification open app from background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint("Message clicked!");
-      // Handle the data
+      _handleDeepLink(message.data['deepLink']);
     });
 
     // 7. Handling notification when app was terminated
     RemoteMessage? initialMessage = await _messaging.getInitialMessage();
     if (initialMessage != null) {
       debugPrint("App opened from terminated state via notification");
-      // Handle the data
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _handleDeepLink(initialMessage.data['deepLink']);
+      });
     }
 
     // 8. Token handling
@@ -119,12 +124,30 @@ class NotificationService {
     }
   }
 
-  void _showLocalNotification(
-      RemoteMessage message, AndroidNotificationChannel channel) {
+  Future<void> _showLocalNotification(
+      RemoteMessage message, AndroidNotificationChannel channel) async {
     RemoteNotification? notification = message.notification;
     AndroidNotification? android = message.notification?.android;
 
     if (notification != null && android != null) {
+      BigPictureStyleInformation? bigPictureStyleInformation;
+      
+      String? imgUrl = android.imageUrl ?? message.data['imageUrl'] as String?;
+      if (imgUrl != null && imgUrl.isNotEmpty) {
+        try {
+          final response = await http.get(Uri.parse(imgUrl));
+          if (response.statusCode == 200) {
+            final Uint8List bytes = response.bodyBytes;
+            bigPictureStyleInformation = BigPictureStyleInformation(
+              ByteArrayAndroidBitmap(bytes),
+              hideExpandedLargeIcon: true,
+            );
+          }
+        } catch (e) {
+          debugPrint("Failed to load image for local notification: $e");
+        }
+      }
+
       _localNotificationsPlugin.show(
         notification.hashCode,
         notification.title,
@@ -135,18 +158,30 @@ class NotificationService {
             channel.name,
             channelDescription: channel.description,
             icon: '@mipmap/ic_launcher',
+            styleInformation: bigPictureStyleInformation,
           ),
           iOS: const DarwinNotificationDetails(),
         ),
-        payload: message.data.toString(), // Simplified payload
+        payload: message.data['deepLink'] as String?,
       );
     }
   }
 
   void _handleNotificationTap(String? payload) {
-    if (payload != null) {
-      debugPrint("Notification tapped with payload: $payload");
-      // Navigate to required screen or process data
+    if (payload != null && payload.isNotEmpty) {
+      debugPrint("Notification tapped with payload deepLink: $payload");
+      _handleDeepLink(payload);
+    }
+  }
+
+  void _handleDeepLink(dynamic deepLink) {
+    if (deepLink != null && deepLink is String && deepLink.isNotEmpty) {
+      debugPrint("Navigating to deep link: $deepLink");
+      try {
+        Get.toNamed(deepLink);
+      } catch (e) {
+        debugPrint("Error navigating to deep link: $e");
+      }
     }
   }
 

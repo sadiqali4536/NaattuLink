@@ -5,6 +5,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -42,7 +43,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:naattulink/MVVM/View/Screen/location/location_selection_page.dart';
 
 class Homepage extends StatefulWidget {
-  const Homepage({Key? key}) : super(key: key);
+  final int initialCategoryIndex;
+  const Homepage({Key? key, this.initialCategoryIndex = 0}) : super(key: key);
 
   @override
   State<Homepage> createState() => HomepageState();
@@ -60,7 +62,7 @@ class HomepageState extends State<Homepage> {
   }
 
   String? username;
-  int selectedCategoryIndex = 0;
+  late int selectedCategoryIndex;
   int _shuffleSeed = 0;
   int activeBannerIndex = 0;
   String searchQuery = "";
@@ -118,6 +120,7 @@ class HomepageState extends State<Homepage> {
   @override
   void initState() {
     super.initState();
+    selectedCategoryIndex = widget.initialCategoryIndex;
     _shuffleSeed = DateTime.now().millisecondsSinceEpoch;
     _searchController = TextEditingController();
     final String currentLoc = LocationController.to.currentLocation.value;
@@ -736,948 +739,983 @@ class HomepageState extends State<Homepage> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context).size;
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: PremiumAppBackground(
-        child: StreamBuilder<QuerySnapshot>(
-          stream: _servicesStream ??=
-              FirebaseFirestore.instance.collection('services').snapshots(),
-          builder: (context, snapshot) {
-            final allServices = snapshot.hasData ? snapshot.data!.docs : [];
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: PremiumAppBackground(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _servicesStream ??=
+                FirebaseFirestore.instance.collection('services').snapshots(),
+            builder: (context, snapshot) {
+              final allServices = snapshot.hasData ? snapshot.data!.docs : [];
 
-            // 1. Build category list dynamically starting with defaults
-            final List<String> currentCategoryList = [
-              "For You",
-              "Workers",
-              "Bus",
-              "Local Ads",
-              "Online Shops",
-            ];
-            // Clamp the selected category index
-            if (selectedCategoryIndex >= currentCategoryList.length) {
-              selectedCategoryIndex = 0;
-            }
-            final selected = currentCategoryList[selectedCategoryIndex];
+              // 1. Build category list dynamically starting with defaults
+              final List<String> currentCategoryList = [
+                "For You",
+                "Workers",
+                "Bus",
+                "Local Ads",
+                "Online Shops",
+              ];
+              // Clamp the selected category index
+              if (selectedCategoryIndex >= currentCategoryList.length) {
+                selectedCategoryIndex = 0;
+              }
+              final selected = currentCategoryList[selectedCategoryIndex];
 
-            // Map to dbSelected category name
-            String dbSelected = selected;
-            if (selected == "For You" || selected == "Workers")
-              dbSelected = "All";
-            else if (selected == "Bus")
-              dbSelected = "Interior";
-            else if (selected == "Local Ads") dbSelected = "Vehicle";
+              // Map to dbSelected category name
+              String dbSelected = selected;
+              if (selected == "For You" || selected == "Workers")
+                dbSelected = "All";
+              else if (selected == "Bus")
+                dbSelected = "Interior";
+              else if (selected == "Local Ads") dbSelected = "Vehicle";
 
-            // 2. Filter services
-            final filtered = allServices.where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              final name =
-                  (data['service_name'] ?? '').toString().toLowerCase();
-              final category = (data['category'] ?? '').toString();
-              final rating = (data['rating'] ?? 0).toDouble();
-              final status = (data['status'] ?? '').toString().toLowerCase();
+              // 2. Filter services
+              final filtered = allServices.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final name =
+                    (data['service_name'] ?? '').toString().toLowerCase();
+                final category = (data['category'] ?? '').toString();
+                final rating = (data['rating'] ?? 0).toDouble();
+                final status = (data['status'] ?? '').toString().toLowerCase();
 
-              final matchesCategory =
-                  dbSelected == "All" || category == dbSelected;
-              final sq = searchQuery.trim().toLowerCase();
-              final matchesSearch = sq.isEmpty || name.contains(sq);
-              final matchesRating = rating >= _minRating;
-              final isActive = status != 'inactive';
+                final matchesCategory =
+                    dbSelected == "All" || category == dbSelected;
+                final sq = searchQuery.trim().toLowerCase();
+                final matchesSearch = sq.isEmpty || name.contains(sq);
+                final matchesRating = rating >= _minRating;
+                final isActive = status != 'inactive';
 
-              return matchesCategory &&
-                  matchesSearch &&
-                  matchesRating &&
-                  isActive;
-            }).toList();
+                return matchesCategory &&
+                    matchesSearch &&
+                    matchesRating &&
+                    isActive;
+              }).toList();
 
-            if (_sortBy == 'A-Z') {
-              filtered.sort(
-                (a, b) => (a['service_name'] ?? '').toString().compareTo(
-                      (b['service_name'] ?? '').toString(),
-                    ),
-              );
-            } else if (_sortBy == 'Rating') {
-              filtered.sort(
-                (a, b) => (b['rating'] ?? 0).compareTo((a['rating'] ?? 0)),
-              );
-            }
+              if (_sortBy == 'A-Z') {
+                filtered.sort(
+                  (a, b) => (a['service_name'] ?? '').toString().compareTo(
+                        (b['service_name'] ?? '').toString(),
+                      ),
+                );
+              } else if (_sortBy == 'Rating') {
+                filtered.sort(
+                  (a, b) => (b['rating'] ?? 0).compareTo((a['rating'] ?? 0)),
+                );
+              }
 
-            // Render appropriate content in the services grid area
+              // Render appropriate content in the services grid area
 
-            return SingleChildScrollView(
-              controller: _homeScrollController,
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      Column(
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            height: selectedCategory == "Bus" ? 210 : 290,
-                          ),
-                          if (_searchController.text.isEmpty) ...[
-                            StreamBuilder<DocumentSnapshot>(
-                              stream: _globalContactStream,
-                              builder: (context, globalContactSnap) {
-                                return StreamBuilder<QuerySnapshot>(
-                                  stream: _advertisementsStream,
-                                  builder: (context, bannerSnap) {
-                                    // While loading banners show skeleton
-                                    if (bannerSnap.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const CarouselSkeleton(
-                                        key: ValueKey('carousel_loading'),
-                                      );
-                                    }
-
-                                    final bannerDocs =
-                                        bannerSnap.data?.docs ?? [];
-
-                                    // In-memory filter and sort to avoid composite index requirements
-                                    final now = DateTime.now();
-                                    final filteredDocs =
-                                        bannerDocs.where((doc) {
-                                      final data =
-                                          doc.data() as Map<String, dynamic>;
-
-                                      final position =
-                                          data['bannerPosition'] ?? '';
-                                      final showOnHome =
-                                          data['showInForYou'] ?? true;
-
-                                      bool matchesCategory = (position ==
-                                          'Home -> $selectedCategory');
-                                      if (selectedCategory == "For You") {
-                                        matchesCategory =
-                                            matchesCategory || showOnHome;
+              return SingleChildScrollView(
+                controller: _homeScrollController,
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        Column(
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              height: selectedCategory == "Bus" ? 210 : 290,
+                            ),
+                            if (_searchController.text.isEmpty) ...[
+                              StreamBuilder<DocumentSnapshot>(
+                                stream: _globalContactStream,
+                                builder: (context, globalContactSnap) {
+                                  return StreamBuilder<QuerySnapshot>(
+                                    stream: _advertisementsStream,
+                                    builder: (context, bannerSnap) {
+                                      // While loading banners show skeleton
+                                      if (bannerSnap.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return const CarouselSkeleton(
+                                          key: ValueKey('carousel_loading'),
+                                        );
                                       }
 
-                                      if (!matchesCategory) {
-                                        return false;
+                                      final bannerDocs =
+                                          bannerSnap.data?.docs ?? [];
+
+                                      // In-memory filter and sort to avoid composite index requirements
+                                      final now = DateTime.now();
+                                      final filteredDocs =
+                                          bannerDocs.where((doc) {
+                                        final data =
+                                            doc.data() as Map<String, dynamic>;
+
+                                        final position =
+                                            data['bannerPosition'] ?? '';
+                                        final showOnHome =
+                                            data['showInForYou'] ?? true;
+
+                                        bool matchesCategory = (position ==
+                                            'Home -> $selectedCategory');
+                                        if (selectedCategory == "For You") {
+                                          matchesCategory =
+                                              matchesCategory || showOnHome;
+                                        }
+
+                                        if (!matchesCategory) {
+                                          return false;
+                                        }
+
+                                        // Filter by dates
+                                        final startTimestamp =
+                                            data['startDate'] as Timestamp?;
+                                        final endTimestamp =
+                                            data['endDate'] as Timestamp?;
+                                        if (startTimestamp != null &&
+                                            startTimestamp
+                                                .toDate()
+                                                .isAfter(now)) {
+                                          return false;
+                                        }
+                                        if (endTimestamp != null &&
+                                            endTimestamp
+                                                .toDate()
+                                                .isBefore(now)) {
+                                          return false;
+                                        }
+
+                                        return true;
+                                      }).toList();
+
+                                      // Sort in-memory: priority descending, then createdAt descending
+                                      filteredDocs.sort((a, b) {
+                                        final dataA =
+                                            a.data() as Map<String, dynamic>;
+                                        final dataB =
+                                            b.data() as Map<String, dynamic>;
+
+                                        final priorityA =
+                                            dataA['priority'] ?? 0;
+                                        final priorityB =
+                                            dataB['priority'] ?? 0;
+                                        if (priorityA != priorityB) {
+                                          return (priorityB as num)
+                                              .compareTo(priorityA as num);
+                                        }
+
+                                        final aTime =
+                                            dataA['createdAt'] as Timestamp?;
+                                        final bTime =
+                                            dataB['createdAt'] as Timestamp?;
+                                        if (aTime == null && bTime == null)
+                                          return 0;
+                                        if (aTime == null) return 1;
+                                        if (bTime == null) return -1;
+                                        return bTime.compareTo(aTime);
+                                      });
+
+                                      // Fallback: no banners from admin -> show placeholder
+                                      final List<Widget> bannerItems = [];
+
+                                      // Check for global contact banner
+                                      final Map<String, dynamic>?
+                                          globalContactData =
+                                          globalContactSnap.data?.data()
+                                              as Map<String, dynamic>?;
+
+                                      if (globalContactData != null &&
+                                          globalContactData['bannerImageUrl'] !=
+                                              null &&
+                                          globalContactData['bannerImageUrl']
+                                              .toString()
+                                              .isNotEmpty) {
+                                        bannerItems.add(buildPromoCard(
+                                            imageUrl: globalContactData[
+                                                'bannerImageUrl'],
+                                            onTap: () {
+                                              _showGlobalContactSheet(
+                                                  context, globalContactData);
+                                            }));
                                       }
 
-                                      // Filter by dates
-                                      final startTimestamp =
-                                          data['startDate'] as Timestamp?;
-                                      final endTimestamp =
-                                          data['endDate'] as Timestamp?;
-                                      if (startTimestamp != null &&
-                                          startTimestamp
-                                              .toDate()
-                                              .isAfter(now)) {
-                                        return false;
-                                      }
-                                      if (endTimestamp != null &&
-                                          endTimestamp.toDate().isBefore(now)) {
-                                        return false;
-                                      }
+                                      final adminBanners =
+                                          filteredDocs.map((doc) {
+                                        final data =
+                                            doc.data() as Map<String, dynamic>;
+                                        return buildPromoCard(
+                                          imageUrl: data['imageUrl'] ?? '',
+                                          bannerImageUrl:
+                                              data['bannerImageUrl'],
+                                          title: data['title'] ?? '',
+                                          buttonText: data['buttonText'],
+                                          buttonBackgroundColor:
+                                              data['buttonBackgroundColor'],
+                                          buttonTextColor:
+                                              data['buttonTextColor'],
+                                          onTap: () async {
+                                            final action =
+                                                data['bannerAction'] ??
+                                                    data['buttonAction'] ??
+                                                    '';
+                                            final value = data['actionValue'] ??
+                                                data['website'] ??
+                                                '';
+                                            if (action == 'Open Product') {
+                                              await _openProductFromBanner(
+                                                context,
+                                                data['productId']?.toString(),
+                                              );
+                                            } else if (action ==
+                                                'Open Service') {
+                                              await _openServiceFromBanner(
+                                                context,
+                                                data['serviceId']?.toString(),
+                                              );
+                                            } else if (action ==
+                                                'Open In-App Page') {
+                                              await _openInAppPageFromBanner(
+                                                context,
+                                                data['inAppPageId']
+                                                        ?.toString() ??
+                                                    data['actionValue']
+                                                        ?.toString(),
+                                              );
+                                            } else if (action == 'Open URL' &&
+                                                value.toString().isNotEmpty) {
+                                              final uri = Uri.tryParse(
+                                                  value.toString());
+                                              if (uri != null) {
+                                                try {
+                                                  await launchUrl(uri,
+                                                      mode: LaunchMode
+                                                          .externalApplication);
+                                                } catch (e) {
+                                                  debugPrint(
+                                                      'Error launching URL: $e');
+                                                }
+                                              }
+                                            }
+                                          },
+                                          onButtonTap: () async {
+                                            final action =
+                                                data['buttonAction'] ??
+                                                    data['bannerAction'] ??
+                                                    '';
+                                            final value = data['actionValue'] ??
+                                                data['website'] ??
+                                                '';
+                                            final valStr =
+                                                value.toString().trim();
 
-                                      return true;
-                                    }).toList();
-
-                                    // Sort in-memory: priority descending, then createdAt descending
-                                    filteredDocs.sort((a, b) {
-                                      final dataA =
-                                          a.data() as Map<String, dynamic>;
-                                      final dataB =
-                                          b.data() as Map<String, dynamic>;
-
-                                      final priorityA = dataA['priority'] ?? 0;
-                                      final priorityB = dataB['priority'] ?? 0;
-                                      if (priorityA != priorityB) {
-                                        return (priorityB as num)
-                                            .compareTo(priorityA as num);
-                                      }
-
-                                      final aTime =
-                                          dataA['createdAt'] as Timestamp?;
-                                      final bTime =
-                                          dataB['createdAt'] as Timestamp?;
-                                      if (aTime == null && bTime == null)
-                                        return 0;
-                                      if (aTime == null) return 1;
-                                      if (bTime == null) return -1;
-                                      return bTime.compareTo(aTime);
-                                    });
-
-                                    // Fallback: no banners from admin -> show placeholder
-                                    final List<Widget> bannerItems = [];
-
-                                    // Check for global contact banner
-                                    final Map<String, dynamic>?
-                                        globalContactData =
-                                        globalContactSnap.data?.data()
-                                            as Map<String, dynamic>?;
-
-                                    if (globalContactData != null &&
-                                        globalContactData['bannerImageUrl'] !=
-                                            null &&
-                                        globalContactData['bannerImageUrl']
-                                            .toString()
-                                            .isNotEmpty) {
-                                      bannerItems.add(buildPromoCard(
-                                          imageUrl: globalContactData[
-                                              'bannerImageUrl'],
-                                          onTap: () {
-                                            _showGlobalContactSheet(
-                                                context, globalContactData);
-                                          }));
-                                    }
-
-                                    final adminBanners =
-                                        filteredDocs.map((doc) {
-                                      final data =
-                                          doc.data() as Map<String, dynamic>;
-                                      return buildPromoCard(
-                                        imageUrl: data['imageUrl'] ?? '',
-                                        bannerImageUrl: data['bannerImageUrl'],
-                                        title: data['title'] ?? '',
-                                        buttonText: data['buttonText'],
-                                        buttonBackgroundColor:
-                                            data['buttonBackgroundColor'],
-                                        buttonTextColor:
-                                            data['buttonTextColor'],
-                                        onTap: () async {
-                                          final action = data['bannerAction'] ??
-                                              data['buttonAction'] ??
-                                              '';
-                                          final value = data['actionValue'] ??
-                                              data['website'] ??
-                                              '';
-                                          if (action == 'Open Product') {
-                                            await _openProductFromBanner(
-                                              context,
-                                              data['productId']?.toString(),
-                                            );
-                                          } else if (action == 'Open Service') {
-                                            await _openServiceFromBanner(
-                                              context,
-                                              data['serviceId']?.toString(),
-                                            );
-                                          } else if (action ==
-                                              'Open In-App Page') {
-                                            await _openInAppPageFromBanner(
-                                              context,
-                                              data['inAppPageId']?.toString() ??
-                                                  data['actionValue']
-                                                      ?.toString(),
-                                            );
-                                          } else if (action == 'Open URL' &&
-                                              value.toString().isNotEmpty) {
-                                            final uri =
-                                                Uri.tryParse(value.toString());
-                                            if (uri != null) {
-                                              try {
+                                            if (action == 'Open Product') {
+                                              await _openProductFromBanner(
+                                                context,
+                                                data['productId']?.toString(),
+                                              );
+                                            } else if (action ==
+                                                'Open Service') {
+                                              await _openServiceFromBanner(
+                                                context,
+                                                data['serviceId']?.toString(),
+                                              );
+                                            } else if (action ==
+                                                'Open In-App Page') {
+                                              await _openInAppPageFromBanner(
+                                                context,
+                                                data['inAppPageId']
+                                                        ?.toString() ??
+                                                    data['actionValue']
+                                                        ?.toString(),
+                                              );
+                                            } else if (action == 'Open URL') {
+                                              if (valStr.isEmpty) return;
+                                              final uri = Uri.tryParse(valStr);
+                                              if (uri != null) {
+                                                try {
+                                                  await launchUrl(uri,
+                                                      mode: LaunchMode
+                                                          .externalApplication);
+                                                } catch (e) {
+                                                  debugPrint(
+                                                      'Error launching URL: $e');
+                                                }
+                                              }
+                                            } else if (action ==
+                                                'Open WhatsApp') {
+                                              if (valStr.isEmpty) return;
+                                              final phone = valStr.replaceAll(
+                                                  RegExp(r'[^0-9]'), '');
+                                              final uri = Uri.parse(
+                                                  'https://wa.me/$phone');
+                                              if (await canLaunchUrl(uri)) {
                                                 await launchUrl(uri,
                                                     mode: LaunchMode
                                                         .externalApplication);
-                                              } catch (e) {
-                                                debugPrint(
-                                                    'Error launching URL: $e');
+                                              }
+                                            } else if (action == 'Call') {
+                                              if (valStr.isEmpty) return;
+                                              final uri =
+                                                  Uri.parse('tel:$valStr');
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(uri);
                                               }
                                             }
-                                          }
-                                        },
-                                        onButtonTap: () async {
-                                          final action = data['buttonAction'] ??
-                                              data['bannerAction'] ??
-                                              '';
-                                          final value = data['actionValue'] ??
-                                              data['website'] ??
-                                              '';
-                                          final valStr =
-                                              value.toString().trim();
+                                          },
+                                        );
+                                      }).toList();
 
-                                          if (action == 'Open Product') {
-                                            await _openProductFromBanner(
-                                              context,
-                                              data['productId']?.toString(),
-                                            );
-                                          } else if (action == 'Open Service') {
-                                            await _openServiceFromBanner(
-                                              context,
-                                              data['serviceId']?.toString(),
-                                            );
-                                          } else if (action ==
-                                              'Open In-App Page') {
-                                            await _openInAppPageFromBanner(
-                                              context,
-                                              data['inAppPageId']?.toString() ??
-                                                  data['actionValue']
-                                                      ?.toString(),
-                                            );
-                                          } else if (action == 'Open URL') {
-                                            if (valStr.isEmpty) return;
-                                            final uri = Uri.tryParse(valStr);
-                                            if (uri != null) {
-                                              try {
-                                                await launchUrl(uri,
-                                                    mode: LaunchMode
-                                                        .externalApplication);
-                                              } catch (e) {
-                                                debugPrint(
-                                                    'Error launching URL: $e');
-                                              }
-                                            }
-                                          } else if (action ==
-                                              'Open WhatsApp') {
-                                            if (valStr.isEmpty) return;
-                                            final phone = valStr.replaceAll(
-                                                RegExp(r'[^0-9]'), '');
-                                            final uri = Uri.parse(
-                                                'https://wa.me/$phone');
-                                            if (await canLaunchUrl(uri)) {
-                                              await launchUrl(uri,
-                                                  mode: LaunchMode
-                                                      .externalApplication);
-                                            }
-                                          } else if (action == 'Call') {
-                                            if (valStr.isEmpty) return;
-                                            final uri =
-                                                Uri.parse('tel:$valStr');
-                                            if (await canLaunchUrl(uri)) {
-                                              await launchUrl(uri);
-                                            }
-                                          }
-                                        },
-                                      );
-                                    }).toList();
+                                      bannerItems.addAll(adminBanners);
 
-                                    bannerItems.addAll(adminBanners);
+                                      if (bannerItems.isEmpty) {
+                                        return const SizedBox.shrink();
+                                      }
 
-                                    if (bannerItems.isEmpty) {
-                                      return const SizedBox.shrink();
-                                    }
+                                      final bannerCount = bannerItems.length;
 
-                                    final bannerCount = bannerItems.length;
-
-                                    int localActiveIndex = 0;
-                                    return AnimatedSwitcher(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      child: StatefulBuilder(
-                                        key: const ValueKey('carousel_loaded'),
-                                        builder: (context, setLocalState) {
-                                          return Column(
-                                            children: [
-                                              CarouselSlider(
-                                                items: bannerItems,
-                                                options: CarouselOptions(
-                                                  autoPlay: bannerCount > 1,
-                                                  enlargeCenterPage: false,
-                                                  aspectRatio: 1.8,
-                                                  viewportFraction: 1,
-                                                  onPageChanged:
-                                                      (index, reason) {
-                                                    setLocalState(() {
-                                                      localActiveIndex = index;
-                                                    });
-                                                  },
-                                                ),
-                                              ),
-                                              if (bannerCount > 1) ...[
-                                                const SizedBox(height: 10),
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: List.generate(
-                                                    bannerCount,
-                                                    (index) {
-                                                      return AnimatedContainer(
-                                                        duration:
-                                                            const Duration(
-                                                          milliseconds: 250,
-                                                        ),
-                                                        width:
-                                                            localActiveIndex ==
-                                                                    index
-                                                                ? 15
-                                                                : 6,
-                                                        height: 6,
-                                                        margin: const EdgeInsets
-                                                            .symmetric(
-                                                          horizontal: 3,
-                                                        ),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            3,
-                                                          ),
-                                                          color:
-                                                              localActiveIndex ==
-                                                                      index
-                                                                  ? const Color(
-                                                                      0xFFFFB800,
-                                                                    )
-                                                                  : Colors.grey[
-                                                                      300],
-                                                        ),
-                                                      );
+                                      int localActiveIndex = 0;
+                                      return AnimatedSwitcher(
+                                        duration:
+                                            const Duration(milliseconds: 400),
+                                        child: StatefulBuilder(
+                                          key:
+                                              const ValueKey('carousel_loaded'),
+                                          builder: (context, setLocalState) {
+                                            return Column(
+                                              children: [
+                                                CarouselSlider(
+                                                  items: bannerItems,
+                                                  options: CarouselOptions(
+                                                    autoPlay: bannerCount > 1,
+                                                    enlargeCenterPage: false,
+                                                    aspectRatio: 1.8,
+                                                    viewportFraction: 1,
+                                                    onPageChanged:
+                                                        (index, reason) {
+                                                      setLocalState(() {
+                                                        localActiveIndex =
+                                                            index;
+                                                      });
                                                     },
                                                   ),
                                                 ),
+                                                if (bannerCount > 1) ...[
+                                                  const SizedBox(height: 10),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: List.generate(
+                                                      bannerCount,
+                                                      (index) {
+                                                        return AnimatedContainer(
+                                                          duration:
+                                                              const Duration(
+                                                            milliseconds: 250,
+                                                          ),
+                                                          width:
+                                                              localActiveIndex ==
+                                                                      index
+                                                                  ? 15
+                                                                  : 6,
+                                                          height: 6,
+                                                          margin:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                            horizontal: 3,
+                                                          ),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                              3,
+                                                            ),
+                                                            color: localActiveIndex ==
+                                                                    index
+                                                                ? const Color(
+                                                                    0xFFFFB800,
+                                                                  )
+                                                                : Colors
+                                                                    .grey[300],
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ],
                                               ],
-                                            ],
-                                          );
-                                        },
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                            if (selectedCategory == "For You" &&
+                                _searchController.text.isEmpty)
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 500),
+                                child: snapshot.connectionState ==
+                                        ConnectionState.waiting
+                                    ? const Column(
+                                        key: ValueKey('loading_dashboard'),
+                                        children: [
+                                          ExpertServicesSkeleton(),
+                                          SizedBox(height: 20),
+                                          CityEssentialsSkeleton(),
+                                          SizedBox(height: 20),
+                                          MarketplaceSkeleton(),
+                                          SizedBox(height: 20),
+                                          SpotlightSkeleton(),
+                                          SizedBox(height: 20),
+                                          CommunityNewsSkeleton(),
+                                          SizedBox(height: 20),
+                                          TrustSectionSkeleton(),
+                                        ],
+                                      )
+                                    : buildForYouDashboard(
+                                        filtered,
+                                        key: const ValueKey('loaded_dashboard'),
                                       ),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ],
-                          if (selectedCategory == "For You" &&
-                              _searchController.text.isEmpty)
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 500),
-                              child: snapshot.connectionState ==
-                                      ConnectionState.waiting
-                                  ? const Column(
-                                      key: ValueKey('loading_dashboard'),
-                                      children: [
-                                        ExpertServicesSkeleton(),
-                                        SizedBox(height: 20),
-                                        CityEssentialsSkeleton(),
-                                        SizedBox(height: 20),
-                                        MarketplaceSkeleton(),
-                                        SizedBox(height: 20),
-                                        SpotlightSkeleton(),
-                                        SizedBox(height: 20),
-                                        CommunityNewsSkeleton(),
-                                        SizedBox(height: 20),
-                                        TrustSectionSkeleton(),
-                                      ],
-                                    )
-                                  : buildForYouDashboard(
-                                      filtered,
-                                      key: const ValueKey('loaded_dashboard'),
-                                    ),
-                            )
-                          else if (selectedCategory == "Workers" &&
-                              _searchController.text.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                              ),
-                              child: snapshot.connectionState ==
-                                      ConnectionState.waiting
-                                  ? const ServiceCardListSkeleton()
-                                  : buildWorkersTab(filtered),
-                            )
-                          else if (selectedCategory == "Bus")
-                            buildBusTab()
-                          else if (selectedCategory == "Local Ads" &&
-                              _searchController.text.isEmpty)
-                            buildLocalAdsTab(allServices)
-                          else if (selectedCategory == "Online Shops" &&
-                              _searchController.text.isEmpty)
-                            buildOnlineShopsTab()
-                          else if (_searchController.text.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                              ),
-                              child: snapshot.connectionState ==
-                                      ConnectionState.waiting
-                                  ? const ServiceCardListSkeleton()
-                                  : filtered.isEmpty
-                                      ? const Padding(
-                                          padding: EdgeInsets.only(top: 100.0),
-                                          child: Center(
-                                            child: Text(
-                                              "No results found for your search.",
-                                              style: TextStyle(
-                                                color: Colors.grey,
-                                                fontSize: 14,
+                              )
+                            else if (selectedCategory == "Workers" &&
+                                _searchController.text.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                child: snapshot.connectionState ==
+                                        ConnectionState.waiting
+                                    ? const ServiceCardListSkeleton()
+                                    : buildWorkersTab(filtered),
+                              )
+                            else if (selectedCategory == "Bus")
+                              buildBusTab()
+                            else if (selectedCategory == "Local Ads" &&
+                                _searchController.text.isEmpty)
+                              buildLocalAdsTab(allServices)
+                            else if (selectedCategory == "Online Shops" &&
+                                _searchController.text.isEmpty)
+                              buildOnlineShopsTab()
+                            else if (_searchController.text.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                child: snapshot.connectionState ==
+                                        ConnectionState.waiting
+                                    ? const ServiceCardListSkeleton()
+                                    : filtered.isEmpty
+                                        ? const Padding(
+                                            padding:
+                                                EdgeInsets.only(top: 100.0),
+                                            child: Center(
+                                              child: Text(
+                                                "No results found for your search.",
+                                                style: TextStyle(
+                                                  color: Colors.grey,
+                                                  fontSize: 14,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        )
-                                      : buildWorkersTab(filtered),
-                            ),
-
-                          const SizedBox(height: 130), // bottom bar spacing
-                        ],
-                      ),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        height: selectedCategory == "Bus" ? 200 : 280,
-                        width: double.infinity,
-                        clipBehavior: Clip.hardEdge,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0F2E5A), // Premium navy color
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(35),
-                            bottomRight: Radius.circular(35),
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 48),
-                          child: SingleChildScrollView(
-                            physics: const NeverScrollableScrollPhysics(),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SizedBox(
-                                  height: 48,
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 300),
-                                    child: username == null
-                                        ? const HeaderSkeleton(
-                                            key: ValueKey('header_loading'),
                                           )
-                                        : Padding(
-                                            key: const ValueKey(
-                                              'header_loaded',
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 20,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    border: Border.all(
-                                                      color: Colors.white,
-                                                      width: 1.5,
-                                                    ),
-                                                  ),
-                                                  child: CircleAvatar(
-                                                    radius: 20,
-                                                    backgroundColor:
-                                                        const Color(
-                                                      0xFFFFB800,
-                                                    ), // Gold accent
-                                                    child: Text(
-                                                      username != null &&
-                                                              username!
-                                                                  .isNotEmpty
-                                                          ? username![0]
-                                                              .toUpperCase()
-                                                          : 'U',
-                                                      style: const TextStyle(
+                                        : buildWorkersTab(filtered),
+                              ),
+
+                            const SizedBox(height: 130), // bottom bar spacing
+                          ],
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          height: selectedCategory == "Bus" ? 200 : 280,
+                          width: double.infinity,
+                          clipBehavior: Clip.hardEdge,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF0F2E5A), // Premium navy color
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(35),
+                              bottomRight: Radius.circular(35),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 48),
+                            child: SingleChildScrollView(
+                              physics: const NeverScrollableScrollPhysics(),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    height: 48,
+                                    child: AnimatedSwitcher(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      child: username == null
+                                          ? const HeaderSkeleton(
+                                              key: ValueKey('header_loading'),
+                                            )
+                                          : Padding(
+                                              key: const ValueKey(
+                                                'header_loaded',
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 20,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
                                                         color: Colors.white,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 16,
+                                                        width: 1.5,
                                                       ),
                                                     ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        username ?? 'Hello!',
+                                                    child: CircleAvatar(
+                                                      radius: 20,
+                                                      backgroundColor:
+                                                          const Color(
+                                                        0xFFFFB800,
+                                                      ), // Gold accent
+                                                      child: Text(
+                                                        username != null &&
+                                                                username!
+                                                                    .isNotEmpty
+                                                            ? username![0]
+                                                                .toUpperCase()
+                                                            : 'U',
                                                         style: const TextStyle(
                                                           color: Colors.white,
-                                                          fontSize: 16,
                                                           fontWeight:
                                                               FontWeight.bold,
+                                                          fontSize: 16,
                                                         ),
                                                       ),
-                                                      const SizedBox(height: 2),
-                                                      GestureDetector(
-                                                        onTap: () async {
-                                                          final loc =
-                                                              LocationController
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          username ?? 'Hello!',
+                                                          style:
+                                                              const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 16,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 2),
+                                                        GestureDetector(
+                                                          onTap: () async {
+                                                            final loc =
+                                                                LocationController
+                                                                    .to
+                                                                    .currentLocation
+                                                                    .value;
+                                                            if (loc.isEmpty ||
+                                                                loc ==
+                                                                    'Unknown Location' ||
+                                                                loc ==
+                                                                    'Selected Location') {
+                                                              ScaffoldMessenger
+                                                                      .of(context)
+                                                                  .showSnackBar(
+                                                                const SnackBar(
+                                                                    content: Text(
+                                                                        'Fetching location...')),
+                                                              );
+                                                              await LocationController
                                                                   .to
-                                                                  .currentLocation
-                                                                  .value;
-                                                          if (loc.isEmpty ||
-                                                              loc ==
-                                                                  'Unknown Location' ||
-                                                              loc ==
-                                                                  'Selected Location') {
-                                                            ScaffoldMessenger
-                                                                    .of(context)
-                                                                .showSnackBar(
-                                                              const SnackBar(
-                                                                  content: Text(
-                                                                      'Fetching location...')),
-                                                            );
-                                                            await LocationController
-                                                                .to
-                                                                .fetchLocation(
-                                                                    forceRefresh:
-                                                                        true);
-                                                          } else {
-                                                            Navigator.push(
-                                                              context,
-                                                              MaterialPageRoute(
-                                                                builder:
-                                                                    (context) =>
-                                                                        const LocationSelectionPage(),
-                                                              ),
-                                                            );
-                                                          }
-                                                        },
-                                                        child: Obx(() {
-                                                          final loc =
-                                                              LocationController
-                                                                  .to
-                                                                  .currentLocation
-                                                                  .value;
-                                                          String shortLoc = loc;
-                                                          if (loc.isNotEmpty &&
-                                                              loc !=
-                                                                  'Unknown Location' &&
-                                                              loc !=
-                                                                  'Selected Location') {
-                                                            List<String> parts =
-                                                                loc.split(',');
-                                                            if (parts
-                                                                .isNotEmpty) {
-                                                              shortLoc =
-                                                                  parts[0]
-                                                                      .trim();
-                                                              if (parts.length >
-                                                                  1) {
-                                                                shortLoc += ", " +
-                                                                    parts[1]
-                                                                        .trim();
-                                                              }
-                                                              if (shortLoc
-                                                                      .length >
-                                                                  25) {
+                                                                  .fetchLocation(
+                                                                      forceRefresh:
+                                                                          true);
+                                                            } else {
+                                                              Navigator.push(
+                                                                context,
+                                                                MaterialPageRoute(
+                                                                  builder:
+                                                                      (context) =>
+                                                                          const LocationSelectionPage(),
+                                                                ),
+                                                              );
+                                                            }
+                                                          },
+                                                          child: Obx(() {
+                                                            final loc =
+                                                                LocationController
+                                                                    .to
+                                                                    .currentLocation
+                                                                    .value;
+                                                            String shortLoc =
+                                                                loc;
+                                                            if (loc.isNotEmpty &&
+                                                                loc !=
+                                                                    'Unknown Location' &&
+                                                                loc !=
+                                                                    'Selected Location') {
+                                                              List<String>
+                                                                  parts =
+                                                                  loc.split(
+                                                                      ',');
+                                                              if (parts
+                                                                  .isNotEmpty) {
                                                                 shortLoc =
-                                                                    "${shortLoc.substring(0, 25)}...";
+                                                                    parts[0]
+                                                                        .trim();
+                                                                if (parts
+                                                                        .length >
+                                                                    1) {
+                                                                  shortLoc += ", " +
+                                                                      parts[1]
+                                                                          .trim();
+                                                                }
+                                                                if (shortLoc
+                                                                        .length >
+                                                                    25) {
+                                                                  shortLoc =
+                                                                      "${shortLoc.substring(0, 25)}...";
+                                                                }
                                                               }
                                                             }
-                                                          }
-                                                          final displayText = loc
-                                                                  .isEmpty
-                                                              ? 'Fetch Location'
-                                                              : shortLoc;
-                                                          return Row(
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            children: [
-                                                              const Icon(
-                                                                Icons
-                                                                    .location_on_outlined,
-                                                                color: Colors
-                                                                    .white70,
-                                                                size: 12,
-                                                              ),
-                                                              const SizedBox(
-                                                                  width: 4),
-                                                              Flexible(
-                                                                child: Text(
-                                                                  displayText,
-                                                                  maxLines: 1,
-                                                                  overflow:
-                                                                      TextOverflow
-                                                                          .ellipsis,
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    color: Colors
-                                                                        .white70,
-                                                                    fontSize:
-                                                                        11,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w500,
+                                                            final displayText = loc
+                                                                    .isEmpty
+                                                                ? 'Fetch Location'
+                                                                : shortLoc;
+                                                            return Row(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .min,
+                                                              children: [
+                                                                const Icon(
+                                                                  Icons
+                                                                      .location_on_outlined,
+                                                                  color: Colors
+                                                                      .white70,
+                                                                  size: 12,
+                                                                ),
+                                                                const SizedBox(
+                                                                    width: 4),
+                                                                Flexible(
+                                                                  child: Text(
+                                                                    displayText,
+                                                                    maxLines: 1,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                    style:
+                                                                        const TextStyle(
+                                                                      color: Colors
+                                                                          .white70,
+                                                                      fontSize:
+                                                                          11,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w500,
+                                                                    ),
                                                                   ),
                                                                 ),
-                                                              ),
-                                                              const SizedBox(
-                                                                  width: 2),
-                                                              const Icon(
-                                                                Icons
-                                                                    .keyboard_arrow_down,
-                                                                color: Colors
-                                                                    .white70,
-                                                                size: 12,
-                                                              ),
-                                                            ],
-                                                          );
-                                                        }),
-                                                      ),
-                                                    ],
+                                                                const SizedBox(
+                                                                    width: 2),
+                                                                const Icon(
+                                                                  Icons
+                                                                      .keyboard_arrow_down,
+                                                                  color: Colors
+                                                                      .white70,
+                                                                  size: 12,
+                                                                ),
+                                                              ],
+                                                            );
+                                                          }),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
-                                                ),
-                                                StreamBuilder<QuerySnapshot>(
-                                                  stream: _notificationsStream,
-                                                  builder: (context, snapshot) {
-                                                    int unreadCount = 0;
-                                                    if (snapshot.hasData) {
-                                                      final lastRead = Hive.box(
-                                                        'saved_routes_box',
-                                                      ).get(
-                                                        'last_notification_read_time',
-                                                        defaultValue: 0,
-                                                      ) as int;
-                                                      for (var doc in snapshot
-                                                          .data!.docs) {
-                                                        final data = doc.data()
-                                                            as Map<String,
-                                                                dynamic>?;
-                                                        if (data != null &&
-                                                            data['created_at'] !=
-                                                                null) {
-                                                          final timestamp =
-                                                              data['created_at']
-                                                                  as Timestamp;
-                                                          if (timestamp
-                                                                  .millisecondsSinceEpoch >
-                                                              lastRead) {
-                                                            unreadCount++;
+                                                  StreamBuilder<QuerySnapshot>(
+                                                    stream:
+                                                        _notificationsStream,
+                                                    builder:
+                                                        (context, snapshot) {
+                                                      int unreadCount = 0;
+                                                      if (snapshot.hasData) {
+                                                        final lastRead =
+                                                            Hive.box(
+                                                          'saved_routes_box',
+                                                        ).get(
+                                                          'last_notification_read_time',
+                                                          defaultValue: 0,
+                                                        ) as int;
+                                                        for (var doc in snapshot
+                                                            .data!.docs) {
+                                                          final data =
+                                                              doc.data() as Map<
+                                                                  String,
+                                                                  dynamic>?;
+                                                          if (data != null &&
+                                                              data['created_at'] !=
+                                                                  null) {
+                                                            final timestamp =
+                                                                data['created_at']
+                                                                    as Timestamp;
+                                                            if (timestamp
+                                                                    .millisecondsSinceEpoch >
+                                                                lastRead) {
+                                                              unreadCount++;
+                                                            }
                                                           }
                                                         }
                                                       }
-                                                    }
-                                                    return Stack(
-                                                      children: [
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                            Icons
-                                                                .notifications_none_outlined,
-                                                            color: Colors.white,
+                                                      return Stack(
+                                                        children: [
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons
+                                                                  .notifications_none_outlined,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                            onPressed: () {
+                                                              Hive.box(
+                                                                'saved_routes_box',
+                                                              ).put(
+                                                                'last_notification_read_time',
+                                                                DateTime.now()
+                                                                    .millisecondsSinceEpoch,
+                                                              );
+                                                              setState(
+                                                                () {},
+                                                              ); // to instantly clear the badge before stream re-emits
+                                                              Navigator.push(
+                                                                context,
+                                                                MaterialPageRoute(
+                                                                  builder: (_) =>
+                                                                      const NotificationsPage(),
+                                                                ),
+                                                              );
+                                                            },
                                                           ),
-                                                          onPressed: () {
-                                                            Hive.box(
-                                                              'saved_routes_box',
-                                                            ).put(
-                                                              'last_notification_read_time',
-                                                              DateTime.now()
-                                                                  .millisecondsSinceEpoch,
-                                                            );
-                                                            setState(
-                                                              () {},
-                                                            ); // to instantly clear the badge before stream re-emits
-                                                            Navigator.push(
-                                                              context,
-                                                              MaterialPageRoute(
-                                                                builder: (_) =>
-                                                                    const NotificationsPage(),
-                                                              ),
-                                                            );
-                                                          },
-                                                        ),
-                                                        if (unreadCount > 0)
-                                                          Positioned(
-                                                            right: 8,
-                                                            top: 8,
-                                                            child: Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(
-                                                                4,
-                                                              ),
-                                                              decoration:
-                                                                  const BoxDecoration(
-                                                                color:
-                                                                    Colors.red,
-                                                                shape: BoxShape
-                                                                    .circle,
-                                                              ),
-                                                              constraints:
-                                                                  const BoxConstraints(
-                                                                minWidth: 16,
-                                                                minHeight: 16,
-                                                              ),
-                                                              child: Center(
-                                                                child: Text(
-                                                                  unreadCount >
-                                                                          9
-                                                                      ? '9+'
-                                                                      : unreadCount
-                                                                          .toString(),
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    color: Colors
-                                                                        .white,
-                                                                    fontSize:
-                                                                        10,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold,
+                                                          if (unreadCount > 0)
+                                                            Positioned(
+                                                              right: 8,
+                                                              top: 8,
+                                                              child: Container(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .all(
+                                                                  4,
+                                                                ),
+                                                                decoration:
+                                                                    const BoxDecoration(
+                                                                  color: Colors
+                                                                      .red,
+                                                                  shape: BoxShape
+                                                                      .circle,
+                                                                ),
+                                                                constraints:
+                                                                    const BoxConstraints(
+                                                                  minWidth: 16,
+                                                                  minHeight: 16,
+                                                                ),
+                                                                child: Center(
+                                                                  child: Text(
+                                                                    unreadCount >
+                                                                            9
+                                                                        ? '9+'
+                                                                        : unreadCount
+                                                                            .toString(),
+                                                                    style:
+                                                                        const TextStyle(
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontSize:
+                                                                          10,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                    ),
                                                                   ),
                                                                 ),
                                                               ),
                                                             ),
-                                                          ),
-                                                      ],
-                                                    );
-                                                  },
-                                                ),
-                                                Visibility(
-                                                  visible: false,
-                                                  child: IconButton(
-                                                    icon: const Icon(
-                                                      Icons.menu,
-                                                      color: Colors.white,
+                                                        ],
+                                                      );
+                                                    },
+                                                  ),
+                                                  Visibility(
+                                                    visible: false,
+                                                    child: IconButton(
+                                                      icon: const Icon(
+                                                        Icons.menu,
+                                                        color: Colors.white,
+                                                      ),
+                                                      onPressed: () {},
                                                     ),
-                                                    onPressed: () {},
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                  if (selectedCategory != "Bus") ...[
+                                    const SizedBox(height: 12),
+                                    // Search field with integrated filter and mic buttons inside
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                      ),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(30),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.08,
+                                              ),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: TextFormField(
+                                          controller: _searchController,
+                                          onChanged: (value) => setState(
+                                              () => searchQuery = value),
+                                          onFieldSubmitted: (value) {
+                                            RecommendationController.to
+                                                .trackSearch(value, 'Other');
+                                          },
+                                          decoration: InputDecoration(
+                                            hintText:
+                                                "Search for workers, services...",
+                                            hintStyle: const TextStyle(
+                                              color: Color(0xFF94A3B8),
+                                              fontSize: 13,
+                                            ),
+                                            prefixIcon: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(12.0),
+                                              child: Image.asset(
+                                                "assets/icons/serch_icon.png",
+                                                color: const Color(0xFF0F2E5A),
+                                                height: 18,
+                                                width: 18,
+                                              ),
+                                            ),
+                                            suffixIcon: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  height: 20,
+                                                  width: 1,
+                                                  color: Colors.grey[300],
+                                                ),
+                                                const SizedBox(width: 8),
+                                                GestureDetector(
+                                                  onTap: () =>
+                                                      showModalBottomSheet(
+                                                    context: context,
+                                                    shape:
+                                                        const RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.vertical(
+                                                        top: Radius.circular(
+                                                          20,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    builder: (context) =>
+                                                        buildFilterSheet(),
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.qr_code_scanner,
+                                                    color: Color(0xFF64748B),
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Padding(
+                                                  padding: EdgeInsets.only(
+                                                    right: 14.0,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.mic_none_outlined,
+                                                    color: Color(0xFF64748B),
+                                                    size: 20,
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                          ),
-                                  ),
-                                ),
-                                if (selectedCategory != "Bus") ...[
-                                  const SizedBox(height: 12),
-                                  // Search field with integrated filter and mic buttons inside
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                    ),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(30),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.08,
+                                            border: InputBorder.none,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                              vertical: 14,
                                             ),
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: TextFormField(
-                                        controller: _searchController,
-                                        onChanged: (value) =>
-                                            setState(() => searchQuery = value),
-                                        onFieldSubmitted: (value) {
-                                          RecommendationController.to
-                                              .trackSearch(value, 'Other');
-                                        },
-                                        decoration: InputDecoration(
-                                          hintText:
-                                              "Search for workers, services...",
-                                          hintStyle: const TextStyle(
-                                            color: Color(0xFF94A3B8),
-                                            fontSize: 13,
-                                          ),
-                                          prefixIcon: Padding(
-                                            padding: const EdgeInsets.all(12.0),
-                                            child: Image.asset(
-                                              "assets/icons/serch_icon.png",
-                                              color: const Color(0xFF0F2E5A),
-                                              height: 18,
-                                              width: 18,
-                                            ),
-                                          ),
-                                          suffixIcon: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Container(
-                                                height: 20,
-                                                width: 1,
-                                                color: Colors.grey[300],
-                                              ),
-                                              const SizedBox(width: 8),
-                                              GestureDetector(
-                                                onTap: () =>
-                                                    showModalBottomSheet(
-                                                  context: context,
-                                                  shape:
-                                                      const RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.vertical(
-                                                      top: Radius.circular(
-                                                        20,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  builder: (context) =>
-                                                      buildFilterSheet(),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.qr_code_scanner,
-                                                  color: Color(0xFF64748B),
-                                                  size: 20,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              const Padding(
-                                                padding: EdgeInsets.only(
-                                                  right: 14.0,
-                                                ),
-                                                child: Icon(
-                                                  Icons.mic_none_outlined,
-                                                  color: Color(0xFF64748B),
-                                                  size: 20,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          border: InputBorder.none,
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                            vertical: 14,
                                           ),
                                         ),
                                       ),
                                     ),
+                                  ],
+                                  const SizedBox(height: 20),
+                                  SizedBox(
+                                    height: 80,
+                                    child: AnimatedSwitcher(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      child: snapshot.connectionState ==
+                                              ConnectionState.waiting
+                                          ? const CategoryRowSkeleton(
+                                              key: ValueKey('category_loading'),
+                                            )
+                                          : ScrollableHorizontalButtons(
+                                              key: const ValueKey(
+                                                'category_loaded',
+                                              ),
+                                              categories: currentCategoryList,
+                                              selectedIndex:
+                                                  selectedCategoryIndex,
+                                              onSelected: (index) {
+                                                setState(() {
+                                                  selectedCategoryIndex = index;
+                                                  _clearBusSearch();
+                                                  _shuffleSeed = DateTime.now()
+                                                      .millisecondsSinceEpoch;
+                                                  if (currentCategoryList[
+                                                          index] ==
+                                                      "Bus") {
+                                                    _searchController.clear();
+                                                    searchQuery = "";
+                                                  }
+                                                });
+                                                if (index <
+                                                    currentCategoryList
+                                                        .length) {
+                                                  RecommendationController.to
+                                                      .trackCategoryClick(
+                                                    currentCategoryList[index],
+                                                  );
+                                                }
+                                              },
+                                              isDark: true,
+                                            ),
+                                    ),
                                   ),
                                 ],
-                                const SizedBox(height: 20),
-                                SizedBox(
-                                  height: 80,
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 300),
-                                    child: snapshot.connectionState ==
-                                            ConnectionState.waiting
-                                        ? const CategoryRowSkeleton(
-                                            key: ValueKey('category_loading'),
-                                          )
-                                        : ScrollableHorizontalButtons(
-                                            key: const ValueKey(
-                                              'category_loaded',
-                                            ),
-                                            categories: currentCategoryList,
-                                            selectedIndex:
-                                                selectedCategoryIndex,
-                                            onSelected: (index) {
-                                              setState(() {
-                                                selectedCategoryIndex = index;
-                                                _clearBusSearch();
-                                                _shuffleSeed = DateTime.now()
-                                                    .millisecondsSinceEpoch;
-                                                if (currentCategoryList[
-                                                        index] ==
-                                                    "Bus") {
-                                                  _searchController.clear();
-                                                  searchQuery = "";
-                                                }
-                                              });
-                                              if (index <
-                                                  currentCategoryList.length) {
-                                                RecommendationController.to
-                                                    .trackCategoryClick(
-                                                  currentCategoryList[index],
-                                                );
-                                              }
-                                            },
-                                            isDark: true,
-                                          ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

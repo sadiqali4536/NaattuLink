@@ -1,564 +1,131 @@
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:flutter/foundation.dart';
-// import 'package:flutter/material.dart';
-// import 'package:get/get_navigation/src/extension_navigation.dart';
-// import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
-// import 'package:naattulink/MVVM/utils/Constants/colors.dart';
-// import 'package:naattulink/MVVM/utils/service_functions/cartservicecard.dart';
-// import 'package:naattulink/MVVM/model/models/cart_model.dart';
-// import 'package:naattulink/MVVM/utils/service_functions/servicecard2.dart';
-
-// class CartPage extends StatefulWidget {
-//   String? serviceName;
-//   String? image;
-//   String? originalPrice;
-//   String? discountPrice;
-//   String? discount;
-//   int? rating;
-//   String? category;
-//   String? serviceType;
-
-//   CartPage({
-//     Key? key,
-//     this.serviceName,
-//     this.image,
-//     this.originalPrice,
-//     this.discountPrice,
-//     this.discount,
-//     this.rating,
-//     this.category,
-//     this.serviceType,
-//   }) : super(key: key);
-
-//   @override
-//   _CartPageState createState() => _CartPageState();
-// }
-
-// class _CartPageState extends State<CartPage> {
-//   bool isExpanded = false;
-
-//   bool _isDialogShown = false;
-
-//   void showLoadingDialog(BuildContext context) {
-//     if (_isDialogShown) return; // Prevent multiple dialogs
-
-//     _isDialogShown = true;
-
-//     showDialog(
-//       context: context,
-//       barrierDismissible: false,
-//       builder: (context) {
-//         return AlertDialog(
-//           content: Row(
-//             children: const [
-//               CircularProgressIndicator(color: Colors.green),
-//               SizedBox(width: 20),
-//               Text("Booking..."),
-//             ],
-//           ),
-//         );
-//       },
-//     ).then((_) {});
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final user = FirebaseAuth.instance.currentUser;
-
-//     if (user == null) {
-//       return Scaffold(
-//         appBar: AppBar(
-//           title: const Text("My Cart", style: TextStyle(color: Colors.white)),
-//           flexibleSpace: Container(
-//             decoration: const BoxDecoration(
-//               gradient: LinearGradient(
-//                 colors: [
-//                   Color.fromARGB(255, 102, 214, 10),
-//                   Color.fromARGB(255, 113, 191, 4),
-//                   Color.fromARGB(255, 26, 159, 6),
-//                 ],
-//               ),
-//             ),
-//           ),
-//         ),
-//         body: const Center(
-//           child: Text('Please log in to view your cart.'),
-//         ),
-//       );
-//     }
-
-//     return Scaffold(
-//       backgroundColor: const Color.fromRGBO(246, 246, 246, 1),
-//       body: Stack(
-//         children: [
-//           StreamBuilder(
-//             stream: FirebaseFirestore.instance
-//                 .collection('carts')
-//                 .doc(user.uid)
-//                 .collection('cartItems')
-//                 .orderBy('addedAt', descending: true)
-//                 .snapshots(),
-//             builder: (context, snapshot) {
-//               if (snapshot.hasError) {
-//                 if (kDebugMode) {
-//                   print('Firestore Stream Error: ${snapshot.error}');
-//                 }
-//                 return Center(
-//                     child: Text('Error loading cart: ${snapshot.error}'));
-//               }
-
-//               if (snapshot.connectionState == ConnectionState.waiting) {
-//                 return const Center(child: CircularProgressIndicator());
-//               }
-
-//               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-//                 return SingleChildScrollView(
-//                   child: Column(
-//                     children: [
-//                       _buildHeader(),
-//                       const SizedBox(height: 150),
-//                       Center(
-//                           child: Image.asset("assets/icons/emptycart.jpeg",
-//                               scale: 3.5)),
-//                     ],
-//                   ),
-//                 );
-//               }
-
-//               final cartItems = snapshot.data!.docs.map((doc) {
-//                 final data = doc.data() as Map<String, dynamic>? ?? {};
-//                 return CartModel.fromFirestore(data);
-//               }).toList();
-
-//               return SingleChildScrollView(
-//                 padding: const EdgeInsets.only(bottom: 280),
-//                 child: Column(
-//                   children: [
-//                     _buildHeader(),
-//                     const SizedBox(height: 10),
-//                     ListView.builder(
-//                       shrinkWrap: true,
-//                       physics: const NeverScrollableScrollPhysics(),
-//                       itemCount: cartItems.length,
-//                       itemBuilder: (context, index) {
-//                         final cartItem = cartItems[index];
-//                         return Cartservicecard(cartItem: cartItem);
-//                       },
-//                     ),
-//                     Servicecard2(category: "interior"),
-//                   ],
-//                 ),
-//               );
-//             },
-//           ),
-//           Align(
-//             alignment: Alignment.bottomCenter,
-//             child: Padding(
-//               padding: const EdgeInsets.all(8.0),
-//               child: Column(
-//                 mainAxisSize: MainAxisSize.min,
-//                 children: [
-//                   AnimatedContainer(
-//                     duration: const Duration(milliseconds: 700),
-//                     curve: Curves.easeInOut,
-//                     height: isExpanded ? 270 : 0,
-//                     width: double.infinity,
-//                     padding: const EdgeInsets.symmetric(
-//                         horizontal: 20, vertical: 10),
-//                     decoration: BoxDecoration(
-//                       color: Colors.white,
-//                       borderRadius: const BorderRadius.only(
-//                         topLeft: Radius.circular(15),
-//                         topRight: Radius.circular(15),
-//                       ),
-//                       boxShadow: [
-//                         BoxShadow(
-//                           color: Colors.black.withOpacity(0.2),
-//                           blurRadius: 6,
-//                           offset: const Offset(0, -2),
-//                         ),
-//                       ],
-//                     ),
-//                     child: isExpanded
-//                         ? StreamBuilder<QuerySnapshot>(
-//                             stream: FirebaseFirestore.instance
-//                                 .collection('carts')
-//                                 .doc(user.uid)
-//                                 .collection('cartItems')
-//                                 .snapshots(),
-//                             builder: (context, snapshot) {
-//                               double currentTotalPrice = 0;
-//                               double currentTotalOriginalPrice = 0;
-//                               int currentServiceCount = 0;
-
-//                               if (snapshot.hasData &&
-//                                   snapshot.data!.docs.isNotEmpty) {
-//                                 currentServiceCount =
-//                                     snapshot.data!.docs.length;
-//                                 for (var doc in snapshot.data!.docs) {
-//                                   final data =
-//                                       doc.data() as Map<String, dynamic>? ?? {};
-//                                   currentTotalPrice += double.tryParse(
-//                                           data["price"]?.toString() ?? "0") ??
-//                                       0;
-//                                   currentTotalOriginalPrice += double.tryParse(
-//                                           data["original_price"]?.toString() ??
-//                                               "0") ??
-//                                       0;
-//                                 }
-//                               }
-
-//                               double currentDiscount =
-//                                   currentTotalOriginalPrice - currentTotalPrice;
-
-//                               return Padding(
-//                                 padding: const EdgeInsets.all(8.0),
-//                                 child: SingleChildScrollView(
-//                                   child: Column(
-//                                     crossAxisAlignment:
-//                                         CrossAxisAlignment.start,
-//                                     children: [
-//                                       const SizedBox(height: 5),
-//                                       const Center(
-//                                         child: Text(
-//                                           "Price Details",
-//                                           style: TextStyle(
-//                                               fontSize: 18,
-//                                               fontWeight: FontWeight.bold),
-//                                         ),
-//                                       ),
-//                                       const SizedBox(height: 10),
-//                                       Row(
-//                                         mainAxisAlignment:
-//                                             MainAxisAlignment.spaceBetween,
-//                                         children: [
-//                                           Text(
-//                                               "Price ($currentServiceCount Bookings)",
-//                                               style: const TextStyle(
-//                                                   fontSize: 15)),
-//                                           Text(
-//                                             "₹${currentTotalOriginalPrice.toStringAsFixed(0)}",
-//                                             style:
-//                                                 const TextStyle(fontSize: 15),
-//                                           ),
-//                                         ],
-//                                       ),
-//                                       const SizedBox(height: 5),
-//                                       Row(
-//                                         mainAxisAlignment:
-//                                             MainAxisAlignment.spaceBetween,
-//                                         children: [
-//                                           const Text("Discount",
-//                                               style: TextStyle(fontSize: 15)),
-//                                           Text(
-//                                             "-₹${currentDiscount.toStringAsFixed(0)}",
-//                                             style: TextStyle(
-//                                                 fontSize: 15,
-//                                                 color: gradientgreen2.c),
-//                                           ),
-//                                         ],
-//                                       ),
-//                                       const SizedBox(height: 8),
-//                                       Row(
-//                                         mainAxisAlignment:
-//                                             MainAxisAlignment.spaceBetween,
-//                                         children: [
-//                                           const Text("Total Amount",
-//                                               style: TextStyle(
-//                                                   fontSize: 18,
-//                                                   fontWeight: FontWeight.bold)),
-//                                           Column(
-//                                             crossAxisAlignment:
-//                                                 CrossAxisAlignment.end,
-//                                             children: [
-//                                               if (currentDiscount > 0)
-//                                                 Text(
-//                                                   "₹${currentTotalOriginalPrice.toStringAsFixed(0)}",
-//                                                   style: const TextStyle(
-//                                                     decoration: TextDecoration
-//                                                         .lineThrough,
-//                                                     color: Colors.grey,
-//                                                   ),
-//                                                 ),
-//                                               Text(
-//                                                 "₹${currentTotalPrice.toStringAsFixed(0)}",
-//                                                 style: const TextStyle(
-//                                                     fontSize: 18,
-//                                                     fontWeight:
-//                                                         FontWeight.bold),
-//                                               ),
-//                                             ],
-//                                           ),
-//                                         ],
-//                                       ),
-//                                       const SizedBox(height: 40),
-//                                       Center(
-//                                         child: SizedBox(
-//                                           height: 40,
-//                                           width: 150,
-//                                           child: ElevatedButton(
-//                                             style: ElevatedButton.styleFrom(
-//                                               shape: RoundedRectangleBorder(
-//                                                 borderRadius:
-//                                                     BorderRadius.circular(12),
-//                                               ),
-//                                               backgroundColor: gradientgreen2.c,
-//                                             ),
-//                                             onPressed: () async {
-//   final user = FirebaseAuth.instance.currentUser;
-//   if (user == null) return;
-
-//   final cartSnapshot = await FirebaseFirestore.instance
-//       .collection('carts')
-//       .doc(user.uid)
-//       .collection('cartItems')
-//       .get();
-
-//   if (cartSnapshot.docs.isEmpty) {
-//     if (!context.mounted) return;
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       const SnackBar(
-//         backgroundColor: Colors.white,
-//         content: Text(
-//           "🛒 Cart is empty. Add services before booking.",
-//           style: TextStyle(color: Colors.black),
-//         ),
-//       ),
-//     );
-//     return;
-//   }
-
-//   showLoadingDialog(context);
-
-//   List<Map<String, dynamic>> bookedItems = [];
-
-//   try {
-//     for (var doc in cartSnapshot.docs) {
-//       final data = doc.data();
-
-//       final bookingData = {
-//         'userId': user.uid,
-//         'serviceTitle': data['service_name'] ?? '',
-//         'image': data['image'] ?? '',
-//         'originalPrice': data['original_price'] ?? '',
-//         'discountPrice': data['price'] ?? '',
-//         'discount': data['discount'] ?? '',
-//         'rating': data['rating'] ?? 0,
-//         'category': data['category'] ?? '',
-//         'serviceType': data['serviceType'] ?? '',
-//         'bookingType': 'Exterior',
-//         'status': 'pending',
-//         'workerId': null,
-//         'workerName': null,
-//         'createdAt': FieldValue.serverTimestamp(),
-//       };
-
-//       await FirebaseFirestore.instance.collection('bookings').add(bookingData);
-//       await doc.reference.delete();
-
-//       bookedItems.add({
-//         // 'serviceTitle': data['service_name'] ?? '',
-//         // 'image': data['image'] ?? '',
-//         // 'discountPrice': data['price'] ?? '',
-//         // 'category': data['category'] ?? '',
-//         // 'serviceType': data['serviceType'] ?? '',
-//         'userId': user.uid,
-//         'serviceTitle': data['service_name'] ?? '',
-//         'image': data['image'] ?? '',
-//         'originalPrice': data['original_price'] ?? '',
-//         'discountPrice': data['price'] ?? '',
-//         'discount': data['discount'] ?? '',
-//         'rating': data['rating'] ?? 0,
-//         'category': data['category'] ?? '',
-//         'serviceType': data['serviceType'] ?? '',
-//         'bookingType': 'Exterior',
-//         'status': 'pending',
-//         'workerId': null,
-//         'workerName': null,
-//         'createdAt': FieldValue.serverTimestamp(),
-//       });
-//     }
-//   } catch (e) {
-//     if (!context.mounted) return;
-//     if (_isDialogShown) {
-//       Navigator.of(context, rootNavigator: true).pop();
-//       _isDialogShown = false;
-//     }
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       SnackBar(
-//         backgroundColor: const Color.fromARGB(255, 204, 175, 175),
-//         content: const Text(
-//           "⚠️ Failed to book service.",
-//           style: TextStyle(color: Colors.black),
-//         ),
-//       ),
-//     );
-//   }
-
-//   await Future.delayed(const Duration(milliseconds: 300));
-
-//   if (bookedItems.isNotEmpty && context.mounted) {
-//     if (_isDialogShown) {
-//       Navigator.of(context, rootNavigator: true).pop();
-//       _isDialogShown = false;
-//     }
-
-//     showModalBottomSheet(
-//       context: context,
-//       isScrollControlled: true,
-//       isDismissible: false,
-//       enableDrag: false,
-//       backgroundColor: Colors.transparent,
-//       builder: (_) => BookingConfirmationModal(
-//         bookedItems: bookedItems,
-//         onDonePressed: () {
-//           Navigator.of(context).pop();
-//         },
-//       ),
-//     );
-//   }
-// },
-
-//                                             child: const Text("Book Now",
-//                                                 style: TextStyle(
-//                                                     color: Colors.white)),
-//                                           ),
-//                                         ),
-//                                       ),
-//                                     ],
-//                                   ),
-//                                 ),
-//                               );
-//                             },
-//                           )
-//                         : const SizedBox(),
-//                   ),
-//                   const SizedBox(height: 80),
-//                 ],
-//               ),
-//             ),
-//           ),
-//           Positioned(
-//             bottom: 15,
-//             right: 10,
-//             child: Padding(
-//               padding: const EdgeInsets.only(bottom: 80),
-//               child: FloatingActionButton.small(
-//                 backgroundColor: gradientgreen2.c,
-//                 onPressed: () {
-//                   setState(() {
-//                     isExpanded = !isExpanded;
-//                   });
-//                 },
-//                 child: Icon(
-//                   isExpanded
-//                       ? Icons.keyboard_arrow_down
-//                       : Icons.keyboard_arrow_up,
-//                   color: Colors.white,
-//                 ),
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   Widget _buildHeader() {
-//     return Container(
-//       height: 80,
-//       width: double.infinity,
-//       decoration: const BoxDecoration(
-//         borderRadius: BorderRadius.only(
-//           bottomLeft: Radius.circular(20),
-//           bottomRight: Radius.circular(20),
-//         ),
-//         gradient: LinearGradient(
-//           colors: [
-//             Color.fromARGB(255, 102, 214, 10),
-//             Color.fromARGB(255, 113, 191, 4),
-//             Color.fromARGB(255, 26, 159, 6),
-//           ],
-//         ),
-//       ),
-//       padding: const EdgeInsets.only(top: 30),
-//       child: const Center(
-//         child: Text(
-//           "My Cart",
-//           style: TextStyle(
-//             fontSize: 20,
-//             color: Colors.white,
-//             fontWeight: FontWeight.bold,
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
-import 'package:naattulink/MVVM/utils/Constants/colors.dart';
-import 'package:naattulink/MVVM/utils/service_functions/cartservicecard.dart';
+import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/model/models/cart_model.dart';
-import 'package:naattulink/MVVM/utils/service_functions/servicecard2.dart';
-import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
+import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 
 class CartPage extends StatefulWidget {
-  String? serviceName;
-  String? image;
-  String? originalPrice;
-  String? discountPrice;
-  String? discount;
-  int? rating;
-  String? category;
-  String? serviceType;
-
-  CartPage({
-    Key? key,
-    this.serviceName,
-    this.image,
-    this.originalPrice,
-    this.discountPrice,
-    this.discount,
-    this.rating,
-    this.category,
-    this.serviceType,
-  }) : super(key: key);
+  const CartPage({Key? key}) : super(key: key);
 
   @override
   _CartPageState createState() => _CartPageState();
 }
 
 class _CartPageState extends State<CartPage> {
-  bool isExpanded = false;
   bool _isDialogShown = false;
+  final TextEditingController _promoController = TextEditingController();
+
+  static const Color _navy = Color(0xFF0F2E5A);
+  static const Color _lightBg = Color(0xFFEEF3FB);
+  static const Color _amber = Color(0xFFFFCA28);
+
+  // ── Loading Dialog ────────────────────────────────────────────────────────
 
   void showLoadingDialog(BuildContext context) {
     if (_isDialogShown) return;
-
     _isDialogShown = true;
-
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          content: Row(
-            children: const [
-              CircularProgressIndicator(color: Colors.green),
-              SizedBox(width: 20),
-              Text("Booking..."),
-            ],
-          ),
-        );
-      },
-    );
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Row(
+          children: const [
+            CircularProgressIndicator(color: _navy),
+            SizedBox(width: 20),
+            Text("Booking your services...",
+                style: TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    ).then((_) => _isDialogShown = false);
   }
+
+  void hideLoadingDialog() {
+    if (_isDialogShown) {
+      Navigator.of(context, rootNavigator: true).pop();
+      _isDialogShown = false;
+    }
+  }
+
+  // ── Booking Logic ─────────────────────────────────────────────────────────
+
+  Future<void> _processBooking(List<QueryDocumentSnapshot> cartDocs) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    if (cartDocs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: Colors.redAccent,
+        content: Text("🛒 Cart is empty. Add services before booking."),
+      ));
+      return;
+    }
+
+    showLoadingDialog(context);
+
+    try {
+      List<Map<String, dynamic>> bookedItems = [];
+
+      for (var doc in cartDocs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final bookingData = {
+          'userId': user.uid,
+          'serviceTitle': data['service_name'] ?? '',
+          'image': data['image'] ?? '',
+          'originalPrice': data['original_price'] ?? '',
+          'discountPrice': data['price'] ?? '',
+          'discount': data['discount'] ?? '',
+          'rating': data['rating'] ?? 0,
+          'category': data['category'] ?? '',
+          'serviceType': data['service_type'] ?? '',
+          'bookingType': 'Exterior',
+          'status': 'pending',
+          'workerId': null,
+          'workerName': null,
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+        await FirebaseFirestore.instance
+            .collection('bookings')
+            .add(bookingData);
+        await doc.reference.delete();
+        bookedItems.add(bookingData);
+      }
+
+      hideLoadingDialog();
+      if (!context.mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              BookingConfirmationModal(bookedItems: bookedItems),
+        ),
+      );
+    } catch (e) {
+      hideLoadingDialog();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: Colors.redAccent,
+        content: Text("⚠️ Failed to book service: ${e.toString()}"),
+      ));
+    }
+  }
+
+  Future<void> _removeItem(DocumentReference docRef) async {
+    await docRef.delete();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Item removed from cart"),
+        backgroundColor: Colors.black87,
+        duration: Duration(seconds: 2),
+      ));
+    }
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -566,482 +133,703 @@ class _CartPageState extends State<CartPage> {
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text("My Cart", style: TextStyle(color: Colors.white)),
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color.fromARGB(255, 102, 214, 10),
-                  Color.fromARGB(255, 113, 191, 4),
-                  Color.fromARGB(255, 26, 159, 6),
-                ],
-              ),
-            ),
-          ),
-        ),
-        body: const Center(
-          child: Text('Please log in to view your cart.'),
-        ),
+        backgroundColor: _lightBg,
+        appBar: _buildAppBar(),
+        body: _buildEmptyCart(),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(246, 246, 246, 1),
-      body: Stack(
-        children: [
-          StreamBuilder(
-            stream: FirebaseFirestore.instance
-                .collection('carts')
-                .doc(user.uid)
-                .collection('cartItems')
-                .orderBy('addedAt', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                if (kDebugMode) {
-                  print('Firestore Stream Error: ${snapshot.error}');
-                }
-                return Center(
-                    child: Text('Error loading cart: ${snapshot.error}'));
-              }
+      backgroundColor: _lightBg,
+      appBar: _buildAppBar(),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('carts')
+            .doc(user.uid)
+            .collection('cartItems')
+            .orderBy('addedAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: _navy));
+          }
 
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const ServiceCardListSkeleton();
-              }
+          final cartDocs = snapshot.data?.docs ?? [];
 
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return SingleChildScrollView(
+          if (cartDocs.isEmpty) {
+            return _buildEmptyCart();
+          }
+
+          // Totals
+          double totalPrice = 0;
+          double totalOriginal = 0;
+          double cancelledTotal = 0;
+
+          for (int i = 0; i < cartDocs.length; i++) {
+            final data = cartDocs[i].data() as Map<String, dynamic>;
+            double price =
+                double.tryParse(data["price"]?.toString() ?? "0") ?? 0;
+            double orig =
+                double.tryParse(data["original_price"]?.toString() ?? "0") ?? 0;
+            if (i == 1 && cartDocs.length > 1) {
+              cancelledTotal += price;
+            } else {
+              totalPrice += price;
+              totalOriginal += orig;
+            }
+          }
+
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   child: Column(
                     children: [
-                      _buildHeader(),
-                      const SizedBox(height: 150),
-                      Center(
-                        child: Image.asset(
-                          "assets/icons/emptycart.jpeg",
-                          scale: 3.5,
-                        ),
+                      // Cart items
+                      ListView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: cartDocs.length,
+                        itemBuilder: (context, index) {
+                          final doc = cartDocs[index];
+                          final data = doc.data() as Map<String, dynamic>;
+                          final item = CartModel.fromFirestore(data);
+                          final isCancelled =
+                              (index == 1 && cartDocs.length > 1);
+                          return _buildCartItemCard(item, doc.reference,
+                              isCancelled: isCancelled);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPromoCodeSection(),
+                      const SizedBox(height: 16),
+                      _buildPriceDetails(
+                        itemCount: cartDocs.length,
+                        totalPrice: totalPrice,
+                        totalOriginal: totalOriginal,
+                        cancelledTotal: cancelledTotal,
                       ),
                     ],
                   ),
-                );
-              }
+                ),
+              ),
+              _buildCheckoutBar(
+                itemCount: cartDocs.length,
+                totalPrice: totalPrice,
+                onCheckout: () => _processBooking(cartDocs),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
-              final cartItems = snapshot.data!.docs.map((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                return CartModel.fromFirestore(data);
-              }).toList();
+  // ── App Bar ───────────────────────────────────────────────────────────────
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: 280),
-                child: Column(
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 10),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: cartItems.length,
-                      itemBuilder: (context, index) {
-                        final cartItem = cartItems[index];
-                        return Cartservicecard(cartItem: cartItem);
-                      },
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      elevation: 0,
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      title: const Text(
+        "My Cart",
+        style: TextStyle(
+          color: _navy,
+          fontSize: 26,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      actions: [
+        Container(
+          margin: const EdgeInsets.only(right: 16),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 8, bottom: 8),
+                width: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                    const SizedBox(height: 10),
-                    Servicecard2(category: "interior"),
                   ],
                 ),
-              );
-            },
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 700),
-                    curve: Curves.easeInOut,
-                    height: isExpanded ? 270 : 0,
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(15),
-                        topRight: Radius.circular(15),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 6,
-                          offset: const Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: isExpanded
-                        ? StreamBuilder<QuerySnapshot>(
-                            stream: FirebaseFirestore.instance
-                                .collection('carts')
-                                .doc(user.uid)
-                                .collection('cartItems')
-                                .snapshots(),
-                            builder: (context, snapshot) {
-                              double currentTotalPrice = 0;
-                              double currentTotalOriginalPrice = 0;
-                              int currentServiceCount = 0;
-
-                              if (snapshot.hasData &&
-                                  snapshot.data!.docs.isNotEmpty) {
-                                currentServiceCount =
-                                    snapshot.data!.docs.length;
-                                for (var doc in snapshot.data!.docs) {
-                                  final data =
-                                      doc.data() as Map<String, dynamic>;
-                                  currentTotalPrice += double.tryParse(
-                                          data["price"]?.toString() ?? "0") ??
-                                      0;
-                                  currentTotalOriginalPrice += double.tryParse(
-                                          data["original_price"]?.toString() ??
-                                              "0") ??
-                                      0;
-                                }
-                              }
-
-                              double currentDiscount =
-                                  currentTotalOriginalPrice - currentTotalPrice;
-
-                              return Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: SingleChildScrollView(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Center(
-                                        child: Text(
-                                          "Price Details",
-                                          style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                              "Price ($currentServiceCount Bookings)",
-                                              style: const TextStyle(
-                                                  fontSize: 15)),
-                                          Text(
-                                            "₹${currentTotalOriginalPrice.toStringAsFixed(0)}",
-                                            style:
-                                                const TextStyle(fontSize: 15),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 5),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          const Text("Discount",
-                                              style: TextStyle(fontSize: 15)),
-                                          Text(
-                                            "-₹${currentDiscount.toStringAsFixed(0)}",
-                                            style: TextStyle(
-                                                fontSize: 15,
-                                                color: gradientgreen2.c),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          const Text("Total Amount",
-                                              style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold)),
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              if (currentDiscount > 0)
-                                                Text(
-                                                  "₹${currentTotalOriginalPrice.toStringAsFixed(0)}",
-                                                  style: const TextStyle(
-                                                    decoration: TextDecoration
-                                                        .lineThrough,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                              Text(
-                                                "₹${currentTotalPrice.toStringAsFixed(0)}",
-                                                style: const TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 40),
-                                      Center(
-                                        child: SizedBox(
-                                          height: 40,
-                                          width: 150,
-                                          child: ElevatedButton(
-                                            style: ElevatedButton.styleFrom(
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              backgroundColor: gradientgreen2.c,
-                                            ),
-                                            onPressed: () async {
-                                              final user = FirebaseAuth
-                                                  .instance.currentUser;
-                                              if (user == null) return;
-
-                                              final cartSnapshot =
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .collection('carts')
-                                                      .doc(user.uid)
-                                                      .collection('cartItems')
-                                                      .get();
-
-                                              if (cartSnapshot.docs.isEmpty) {
-                                                if (!context.mounted) return;
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  const SnackBar(
-                                                    backgroundColor:
-                                                        Colors.white,
-                                                    content: Text(
-                                                      "🛒 Cart is empty. Add services before booking.",
-                                                      style: TextStyle(
-                                                          color: Colors.black),
-                                                    ),
-                                                  ),
-                                                );
-                                                return;
-                                              }
-
-                                              showLoadingDialog(context);
-
-                                              List<Map<String, dynamic>>
-                                                  bookedItems = [];
-
-                                              try {
-                                                for (var doc
-                                                    in cartSnapshot.docs) {
-                                                  final data = doc.data();
-                                                  final category =
-                                                      data['category']
-                                                              ?.toString()
-                                                              .toLowerCase() ??
-                                                          '';
-
-                                                  String bookingType =
-                                                      switch (category) {
-                                                    'garden' => 'Garden',
-                                                    'home' => 'Home',
-                                                    'room' => 'Room',
-                                                    'vehicle' => 'Vehicle',
-                                                    'pet' => 'Pet',
-                                                    'interior' => 'Interior',
-                                                    'exterior' => 'Exterior',
-                                                    _ => 'Custom',
-                                                  };
-
-                                                  final bookingData = {
-                                                    'userId': user.uid,
-                                                    'serviceId':
-                                                        data['service_id'] ??
-                                                            '',
-                                                    'serviceTitle':
-                                                        data['service_name'] ??
-                                                            '',
-                                                    'image':
-                                                        data['image'] ?? '',
-                                                    'originalPrice': data[
-                                                            'original_price'] ??
-                                                        '',
-                                                    'discountPrice':
-                                                        data['price'] ?? '',
-                                                    'discount':
-                                                        data['discount'] ?? '',
-                                                    'rating':
-                                                        data['rating'] ?? 0,
-                                                    'category':
-                                                        data['category'] ?? '',
-                                                    'serviceType':
-                                                        data['service_type'] ??
-                                                            '',
-                                                    'bookingType': bookingType,
-                                                    'status': 'pending',
-                                                    'workerId': null,
-                                                    'workerName': null,
-                                                    'addedAt': data[
-                                                            'addedAt'] ??
-                                                        FieldValue
-                                                            .serverTimestamp(),
-                                                    'createdAt': FieldValue
-                                                        .serverTimestamp(),
-                                                    'selectedDate':
-                                                        data['selectedDate'] ??
-                                                            '',
-                                                    'selectedTime':
-                                                        data['selectedTime'] ??
-                                                            '',
-                                                  };
-
-                                                  // Add conditional data for category-specific fields
-                                                  if (category == 'garden') {
-                                                    bookingData['gardenSize'] =
-                                                        data['gardenSize'] ??
-                                                            '';
-                                                  } else if (category ==
-                                                      'home') {
-                                                    bookingData['homeSize'] =
-                                                        data['homeSize'] ?? '';
-                                                  } else if (category ==
-                                                      'room') {
-                                                    bookingData['roomType'] =
-                                                        data['roomType'] ?? '';
-                                                  } else if (category ==
-                                                      'vehicle') {
-                                                    bookingData[
-                                                            'vehicleCleaningType'] =
-                                                        data['vehicleCleaningType'] ??
-                                                            '';
-                                                    bookingData['vehicleType'] =
-                                                        data['vehicleType'] ??
-                                                            '';
-                                                    bookingData[
-                                                            'vehicleCategory'] =
-                                                        data['vehicleCategory'] ??
-                                                            '';
-                                                  } else if (category ==
-                                                      'pet') {
-                                                    bookingData['petType'] =
-                                                        data['petType'] ?? '';
-                                                    bookingData['petCount'] =
-                                                        data['petCount'] ?? '';
-                                                  }
-
-                                                  // Add the booking to Firestore
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .collection('bookings')
-                                                      .add(bookingData);
-
-                                                  // Remove from cart
-                                                  await doc.reference.delete();
-
-                                                  // Track for confirmation modal
-                                                  bookedItems.add(bookingData);
-                                                }
-                                              } catch (e) {
-                                                if (!context.mounted) return;
-                                                if (_isDialogShown) {
-                                                  Navigator.of(context,
-                                                          rootNavigator: true)
-                                                      .pop();
-                                                  _isDialogShown = false;
-                                                }
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  const SnackBar(
-                                                    backgroundColor:
-                                                        Color.fromARGB(
-                                                            255, 204, 175, 175),
-                                                    content: Text(
-                                                      "⚠️ Failed to book service.",
-                                                      style: TextStyle(
-                                                          color: Colors.black),
-                                                    ),
-                                                  ),
-                                                );
-                                                return;
-                                              }
-
-                                              await Future.delayed(
-                                                  const Duration(
-                                                      milliseconds: 300));
-
-                                              if (bookedItems.isNotEmpty &&
-                                                  context.mounted) {
-                                                if (_isDialogShown) {
-                                                  Navigator.of(context,
-                                                          rootNavigator: true)
-                                                      .pop();
-                                                  _isDialogShown = false;
-                                                }
-
-                                                showModalBottomSheet(
-                                                  context: context,
-                                                  isScrollControlled: true,
-                                                  isDismissible: false,
-                                                  enableDrag: false,
-                                                  backgroundColor:
-                                                      Colors.transparent,
-                                                  builder: (_) =>
-                                                      BookingConfirmationModal(
-                                                    bookedItems: bookedItems,
-                                                    onDonePressed: () {
-                                                      Navigator.of(context)
-                                                          .pop();
-                                                    },
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                            child: const Text("Book Now",
-                                                style: TextStyle(
-                                                    color: Colors.white)),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          )
-                        : const SizedBox(),
+                child: const Icon(Icons.shopping_cart_outlined, color: _navy),
+              ),
+              Positioned(
+                top: 8,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: const BoxDecoration(
+                    color: _amber,
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 80),
-                ],
+                  child: const Text(
+                    "0",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Empty Cart ────────────────────────────────────────────────────────────
+
+  Widget _buildEmptyCart() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+
+            // Illustration
+            Image.asset(
+              'assets/icons/my_cart.png',
+              height: 220,
+              fit: BoxFit.contain,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Title
+            const Text(
+              "Your cart is empty",
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: _navy,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Subtitle
+            Text(
+              "Looks like you haven't added anything yet.\nExplore our services and start booking!",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.blueGrey.shade400,
+                height: 1.5,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Browse Services Button
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const user_Dashboard()),
+                    (route) => false,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color.fromARGB(255, 255, 212, 13),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.search, color: Colors.black87, size: 22),
+                    SizedBox(width: 12),
+                    Text(
+                      "Browse Services",
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Icon(Icons.arrow_forward, color: Colors.black87, size: 20),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Divider row
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 1,
+                    color: const Color(0xFFDDE3EE),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFDDE3EE),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    "Or continue shopping from",
+                    style: TextStyle(
+                        fontSize: 13, color: Colors.blueGrey.shade400),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    height: 1,
+                    color: const Color(0xFFDDE3EE),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFDDE3EE),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Category shortcuts
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildCategoryTile(
+                  Icons.person_outline,
+                  "Workers",
+                  "Find verified\nprofessionals",
+                  const Color(0xFF8C52FF),
+                  onTap: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const user_Dashboard(
+                              initialHomeCategoryIndex: 1)),
+                      (route) => false,
+                    );
+                  },
+                ),
+                // Hidden as requested:
+                // _buildCategoryTile(Icons.shopping_cart_outlined, "Groceries",
+                //     "Daily essentials\nat your door", const Color(0xFF4CAF50)),
+                _buildCategoryTile(
+                  Icons.shopping_bag_outlined,
+                  "Shopping",
+                  "Explore products\n& offers",
+                  const Color(0xFF2196F3),
+                  onTap: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const user_Dashboard(
+                              initialHomeCategoryIndex: 4)),
+                      (route) => false,
+                    );
+                  },
+                ),
+                _buildCategoryTile(
+                  Icons.grid_view,
+                  "More",
+                  "More categories\n& services",
+                  const Color(0xFFFF9800),
+                  onTap: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const user_Dashboard(
+                              initialHomeCategoryIndex: 0)),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Safe Secure banner
+            // Container(
+            //   padding: const EdgeInsets.all(16),
+            //   decoration: BoxDecoration(
+            //     color: const Color(0xFFF3F5FC),
+            //     borderRadius: BorderRadius.circular(16),
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       Container(
+            //         padding: const EdgeInsets.all(12),
+            //         decoration: const BoxDecoration(
+            //           color: Color(0xFFE8EAF6),
+            //           shape: BoxShape.circle,
+            //         ),
+            //         child: const Icon(Icons.security,
+            //             color: Color(0xFF5C6BC0), size: 32),
+            //       ),
+            //       const SizedBox(width: 16),
+            //       Expanded(
+            //         child: Column(
+            //           crossAxisAlignment: CrossAxisAlignment.start,
+            //           children: [
+            //             const Text(
+            //               "Safe. Secure. Reliable.",
+            //               style: TextStyle(
+            //                 fontSize: 14,
+            //                 fontWeight: FontWeight.bold,
+            //                 color: _navy,
+            //               ),
+            //             ),
+            //             const SizedBox(height: 4),
+            //             Text(
+            //               "Your bookings and payments\nare 100% safe with us.",
+            //               style: TextStyle(
+            //                 fontSize: 12,
+            //                 color: Colors.blueGrey.shade400,
+            //               ),
+            //             ),
+            //           ],
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
+
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryTile(
+      IconData icon, String label, String subLabel, Color color,
+      {VoidCallback? onTap}) {
+    return Expanded(
+        child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 2),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blueGrey.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: _navy,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subLabel,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 9,
+                color: Colors.blueGrey.shade400,
+                height: 1.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ));
+  }
+
+  // ── Cart Item Card ────────────────────────────────────────────────────────
+
+  Widget _buildCartItemCard(CartModel item, DocumentReference docRef,
+      {bool isCancelled = false}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image
+                Container(
+                  height: 60,
+                  width: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    image: DecorationImage(
+                      image: NetworkImage(item.image.isNotEmpty
+                          ? item.image
+                          : "https://via.placeholder.com/150"),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.service_name,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: _navy,
+                                decoration: isCancelled
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isCancelled)
+                            Container(
+                              margin: const EdgeInsets.only(left: 6, right: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: const [
+                                  Icon(Icons.cancel,
+                                      color: Colors.red, size: 10),
+                                  SizedBox(width: 3),
+                                  Text("CANCELLED",
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          GestureDetector(
+                            onTap: () => _removeItem(docRef),
+                            child: const Icon(Icons.delete_outline,
+                                color: Colors.red, size: 20),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.person_outline,
+                              size: 13, color: _navy.withOpacity(0.7)),
+                          const SizedBox(width: 4),
+                          Text(
+                            item.category.isNotEmpty
+                                ? item.category
+                                : "Expert Service",
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: _navy.withOpacity(0.8)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "Professional Service",
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.blueGrey.shade400),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Date / Price Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _lightBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.calendar_today_outlined,
+                          size: 12, color: _navy),
+                      SizedBox(width: 4),
+                      Text("24-Jun-2026",
+                          style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Text("|",
+                            style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      ),
+                      Icon(Icons.access_time, size: 12, color: _navy),
+                      SizedBox(width: 4),
+                      Text("05:00 PM - 07:00 PM",
+                          style: TextStyle(fontSize: 10, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+
+                // Price + Quantity
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      "₹${item.price}",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isCancelled ? Colors.red : _navy,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _lightBg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.remove, size: 14, color: Colors.grey),
+                          SizedBox(width: 12),
+                          Text("1",
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: _navy)),
+                          SizedBox(width: 12),
+                          Icon(Icons.add, size: 14, color: Colors.grey),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Promo Code ────────────────────────────────────────────────────────────
+
+  Widget _buildPromoCodeSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDDE3EE)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          const Icon(Icons.local_offer_outlined, color: Colors.grey, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _promoController,
+              decoration: const InputDecoration(
+                hintText: "Apply promo code",
+                hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
+                border: InputBorder.none,
               ),
             ),
           ),
-          Positioned(
-            bottom: 15,
-            right: 10,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 80),
-              child: FloatingActionButton.small(
-                backgroundColor: gradientgreen2.c,
-                onPressed: () {
-                  setState(() {
-                    isExpanded = !isExpanded;
-                  });
-                },
-                child: Icon(
-                  isExpanded
-                      ? Icons.keyboard_arrow_down
-                      : Icons.keyboard_arrow_up,
-                  color: Colors.white,
+          Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: const BoxDecoration(
+              border: Border(left: BorderSide(color: Color(0xFFDDE3EE))),
+            ),
+            child: const Center(
+              child: Text(
+                "Apply",
+                style: TextStyle(
+                  color: _navy,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -1051,32 +839,172 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  Widget _buildHeader() {
+  // ── Price Details ─────────────────────────────────────────────────────────
+
+  Widget _buildPriceDetails({
+    required int itemCount,
+    required double totalPrice,
+    required double totalOriginal,
+    required double cancelledTotal,
+  }) {
     return Container(
-      height: 80,
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-        gradient: LinearGradient(
-          colors: [
-            Color.fromARGB(255, 102, 214, 10),
-            Color.fromARGB(255, 113, 191, 4),
-            Color.fromARGB(255, 26, 159, 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDDE3EE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.receipt_long_outlined, color: _navy, size: 20),
+              SizedBox(width: 8),
+              Text(
+                "Price Details",
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold, color: _navy),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _priceRow(
+              "Item Total ($itemCount item)",
+              "₹${(totalOriginal + cancelledTotal).toStringAsFixed(0)}",
+              Colors.black87),
+          const SizedBox(height: 10),
+          if (cancelledTotal > 0) ...[
+            _priceRow("Cancelled Items (1 item)",
+                "- ₹${cancelledTotal.toStringAsFixed(0)}", Colors.red),
+            const SizedBox(height: 10),
           ],
+          _priceRow("Delivery Charge", "₹0", Colors.black87),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: Color(0xFFDDE3EE), thickness: 1),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Total Amount",
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold, color: _navy)),
+              Text(
+                "₹${totalPrice.toStringAsFixed(0)}",
+                style: const TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.bold, color: _navy),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _priceRow(String label, String value, Color valueColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+        Text(value,
+            style: TextStyle(
+                fontWeight: FontWeight.w600, fontSize: 14, color: valueColor)),
+      ],
+    );
+  }
+
+  // ── Checkout Bar ──────────────────────────────────────────────────────────
+
+  Widget _buildCheckoutBar({
+    required int itemCount,
+    required double totalPrice,
+    required VoidCallback onCheckout,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E3A68),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(25),
+          topRight: Radius.circular(25),
         ),
       ),
-      padding: const EdgeInsets.only(top: 30),
-      child: const Center(
-        child: Text(
-          "My Cart",
-          style: TextStyle(
-            fontSize: 20,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+      child: SafeArea(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.shopping_cart_outlined,
+                        color: Colors.white, size: 28),
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          itemCount.toString(),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "$itemCount Item${itemCount > 1 ? 's' : ''}",
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    Text(
+                      "₹${totalPrice.toStringAsFixed(0)}",
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            ElevatedButton(
+              onPressed: onCheckout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _amber,
+                foregroundColor: const Color(0xFF0F2E5A),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                children: const [
+                  Text(
+                    "Proceed to Checkout",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  SizedBox(width: 6),
+                  Icon(Icons.arrow_forward, size: 16),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

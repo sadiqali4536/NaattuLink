@@ -215,7 +215,7 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
     double initialLat = _selectedLat ?? 11.2588;
     double initialLng = _selectedLng ?? 75.7804;
     final result = await Get.to(() =>
-        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng));
+        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng, flow: LocationPickerFlow.registration));
     if (result != null) {
       setState(() {
         _mainStandCtrl.text = result.formattedAddress ?? "";
@@ -611,7 +611,7 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
     double initialLat = _selectedLat ?? 11.2588;
     double initialLng = _selectedLng ?? 75.7804;
     final result = await Get.to(() =>
-        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng));
+        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng, flow: LocationPickerFlow.registration));
     if (result != null) {
       setState(() {
         _mainStandCtrl.text = result.formattedAddress ?? "";
@@ -1354,7 +1354,7 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
     double initialLat = _selectedLat ?? 11.2588;
     double initialLng = _selectedLng ?? 75.7804;
     final result = await Get.to(() =>
-        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng));
+        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng, flow: LocationPickerFlow.registration));
     if (result != null) {
       setState(() {
         _mainStandCtrl.text = result.formattedAddress ?? "";

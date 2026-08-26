@@ -130,59 +130,81 @@ class LocationController extends GetxController {
             .doc(user.uid)
             .set(updateData, SetOptions(merge: true));
 
-        // --- Add to delivery_addresses subcollection across all role collections ---
-        final roleCollections = [
-          'users',
-          'workers',
-          'healthcare',
-          'transports',
-          'shops_businesses'
-        ];
+        // --- Add to delivery_addresses subcollection across all role collections ONLY if not from auto GPS ---
+        if (source != 'gps') {
+          final roleCollections = [
+            'users',
+            'workers',
+            'healthcare',
+            'transports',
+            'shops_businesses'
+          ];
 
-        // Generate a new ID if it's a create, otherwise use the existing ID
-        final String addressId =
-            loc.id ?? FirebaseFirestore.instance.collection('users').doc().id;
+          // Generate a new ID if it's a create, otherwise use the existing ID
+          final String addressId =
+              loc.id ?? FirebaseFirestore.instance.collection('users').doc().id;
 
-        for (String collectionName in roleCollections) {
-          final docRef = FirebaseFirestore.instance
-              .collection(collectionName)
-              .doc(user.uid);
-          final docSnap = await docRef.get();
+          for (String collectionName in roleCollections) {
+            final docRef = FirebaseFirestore.instance
+                .collection(collectionName)
+                .doc(user.uid);
+            final docSnap = await docRef.get();
 
-          if (docSnap.exists) {
-            final deliveryRef = docRef.collection('delivery_addresses');
+            if (docSnap.exists) {
+              final deliveryRef = docRef.collection('delivery_addresses');
 
-            if (loc.isPrimary == true) {
-              // Reset all existing default addresses to 0
-              final existingDefaults =
-                  await deliveryRef.where('isDefault', isEqualTo: 1).get();
-              for (var d in existingDefaults.docs) {
-                await d.reference.update({'isDefault': 0});
+              if (loc.isPrimary == true) {
+                // Reset all existing default addresses to 0
+                final existingDefaults =
+                    await deliveryRef.where('isDefault', isEqualTo: 1).get();
+                for (var d in existingDefaults.docs) {
+                  await d.reference.update({'isDefault': 0});
+                }
               }
-            }
 
-            if (loc.id != null) {
-              // EDIT: Update existing address using its exact document ID
-              try {
-                await deliveryRef.doc(addressId).update({
-                  'buildingName': loc.landmark ?? '',
-                  'address': loc.formattedAddress,
-                  'phone': loc.receiverPhone ?? user.phoneNumber ?? '',
-                  'name': loc.receiverName ?? user.displayName ?? '',
-                  'alternativeNumber': loc.alternatePhone ?? '',
-                  'isDefault': loc.isPrimary == true ? 1 : 0,
-                  'addressType': loc.addressType ?? 'Home',
-                  'latitude': loc.latitude,
-                  'longitude': loc.longitude,
-                  'district': loc.district,
-                  'city': loc.city ?? '',
-                  'state': loc.state ?? '',
-                  'pincode': loc.pincode ?? '',
-                  'zoneId': loc.zoneId,
-                  'zoneName': loc.zoneName,
-                });
-              } catch (e) {
-                // If it doesn't exist in this specific role collection, fallback to set
+              if (loc.id != null) {
+                // EDIT: Update existing address using its exact document ID
+                try {
+                  await deliveryRef.doc(addressId).update({
+                    'buildingName': loc.landmark ?? '',
+                    'address': loc.formattedAddress,
+                    'phone': loc.receiverPhone ?? user.phoneNumber ?? '',
+                    'name': loc.receiverName ?? user.displayName ?? '',
+                    'alternativeNumber': loc.alternatePhone ?? '',
+                    'isDefault': loc.isPrimary == true ? 1 : 0,
+                    'addressType': loc.addressType ?? 'Home',
+                    'latitude': loc.latitude,
+                    'longitude': loc.longitude,
+                    'district': loc.district,
+                    'city': loc.city ?? '',
+                    'state': loc.state ?? '',
+                    'pincode': loc.pincode ?? '',
+                    'zoneId': loc.zoneId,
+                    'zoneName': loc.zoneName,
+                  });
+                } catch (e) {
+                  // If it doesn't exist in this specific role collection, fallback to set
+                  await deliveryRef.doc(addressId).set({
+                    'buildingName': loc.landmark ?? '',
+                    'address': loc.formattedAddress,
+                    'phone': loc.receiverPhone ?? user.phoneNumber ?? '',
+                    'name': loc.receiverName ?? user.displayName ?? '',
+                    'alternativeNumber': loc.alternatePhone ?? '',
+                    'isDefault': loc.isPrimary == true ? 1 : 0,
+                    'addressType': loc.addressType ?? 'Home',
+                    'latitude': loc.latitude,
+                    'longitude': loc.longitude,
+                    'district': loc.district,
+                    'city': loc.city ?? '',
+                    'state': loc.state ?? '',
+                    'pincode': loc.pincode ?? '',
+                    'zoneId': loc.zoneId,
+                    'zoneName': loc.zoneName,
+                    'createdAt': FieldValue.serverTimestamp(),
+                  });
+                }
+              } else {
+                // CREATE: Save new address using the generated ID
                 await deliveryRef.doc(addressId).set({
                   'buildingName': loc.landmark ?? '',
                   'address': loc.formattedAddress,
@@ -202,26 +224,6 @@ class LocationController extends GetxController {
                   'createdAt': FieldValue.serverTimestamp(),
                 });
               }
-            } else {
-              // CREATE: Save new address using the generated ID
-              await deliveryRef.doc(addressId).set({
-                'buildingName': loc.landmark ?? '',
-                'address': loc.formattedAddress,
-                'phone': loc.receiverPhone ?? user.phoneNumber ?? '',
-                'name': loc.receiverName ?? user.displayName ?? '',
-                'alternativeNumber': loc.alternatePhone ?? '',
-                'isDefault': loc.isPrimary == true ? 1 : 0,
-                'addressType': loc.addressType ?? 'Home',
-                'latitude': loc.latitude,
-                'longitude': loc.longitude,
-                'district': loc.district,
-                'city': loc.city ?? '',
-                'state': loc.state ?? '',
-                'pincode': loc.pincode ?? '',
-                'zoneId': loc.zoneId,
-                'zoneName': loc.zoneName,
-                'createdAt': FieldValue.serverTimestamp(),
-              });
             }
           }
         }

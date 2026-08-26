@@ -472,6 +472,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                             builder: (context) => SelectLocationMapPage(
                               initialLat: initialLat,
                               initialLng: initialLng,
+                              flow: LocationPickerFlow.addAddress,
                               onAddressSaved: _refreshFirebaseAddresses,
                             ),
                           ),

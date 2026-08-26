@@ -275,7 +275,7 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
           initialLng: lng,
           // Don't show the address form again inside the map page —
           // we are already inside AddressFormBottomSheet.
-          showAddressFormOnConfirm: false,
+          flow: LocationPickerFlow.registration,
         ),
       ),
     );

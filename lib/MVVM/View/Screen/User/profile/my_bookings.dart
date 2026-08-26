@@ -3,9 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 
 import 'confirmed_booking_details.dart';
 import 'cancelled_booking_details.dart';
+import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 
 class MyBookings extends StatefulWidget {
   const MyBookings({super.key});
@@ -299,175 +301,267 @@ class _MyBookingsState extends State<MyBookings> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Header ─────────────────────────────────────────────────────
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark, // Dark icons for white background
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // ── Header ─────────────────────────────────────────────────────
+                Container(
+                  color: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('My Bookings',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F2E5A))),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('My Bookings',
+                              style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0F2E5A))),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Search bar
+                      Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(26),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Search your bookings',
+                            hintStyle: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 14),
+                            prefixIcon: const Icon(Icons.search,
+                                color: Colors.grey, size: 20),
+                            border: InputBorder.none,
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 16),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? GestureDetector(
+                                    onTap: () => setState(() {
+                                      _searchController.clear();
+                                      _searchQuery = '';
+                                    }),
+                                    child: const Icon(Icons.close,
+                                        color: Colors.grey, size: 18),
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Status chips
+                      SizedBox(
+                        height: 38,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _statusFilters.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (_, i) {
+                            final st = _statusFilters[i];
+                            final sel = _selectedStatus == st;
+                            return GestureDetector(
+                              onTap: () => setState(() => _selectedStatus = st),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 18, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: sel
+                                      ? Color(0xFF0F2E5A).withOpacity(0.15)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: sel
+                                        ? Color(0xFF0F2E5A)
+                                        : Colors.grey.shade200,
+                                    width: sel ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  st,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight:
+                                        sel ? FontWeight.bold : FontWeight.w500,
+                                    color: sel
+                                        ? Color(0xFF0F2E5A)
+                                        : Colors.black54,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  // Search bar
-                  Container(
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F2F5),
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (v) => setState(() => _searchQuery = v),
-                      style: const TextStyle(fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: 'Search your bookings',
-                        hintStyle: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 14),
-                        prefixIcon: const Icon(Icons.search,
-                            color: Colors.grey, size: 20),
-                        border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 12),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? GestureDetector(
-                                onTap: () => setState(() {
-                                  _searchController.clear();
-                                  _searchQuery = '';
-                                }),
-                                child: const Icon(Icons.close,
-                                    color: Colors.grey, size: 18),
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Status chips
-                  SizedBox(
-                    height: 32,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _statusFilters.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        final st = _statusFilters[i];
-                        final sel = _selectedStatus == st;
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedStatus = st),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: sel
-                                  ? _primary.withOpacity(0.1)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: sel ? _primary : Colors.grey.shade300,
-                                width: sel ? 1.5 : 1,
-                              ),
+                ),
+
+                // ── Booking list ────────────────────────────────────────────────
+                Expanded(
+                  child: Container(
+                    color: const Color(0xFFF5F6FA),
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: _stream,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Color(0xFF0F2E5A)));
+                        }
+                        if (snapshot.hasError) {
+                          return Center(
+                              child: Text('Error: ${snapshot.error}'));
+                        }
+
+                        final filtered = _filter(snapshot.data?.docs ?? []);
+
+                        if (filtered.isEmpty) {
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(height: 40),
+                                Image.asset(
+                                  'assets/icons/my_bookings.png', // Assuming asset exists
+                                  height: 200,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Icon(Icons.event_busy,
+                                          size: 120,
+                                          color: Colors.blue.shade100),
+                                ),
+                                const SizedBox(height: 32),
+                                const Text(
+                                  "No Bookings Yet",
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F2E5A),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  _searchQuery.isNotEmpty
+                                      ? 'No bookings match "$_searchQuery"'
+                                      : "Your upcoming and past bookings\nwill appear here.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.blueGrey.shade400,
+                                    height: 1.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 54,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                const user_Dashboard(
+                                                    initialHomeCategoryIndex:
+                                                        1)),
+                                        (route) => false,
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color.fromARGB(
+                                          255, 255, 212, 13),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: const [
+                                        Icon(Icons.search,
+                                            color: Colors.black87, size: 22),
+                                        SizedBox(width: 12),
+                                        Text(
+                                          "Browse Services",
+                                          style: TextStyle(
+                                            color: Colors.black87,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Icon(Icons.arrow_forward,
+                                            color: Colors.black87, size: 20),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 40),
+                              ],
                             ),
-                            child: Text(
-                              st,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight:
-                                    sel ? FontWeight.bold : FontWeight.normal,
-                                color: sel ? _primary : Colors.black54,
-                              ),
-                            ),
-                          ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                          itemCount: filtered.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == filtered.length) {
+                              return Column(
+                                children: [
+                                  const SizedBox(height: 8),
+                                  Icon(Icons.inbox_outlined,
+                                      size: 40, color: Colors.grey.shade300),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'End of your booking history',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade400),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            }
+                            final data =
+                                filtered[index].data() as Map<String, dynamic>;
+                            return _BookingCard(
+                              data: data,
+                              bookingId: filtered[index].id,
+                              onCancel: _showCancelSheet,
+                            );
+                          },
                         );
                       },
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-
-            // ── Booking list ────────────────────────────────────────────────
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: _stream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                        child: CircularProgressIndicator(
-                            color: Color(0xFF0F2E5A)));
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-
-                  final filtered = _filter(snapshot.data?.docs ?? []);
-
-                  if (filtered.isEmpty) {
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.receipt_long_outlined,
-                            size: 64, color: Colors.grey.shade300),
-                        const SizedBox(height: 12),
-                        Text(
-                          _searchQuery.isNotEmpty
-                              ? 'No bookings match "$_searchQuery"'
-                              : 'No bookings found',
-                          style: TextStyle(
-                              color: Colors.grey.shade500, fontSize: 14),
-                        ),
-                      ],
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                    itemCount: filtered.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == filtered.length) {
-                        return Column(
-                          children: [
-                            const SizedBox(height: 8),
-                            Icon(Icons.inbox_outlined,
-                                size: 40, color: Colors.grey.shade300),
-                            const SizedBox(height: 6),
-                            Text(
-                              'End of your booking history',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade400),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                        );
-                      }
-                      final data =
-                          filtered[index].data() as Map<String, dynamic>;
-                      return _BookingCard(
-                        data: data,
-                        bookingId: filtered[index].id,
-                        onCancel: _showCancelSheet,
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 }
 

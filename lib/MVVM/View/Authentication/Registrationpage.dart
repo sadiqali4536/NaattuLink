@@ -87,7 +87,10 @@ class _RegistrationpageState extends State<Registrationpage> {
       context,
       MaterialPageRoute(
         builder: (context) => naattulink_map.SelectLocationMapPage(
-            initialLat: initialLat, initialLng: initialLng),
+            initialLat: initialLat,
+            initialLng: initialLng,
+            flow: naattulink_map.LocationPickerFlow.registration,
+        ),
       ),
     );
 
