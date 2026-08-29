@@ -86,10 +86,14 @@ class _HealthcareWorkerRegistrationPageState
         return Theme(
           data: ThemeData.light().copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF0A235C),
+              primary: Color(0xFF0A235C), // header background color
+              onPrimary: Colors.white, // header text color
+              onSurface: Color(0xFF0A235C), // body text color
             ),
-            timePickerTheme: const TimePickerThemeData(
-              backgroundColor: Colors.white,
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0A235C), // button text color
+              ),
             ),
           ),
           child: child!,
@@ -194,7 +198,7 @@ class _HealthcareWorkerRegistrationPageState
         "created_at": FieldValue.serverTimestamp(),
         "updated_at": FieldValue.serverTimestamp(),
         "address": _addressCtrl.text.trim(),
-        "status": "pending",
+        "status": "active",
         "services": [],
         "ratings": 0,
         "total_reviews": 0,
@@ -204,7 +208,7 @@ class _HealthcareWorkerRegistrationPageState
         "lng": finalLng,
       });
 
-      _toastSuccess("Account created successfully. Awaiting admin approval.");
+      _toastSuccess("Account created successfully.");
       if (_category == 'Pharmacy' || _category == 'Emergency Services') {
         Get.offAll(() => const user_Dashboard());
       } else {

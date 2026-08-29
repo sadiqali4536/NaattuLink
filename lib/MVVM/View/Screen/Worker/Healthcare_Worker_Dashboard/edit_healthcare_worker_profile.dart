@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'controller/healthcare_dashboard_controller.dart';
 import '../../../../utils/widget/backbutton/app_back_button.dart';
+import '../../location/select_location_map_page.dart';
+import '../../../../model/models/app_location_model.dart';
 
 class EditHealthcareWorkerProfile extends StatefulWidget {
   const EditHealthcareWorkerProfile({super.key});
@@ -149,18 +151,18 @@ class _EditHealthcareWorkerProfileState
                                   size: 60, color: Color(0xFF0A235C))
                               : null,
                         ),
-                        GestureDetector(
-                          onTap: _pickImage,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFEAB308),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.camera_alt,
-                                color: Colors.white, size: 20),
-                          ),
-                        ),
+                        // GestureDetector(
+                        //   onTap: _pickImage,
+                        //   child: Container(
+                        //     padding: const EdgeInsets.all(8),
+                        //     decoration: const BoxDecoration(
+                        //       color: Color(0xFFEAB308),
+                        //       shape: BoxShape.circle,
+                        //     ),
+                        //     child: const Icon(Icons.camera_alt,
+                        //         color: Colors.white, size: 20),
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
@@ -197,6 +199,18 @@ class _EditHealthcareWorkerProfileState
                     icon: Icons.location_on_outlined,
                     validator: (value) =>
                         value!.isEmpty ? 'Area is required' : null,
+                    readOnly: true,
+                    onTap: () async {
+                      final result =
+                          await Get.to(() => const SelectLocationMapPage(
+                                initialLat: 11.2588,
+                                initialLng: 75.7804,
+                                flow: LocationPickerFlow.registration,
+                              ));
+                      if (result != null && result is AppLocationModel) {
+                        _areaController.text = result.formattedAddress ?? '';
+                      }
+                    },
                   ),
                   const SizedBox(height: 40),
                   SizedBox(
@@ -251,6 +265,8 @@ class _EditHealthcareWorkerProfileState
     required IconData icon,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    VoidCallback? onTap,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,6 +298,8 @@ class _EditHealthcareWorkerProfileState
             controller: controller,
             keyboardType: keyboardType,
             validator: validator,
+            onTap: onTap,
+            readOnly: readOnly,
             decoration: InputDecoration(
               hintText: "Enter $label",
               hintStyle:

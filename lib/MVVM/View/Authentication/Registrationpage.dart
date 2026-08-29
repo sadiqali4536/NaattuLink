@@ -12,10 +12,13 @@ import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/View/Authentication/healthcare_worker_registration.dart';
 import 'package:naattulink/MVVM/View/Authentication/business_worker_registration.dart';
 import 'package:naattulink/MVVM/View/Authentication/transport_worker_registration.dart';
+import 'package:naattulink/MVVM/View/Authentication/online_services_registration.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart'
     as naattulink_model;
 import 'package:naattulink/MVVM/View/Screen/location/select_location_map_page.dart'
     as naattulink_map;
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart' hide Position;
 
 class Registrationpage extends StatefulWidget {
   const Registrationpage({super.key});
@@ -87,9 +90,9 @@ class _RegistrationpageState extends State<Registrationpage> {
       context,
       MaterialPageRoute(
         builder: (context) => naattulink_map.SelectLocationMapPage(
-            initialLat: initialLat,
-            initialLng: initialLng,
-            flow: naattulink_map.LocationPickerFlow.registration,
+          initialLat: initialLat,
+          initialLng: initialLng,
+          flow: naattulink_map.LocationPickerFlow.registration,
         ),
       ),
     );
@@ -637,6 +640,11 @@ class _RegistrationpageState extends State<Registrationpage> {
         subtitle: "Food, Grocery, Travels and more",
         icon: Icons.storefront_outlined,
       ),
+      _buildCategoryCard(
+        title: "Online services",
+        subtitle: "Online registration, passport, application",
+        icon: Icons.computer_outlined,
+      ),
       const SizedBox(height: 20),
       _buildWhyJoinBlock(),
       const SizedBox(height: 15),
@@ -1172,21 +1180,26 @@ class _RegistrationpageState extends State<Registrationpage> {
   Future<void> _handleRegister() async {
     if (!isUser && workerStep == 1) {
       if (selectedWorkerCategory == null) {
-        Get.snackbar(
-          "Category Required",
-          "Please select a category to continue.",
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
+        CherryToast.error(
+          title: const Text("Category Required",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          description: const Text("Please select a category to continue."),
+          animationType: AnimationType.fromTop,
+          autoDismiss: true,
+          displayCloseButton: false,
+        ).show(context);
         return;
       }
       if (!_agreeToTerms) {
-        Get.snackbar(
-          "Agreement Required",
-          "Please read and agree to the Terms & Conditions and Privacy Policy to continue.",
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
+        CherryToast.error(
+          title: const Text("Agreement Required",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          description: const Text(
+              "Please read and agree to the Terms & Conditions and Privacy Policy to continue."),
+          animationType: AnimationType.fromTop,
+          autoDismiss: true,
+          displayCloseButton: false,
+        ).show(context);
         return;
       }
       setState(() {
@@ -1205,6 +1218,10 @@ class _RegistrationpageState extends State<Registrationpage> {
           Get.to(() => const BusinessWorkerRegistrationPage());
           return;
         }
+        if (selectedWorkerCategory == 'Online services') {
+          Get.to(() => const OnlineServicesRegistrationPage());
+          return;
+        }
         workerStep = 2;
         selectedCategory = selectedWorkerCategory;
       });
@@ -1221,12 +1238,15 @@ class _RegistrationpageState extends State<Registrationpage> {
     }
 
     if (!_agreeToTerms) {
-      Get.snackbar(
-        "Agreement Required",
-        "Please read and agree to the Terms & Conditions and Privacy Policy to register.",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      CherryToast.error(
+        title: const Text("Agreement Required",
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        description: const Text(
+            "Please read and agree to the Terms & Conditions and Privacy Policy to register."),
+        animationType: AnimationType.fromTop,
+        autoDismiss: true,
+        displayCloseButton: false,
+      ).show(context);
       return;
     }
 
@@ -1311,8 +1331,14 @@ class _RegistrationpageState extends State<Registrationpage> {
       debugPrint("!!! GOOGLE SIGN-IN ERROR !!!");
       debugPrint("Error Details: $e");
       debugPrint("Stack Trace: $stackTrace");
-      Get.snackbar("Error", "Failed to fetch Google Account",
-          backgroundColor: Colors.red, colorText: Colors.white);
+      CherryToast.error(
+        title:
+            const Text("Error", style: TextStyle(fontWeight: FontWeight.bold)),
+        description: const Text("Failed to fetch Google Account"),
+        animationType: AnimationType.fromTop,
+        autoDismiss: true,
+        displayCloseButton: false,
+      ).show(context);
     }
     debugPrint("=== GOOGLE SIGN-IN PROCESS FINISHED (Registration Page) ===");
   }

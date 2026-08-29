@@ -1,3 +1,4 @@
+import 'product_search_page.dart';
 import 'dart:ui';
 import 'dart:math';
 import 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_notch_bottom_bar.dart';
@@ -23,6 +24,8 @@ import 'package:naattulink/MVVM/View/Screen/User/Booking_page/transportation_cat
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/shops_categories_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/healthcare_bookings/healthcare_categories_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/services/service_details_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/product/product_details_page.dart';
+import 'package:naattulink/MVVM/model/seller/store_product_model.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/helpline_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/tuition_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
@@ -123,9 +126,9 @@ class HomepageState extends State<Homepage> {
     selectedCategoryIndex = widget.initialCategoryIndex;
     _shuffleSeed = DateTime.now().millisecondsSinceEpoch;
     _searchController = TextEditingController();
-    final String currentLoc = LocationController.to.currentLocation.value;
-    final String defaultFrom = currentLoc.split(',').first.trim();
-    _fromBusController = TextEditingController(text: defaultFrom);
+    // Don't read location here — GPS hasn't run yet.
+    // _fromBusController will be updated after fetchLocation() in _detectUserDistrict.
+    _fromBusController = TextEditingController(text: '');
     _toBusController = TextEditingController(text: "");
     loadUsername();
     _servicesStream =
@@ -173,6 +176,12 @@ class HomepageState extends State<Homepage> {
       }
 
       if (mounted) {
+        // Update the bus 'From' field with the real GPS location now that it's available
+        final fetchedLoc = LocationController.to.currentLocation.value;
+        final fromText = fetchedLoc.split(',').first.trim();
+        if (fromText.isNotEmpty) {
+          _fromBusController.text = fromText;
+        }
         setState(() {
           _currentDistrict = district;
           _selectedDistrict = savedDistrict ?? "All Districts";
@@ -214,7 +223,15 @@ class HomepageState extends State<Homepage> {
   Future<void> loadUsername() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final collections = ['users', 'healthcare'];
+      final collections = [
+        'healthcare',
+        'businesses',
+        'transport',
+        'workers',
+        'transports',
+        'shops_businesses',
+        'users'
+      ];
       Map<String, dynamic>? data;
 
       for (String collection in collections) {
@@ -313,7 +330,10 @@ class HomepageState extends State<Homepage> {
           .get();
 
       // Dismiss loading
-      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (context.mounted) {
+        final nav = Navigator.of(context, rootNavigator: true);
+        if (nav.canPop()) nav.pop();
+      }
 
       if (!doc.exists) {
         if (context.mounted) {
@@ -344,7 +364,16 @@ class HomepageState extends State<Homepage> {
       final name = (data['service_name'] ?? 'Service').toString();
       final category = (data['category'] ?? '').toString();
       final image = (data['image_url'] ?? data['image'] ?? '').toString();
-      final rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
+      final dynamic rawRating = data['rating'];
+      double rating = 0.0;
+      if (rawRating is num) {
+        rating = rawRating.toDouble();
+      } else if (rawRating is Map) {
+        final avg = rawRating['average'];
+        if (avg is num) {
+          rating = avg.toDouble();
+        }
+      }
 
       if (context.mounted) {
         Navigator.push(
@@ -385,7 +414,8 @@ class HomepageState extends State<Homepage> {
       // Dismiss loading if still showing
       if (context.mounted) {
         try {
-          Navigator.of(context, rootNavigator: true).pop();
+          final nav = Navigator.of(context, rootNavigator: true);
+          if (nav.canPop()) nav.pop();
         } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -488,13 +518,25 @@ class HomepageState extends State<Homepage> {
     );
 
     try {
-      final doc = await FirebaseFirestore.instance
+      DocumentSnapshot doc = await FirebaseFirestore.instance
           .collection('products')
           .doc(productId.trim())
           .get();
+      bool isStoreProduct = false;
+
+      if (!doc.exists) {
+        doc = await FirebaseFirestore.instance
+            .collection('store_products')
+            .doc(productId.trim())
+            .get();
+        isStoreProduct = true;
+      }
 
       // Dismiss loading
-      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (context.mounted) {
+        final nav = Navigator.of(context, rootNavigator: true);
+        if (nav.canPop()) nav.pop();
+      }
 
       if (!doc.exists) {
         if (context.mounted) {
@@ -526,41 +568,64 @@ class HomepageState extends State<Homepage> {
           (data['title'] ?? data['productName'] ?? 'Product').toString();
       final category = (data['category'] ?? '').toString();
       final image = (data['image'] ?? data['image_url'] ?? '').toString();
-      final rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
+      final dynamic rawRating = data['rating'];
+      double rating = 0.0;
+      if (rawRating is num) {
+        rating = rawRating.toDouble();
+      } else if (rawRating is Map) {
+        final avg = rawRating['average'];
+        if (avg is num) {
+          rating = avg.toDouble();
+        }
+      }
       final price = data['price'] ?? 0;
+      final dPrice = data['discountPrice'] ?? data['discount_price'] ?? price;
+      final oPrice = data['originalPrice'] ?? data['original_price'] ?? price;
 
       if (context.mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ServiceDetailsPage(
-              category: category,
-              serviceName: name,
-              rating: rating,
-              originalPrice: price,
-              discount: 0,
-              image: image,
-              discountPrice: price,
-              serviceType: 'Product',
-              businessLat: null,
-              businessLng: null,
-              businessAddress: null,
-              businessMapsUrl: null,
-              serviceId: doc.id,
-              providerId: data['sellerId']?.toString() ?? 'Unknown',
-              providerName: 'Seller',
-              providerPhone: '',
-              serviceDescription: data['description']?.toString() ?? '',
-              estimatedDuration: '',
+        if (isStoreProduct) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductDetailsPage(
+                product: StoreProductModel.fromMap(data, doc.id),
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ServiceDetailsPage(
+                category: category,
+                serviceName: name,
+                rating: rating,
+                originalPrice: oPrice,
+                discount: 0,
+                image: image,
+                discountPrice: dPrice,
+                serviceType: 'Product',
+                businessLat: null,
+                businessLng: null,
+                businessAddress: null,
+                businessMapsUrl: null,
+                serviceId: doc.id,
+                providerId: data['sellerId']?.toString() ?? 'Unknown',
+                providerName: 'Seller',
+                providerPhone: '',
+                serviceDescription: data['description']?.toString() ?? '',
+                estimatedDuration: '',
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       // Dismiss loading if still showing
       if (context.mounted) {
         try {
-          Navigator.of(context, rootNavigator: true).pop();
+          final nav = Navigator.of(context, rootNavigator: true);
+          if (nav.canPop()) nav.pop();
         } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1582,12 +1647,15 @@ class HomepageState extends State<Homepage> {
                                           ],
                                         ),
                                         child: TextFormField(
-                                          controller: _searchController,
-                                          onChanged: (value) => setState(
-                                              () => searchQuery = value),
-                                          onFieldSubmitted: (value) {
-                                            RecommendationController.to
-                                                .trackSearch(value, 'Other');
+                                          readOnly: true,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const ProductSearchPage(),
+                                              ),
+                                            );
                                           },
                                           decoration: InputDecoration(
                                             hintText:
@@ -2241,6 +2309,10 @@ class HomepageState extends State<Homepage> {
                   final rating = (data['rating'] ?? 0.0).toDouble();
                   final price = data['price'] ?? 0;
                   final image = data['image'] ?? '';
+                  final dPrice =
+                      data['discountPrice'] ?? data['discount_price'] ?? price;
+                  final oPrice =
+                      data['originalPrice'] ?? data['original_price'] ?? price;
 
                   return GestureDetector(
                     onTap: () {
@@ -2251,10 +2323,10 @@ class HomepageState extends State<Homepage> {
                             category: category,
                             serviceName: name,
                             rating: rating,
-                            originalPrice: data['original_price'] ?? 0,
+                            originalPrice: oPrice,
                             discount: data['discount'] ?? 0,
                             image: image,
-                            discountPrice: price,
+                            discountPrice: dPrice,
                             serviceType: data['service_type'],
                             businessLat:
                                 (data['businessLat'] as num?)?.toDouble(),
@@ -3162,6 +3234,10 @@ class HomepageState extends State<Homepage> {
             final rating = (data['rating'] ?? 0.0).toDouble();
             final price = data['price'] ?? 0;
             final image = data['image'] ?? '';
+            final dPrice =
+                data['discountPrice'] ?? data['discount_price'] ?? price;
+            final oPrice =
+                data['originalPrice'] ?? data['original_price'] ?? price;
 
             return GestureDetector(
               onTap: () {
@@ -3172,10 +3248,10 @@ class HomepageState extends State<Homepage> {
                       category: category,
                       serviceName: name,
                       rating: rating,
-                      originalPrice: data['original_price'] ?? 0,
+                      originalPrice: oPrice,
                       discount: data['discount'] ?? 0,
                       image: image,
-                      discountPrice: price,
+                      discountPrice: dPrice,
                       serviceType: data['service_type'],
                       businessLat: (data['businessLat'] as num?)?.toDouble(),
                       businessLng: (data['businessLng'] as num?)?.toDouble(),
@@ -3343,381 +3419,342 @@ class HomepageState extends State<Homepage> {
   }
 
   Widget buildOnlineShopsTab() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          // 1. "Sadiq, still looking for these?" purple gradient box
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "${username ?? 'Sadiq'}, still looking for these?",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('store_products')
+          .where('status', whereIn: ['ACTIVE', 'Active', 'active']).snapshots(),
+      builder: (context, snapshot) {
+        var products = snapshot.hasData ? snapshot.data!.docs : [];
+
+        // Sort locally to avoid needing a Firestore composite index
+        products = products.toList()
+          ..sort((a, b) {
+            final dataA = a.data() as Map<String, dynamic>?;
+            final dataB = b.data() as Map<String, dynamic>?;
+            final timeA = dataA?['createdAt'] as Timestamp?;
+            final timeB = dataB?['createdAt'] as Timestamp?;
+            if (timeA == null && timeB == null) return 0;
+            if (timeA == null) return 1;
+            if (timeB == null) return -1;
+            return timeB.compareTo(timeA); // newest first
+          });
+
+        Map<String, dynamic> pData(int index) {
+          if (products.isEmpty) return {};
+          return products[index % products.length].data()
+              as Map<String, dynamic>;
+        }
+
+        String pId(int index) {
+          if (products.isEmpty) return '';
+          return products[index % products.length].id;
+        }
+
+        final sq = searchQuery.trim().toLowerCase();
+        final searchResults = products.where((doc) {
+          if (sq.isEmpty) return false;
+          final data = doc.data() as Map<String, dynamic>?;
+          final title = (data?['productName'] ?? data?['title'] ?? '')
+              .toString()
+              .toLowerCase();
+          final category = (data?['category'] ?? '').toString().toLowerCase();
+          return title.contains(sq) || category.contains(sq);
+        }).toList();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (sq.isNotEmpty && searchResults.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                // 1. "Sadiq, still looking for these?" purple gradient box
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: 145,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLookingForCard(
-                        "Vehicle Body Cover",
-                        "assets/image/car_clean.png",
-                        "Shop Now",
+                      Text(
+                        "${username ?? 'Sadiq'}, still looking for these?",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      _buildLookingForCard(
-                        "All Purpose Cleaner",
-                        "assets/image/carpet.png",
-                        "Shop Now",
-                      ),
-                      _buildLookingForCard(
-                        "Car Shampoo",
-                        "assets/image/carpet.png",
-                        "Shop Now",
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        height: 145,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: searchResults.length > 5
+                              ? 5
+                              : searchResults.length,
+                          itemBuilder: (context, index) {
+                            final doc = searchResults[index];
+                            final data = doc.data() as Map<String, dynamic>;
+                            final prodId = doc.id;
+
+                            // Calculate discount if available
+                            String actionText = "Shop Now";
+                            final product =
+                                StoreProductModel.fromMap(data, prodId);
+                            if (product.hasDiscount) {
+                              actionText = "${product.discountPercentage}% Off";
+                            }
+
+                            final String imageUrl =
+                                (data['imageUrl']?.toString() ?? '').isNotEmpty
+                                    ? data['imageUrl']
+                                    : (data['image']?.toString() ?? '')
+                                            .isNotEmpty
+                                        ? data['image']
+                                        : "assets/image/car_clean.png";
+
+                            return GestureDetector(
+                              onTap: () =>
+                                  _openProductFromBanner(context, prodId),
+                              child: _buildLookingForCard(
+                                data['productName']?.toString() ??
+                                    data['title']?.toString() ??
+                                    "Product",
+                                imageUrl,
+                                actionText,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // 2. Smart TV Promo
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0).withOpacity(0.6),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 20),
+              // 2. Smart TV Promo (Static as before)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0).withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "55\" Ultra HD (4K) Smart TV",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            "From ₹19,999*",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 8,
+                              ),
+                              minimumSize: const Size(60, 32),
+                            ),
+                            child: const Text(
+                              "Buy",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Expanded(
+                      flex: 2,
+                      child: Icon(
+                        Icons.tv_outlined,
+                        size: 80,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // 3. Flash Sale Section
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      const Text(
-                        "55\" Ultra HD (4K) Smart TV",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF64748B),
-                          fontWeight: FontWeight.w500,
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEA580C),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.flash_on,
+                          color: Colors.white,
+                          size: 14,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(width: 8),
                       const Text(
-                        "From ₹19,999*",
+                        "Flash Sale",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text(
+                          "SEE ALL",
+                          style: TextStyle(
+                            color: Color(0xFF7C3AED),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 180,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: products.isEmpty
+                          ? 3
+                          : (products.length > 5 ? 5 : products.length),
+                      itemBuilder: (context, index) {
+                        final i = products.isNotEmpty
+                            ? ((index + 1) % products.length)
+                            : index;
+                        final product =
+                            StoreProductModel.fromMap(pData(i), pId(i));
+                        return GestureDetector(
+                          onTap: () => products.isNotEmpty
+                              ? _openProductFromBanner(context, pId(i))
+                              : null,
+                          child: _buildFlashSaleCard(
+                            product.productName,
+                            "₹${product.sellingPrice.round()}",
+                            product.hasDiscount
+                                ? "₹${product.originalPrice.round()}"
+                                : "",
+                            "Sale",
+                            product.coverImage.isNotEmpty
+                                ? product.coverImage
+                                : "assets/image/add_image.png",
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // 4. Suggested For You Section
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Suggested For You",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 8,
-                          ),
-                          minimumSize: const Size(60, 32),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.black,
+                          shape: BoxShape.circle,
                         ),
-                        child: const Text(
-                          "Buy",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: const Icon(
+                          Icons.chevron_right,
+                          color: Colors.white,
+                          size: 16,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const Expanded(
-                  flex: 2,
-                  child: Icon(
-                    Icons.tv_outlined,
-                    size: 80,
-                    color: Colors.black54,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // 3. Flash Sale Section
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFEA580C),
-                      shape: BoxShape.circle,
+                  const SizedBox(height: 12),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: products.isEmpty ? 4 : products.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.82,
                     ),
-                    child: const Icon(
-                      Icons.flash_on,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    "Flash Sale",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _buildTimerUnit("09"),
-                  const Text(
-                    " : ",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  _buildTimerUnit("59"),
-                  const Text(
-                    " : ",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  _buildTimerUnit("50"),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      "SEE ALL",
-                      style: TextStyle(
-                        color: Color(0xFF7C3AED),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
+                    itemBuilder: (context, index) {
+                      final product =
+                          StoreProductModel.fromMap(pData(index), pId(index));
+                      return GestureDetector(
+                        onTap: () => products.isNotEmpty
+                            ? _openProductFromBanner(context, pId(index))
+                            : null,
+                        child: _buildSuggestedCard(
+                          product.productName,
+                          "₹${product.sellingPrice.round()}",
+                          product.hasDiscount
+                              ? "₹${product.originalPrice.round()}"
+                              : "",
+                          "Ordered this week",
+                          product.coverImage.isNotEmpty
+                              ? product.coverImage
+                              : "assets/image/add_image.png",
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 180,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _buildFlashSaleCard(
-                      "TRUFFLE CAKE",
-                      "₹499",
-                      "₹999",
-                      "50% OFF",
-                      "assets/image/add_image.png",
-                    ),
-                    _buildFlashSaleCard(
-                      "PREMIUM WATCH",
-                      "₹2,489",
-                      "₹5,000",
-                      "50% OFF",
-                      "assets/image/add_image.png",
-                    ),
-                    _buildFlashSaleCard(
-                      "OFFICE CHAIR",
-                      "₹4,999",
-                      "₹9,999",
-                      "50% OFF",
-                      "assets/image/add_image.png",
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 20),
             ],
           ),
-          const SizedBox(height: 20),
-
-          // 4. Suggested For You Section
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Suggested For You",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.black,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.chevron_right,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.82,
-                children: [
-                  _buildSuggestedCard(
-                    "FOXCARE Windshield Wash...",
-                    "₹249",
-                    "₹499",
-                    "100+ ordered this week",
-                    "assets/image/add_image.png",
-                  ),
-                  _buildSuggestedCard(
-                    "Premium Car Cover",
-                    "₹1,499",
-                    "₹2,999",
-                    "2,300+ ordered this week",
-                    "assets/image/car_clean.png",
-                  ),
-                  _buildSuggestedCard(
-                    "SEVINCAR Multi-purpose...",
-                    "₹269",
-                    "₹499",
-                    "150+ ordered this week",
-                    "assets/image/carpet.png",
-                  ),
-                  _buildSuggestedCard(
-                    "Pro Phone 13 Ultra",
-                    "₹54,999",
-                    "₹1,20,000",
-                    "10,000+ ordered this week",
-                    "assets/image/carpet.png",
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // 5. Trending Near You Section
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Trending Near You",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTrendingCard(
-                      "SNEAKERS",
-                      "4.8",
-                      "₹4,199",
-                      "assets/image/add_image.png",
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildTrendingCard(
-                      "GOLD RING",
-                      "4.9",
-                      "₹48,350",
-                      "assets/image/add_image.png",
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // 6. Special Deals for You Banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF6D28D9),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Combo Sales Fest",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  "Enjoy extra 10% off on all collections using\n'OFF10' coupon code.",
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFCA8A04),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    minimumSize: const Size(60, 32),
-                  ),
-                  child: const Text(
-                    "Claim now",
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -3747,15 +3784,25 @@ class HomepageState extends State<Homepage> {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                imageAsset,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.shopping_bag_outlined,
-                  color: Colors.purple,
-                  size: 30,
-                ),
-              ),
+              child: (imageAsset.startsWith('http') ||
+                      imageAsset.startsWith('https'))
+                  ? Image.network(
+                      imageAsset,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                          Icons.shopping_bag_outlined,
+                          color: Colors.grey,
+                          size: 30),
+                    )
+                  : Image.asset(
+                      imageAsset,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.shopping_bag_outlined,
+                        color: Colors.purple,
+                        size: 30,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 6),
@@ -3833,16 +3880,25 @@ class HomepageState extends State<Homepage> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        imageAsset,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(
-                          Icons.cake_outlined,
-                          size: 40,
-                          color: Colors.orange,
-                        ),
-                      ),
+                      child: (imageAsset.startsWith('http') ||
+                              imageAsset.startsWith('https'))
+                          ? Image.network(
+                              imageAsset,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.shopping_bag_outlined,
+                                      color: Colors.grey, size: 30),
+                            )
+                          : Image.asset(
+                              imageAsset,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                Icons.cake_outlined,
+                                size: 40,
+                                color: Colors.orange,
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -3932,15 +3988,25 @@ class HomepageState extends State<Homepage> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  imageAsset,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.shopping_bag_outlined,
-                    color: Colors.blue,
-                    size: 40,
-                  ),
-                ),
+                child: (imageAsset.startsWith('http') ||
+                        imageAsset.startsWith('https'))
+                    ? Image.network(
+                        imageAsset,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.shopping_bag_outlined,
+                                color: Colors.grey, size: 30),
+                      )
+                    : Image.asset(
+                        imageAsset,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                          Icons.shopping_bag_outlined,
+                          color: Colors.blue,
+                          size: 40,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -4019,17 +4085,27 @@ class HomepageState extends State<Homepage> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    imageAsset,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.shopping_bag,
-                      size: 50,
-                      color: Colors.purple,
-                    ),
-                  ),
+                  child: (imageAsset.startsWith('http') ||
+                          imageAsset.startsWith('https'))
+                      ? Image.network(
+                          imageAsset,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.shopping_bag_outlined,
+                                  color: Colors.grey, size: 30),
+                        )
+                      : Image.asset(
+                          imageAsset,
+                          height: 120,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                            Icons.shopping_bag,
+                            size: 50,
+                            color: Colors.purple,
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 8),
                 Row(

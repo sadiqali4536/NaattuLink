@@ -181,6 +181,17 @@ class _FindingLocationPageState extends State<FindingLocationPage>
       } else {
         Get.offAll(() => const HealthcareWorkerDashboard());
       }
+    } else if (role == 'business' || role == 'shops_businesses') {
+      final bizDoc = await getUserDocument(user, 'businesses') ??
+          await getUserDocument(user, 'shops_businesses');
+      final isVerified =
+          (bizDoc?.data() as Map<String, dynamic>?)?['isVerified'] == 1;
+
+      if (isVerified) {
+        Get.offAll(() => user_Dashboard());
+      } else {
+        Get.offAll(() => const LoginAndSigning());
+      }
     } else {
       Get.offAll(() => const LoginAndSigning());
     }

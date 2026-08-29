@@ -14,7 +14,13 @@ import 'package:naattulink/MVVM/utils/Constants/constants.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 
 class LocationSelectionPage extends StatefulWidget {
-  const LocationSelectionPage({Key? key}) : super(key: key);
+  /// Whether a detected zone is strictly required to save the address
+  final bool requireZone;
+
+  const LocationSelectionPage({
+    Key? key,
+    this.requireZone = true,
+  }) : super(key: key);
 
   @override
   State<LocationSelectionPage> createState() => _LocationSelectionPageState();
@@ -285,7 +291,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
           LocationController.to.updateLocationManually(locModel);
           _saveToHistory(locModel);
           if (mounted) {
-            Navigator.pop(context);
+            Navigator.pop(context, true);
           }
         }
       }
@@ -410,7 +416,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                         await LocationController.to
                             .fetchLocation(forceRefresh: true);
                         if (mounted) {
-                          Navigator.pop(context);
+                          Navigator.pop(context, true);
                         }
                       },
                       child: Padding(
@@ -474,6 +480,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                               initialLng: initialLng,
                               flow: LocationPickerFlow.addAddress,
                               onAddressSaved: _refreshFirebaseAddresses,
+                              requireZone: widget.requireZone,
                             ),
                           ),
                         );
@@ -599,7 +606,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
         child: InkWell(
           onTap: () {
             LocationController.to.updateLocationManually(address);
-            Navigator.pop(context, address);
+            Navigator.pop(context, true);
           },
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -756,6 +763,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                           return AddressFormBottomSheet(
                             initialAddress: address,
                             isEdit: true,
+                            requireZone: widget.requireZone,
                           );
                         },
                       );
@@ -829,7 +837,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
         child: InkWell(
           onTap: () {
             LocationController.to.updateLocationManually(address);
-            Navigator.pop(context, address);
+            Navigator.pop(context, true);
           },
           child: Padding(
             padding: const EdgeInsets.all(16.0),

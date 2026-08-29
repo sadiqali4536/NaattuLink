@@ -6,18 +6,24 @@ import 'package:naattulink/MVVM/View/Screen/User/cart/Cartpage.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Home/Homepage.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/account_profile_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/my_bookings.dart';
+import 'package:get/get.dart';
+import 'package:naattulink/MVVM/viewmodel/cart_controller.dart';
 
 class user_Dashboard extends StatefulWidget {
   final int initialHomeCategoryIndex;
-  const user_Dashboard({super.key, this.initialHomeCategoryIndex = 0});
+  final int initialIndex;
+  const user_Dashboard({
+    super.key, 
+    this.initialHomeCategoryIndex = 0,
+    this.initialIndex = 0,
+  });
 
   @override
   State<user_Dashboard> createState() => _BottomNavigationBarScreenState();
 }
 
 class _BottomNavigationBarScreenState extends State<user_Dashboard> {
-  int _currentIndex = 0;
-  int cartCount = 0;
+  late int _currentIndex;
 
   /// Key gives us access to HomepageState.resetToForYou()
   final GlobalKey<HomepageState> _homepageKey = GlobalKey<HomepageState>();
@@ -27,6 +33,10 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
+    // Ensure CartController is put into memory
+    Get.put(CartController());
+    
     _bottomBarPages = [
       Homepage(
           key: _homepageKey,
@@ -35,25 +45,6 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
       const MyBookings(),
       const AccountProfileScreen(),
     ];
-    _getCartItemCount();
-  }
-
-  void _getCartItemCount() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      FirebaseFirestore.instance
-          .collection('carts')
-          .doc(user.uid)
-          .collection('cartItems')
-          .snapshots()
-          .listen((snapshot) {
-        if (mounted) {
-          setState(() {
-            cartCount = snapshot.docs.length;
-          });
-        }
-      });
-    }
   }
 
   @override
@@ -93,38 +84,41 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
       case 0:
         return Icon(Icons.home_outlined, color: color, size: 26);
       case 1:
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(Icons.shopping_cart_outlined, color: color, size: 26),
-            if (cartCount > 0)
-              Positioned(
-                right: -6,
-                top: -6,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '$cartCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
+        return Obx(() {
+          final cartCount = Get.find<CartController>().totalItemCount;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(Icons.shopping_cart_outlined, color: color, size: 26),
+              if (cartCount > 0)
+                Positioned(
+                  right: -6,
+                  top: -6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$cartCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
-        );
+            ],
+          );
+        });
       case 2:
         return Icon(Icons.assignment_outlined, color: color, size: 26);
       case 3:

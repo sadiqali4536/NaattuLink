@@ -34,7 +34,8 @@ class _BusinessWorkerRegistrationPageState
 
   String _category =
       "Restaurant"; // Restaurant, Bakery, Grocery, Retail, Supermarket, Online Store
-  String _availableTime = "9 AM - 8 PM";
+  TimeOfDay _openTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _closeTime = const TimeOfDay(hour: 20, minute: 0);
 
   double? _selectedLat;
   double? _selectedLng;
@@ -143,7 +144,7 @@ class _BusinessWorkerRegistrationPageState
         "address": _addressCtrl.text.trim(),
         "facility_name": _businessNameCtrl.text.trim(),
         "contact_number": "+91${_contactNumberCtrl.text.trim()}",
-        "available_time": _availableTime,
+        "available_time": "${_openTime.format(context)} - ${_closeTime.format(context)}",
         "profile_img": "",
         "created_at": FieldValue.serverTimestamp(),
         "updated_at": FieldValue.serverTimestamp(),
@@ -240,15 +241,7 @@ class _BusinessWorkerRegistrationPageState
                   return null;
                 }),
                 const SizedBox(height: 8),
-                _buildDropdownField(
-                    "Available Time",
-                    _availableTime,
-                    Icons.access_time_outlined,
-                    ["9 AM - 8 PM", "24 Hours", "Other"], (val) {
-                  setState(() {
-                    if (val != null) _availableTime = val;
-                  });
-                }),
+                _buildTimePickerRow(),
                 const SizedBox(height: 24),
                 _buildDivider("ACCOUNT DETAILS"),
                 const SizedBox(height: 16),
@@ -670,6 +663,111 @@ class _BusinessWorkerRegistrationPageState
               onChanged: onChanged,
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _selectTime(BuildContext context, bool isOpenTime) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: isOpenTime ? _openTime : _closeTime,
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF0A235C),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF0A235C),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0A235C),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        if (isOpenTime) {
+          _openTime = picked;
+        } else {
+          _closeTime = picked;
+        }
+      });
+    }
+  }
+
+  Widget _buildTimePickerRow() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Available Time",
+          style: TextStyle(
+              color: Color(0xFF0A235C),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _selectTime(context, true),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.access_time, color: Colors.grey[400], size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Open: ${_openTime.format(context)}",
+                          style: const TextStyle(color: Colors.black87, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _selectTime(context, false),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.access_time_filled, color: Colors.grey[400], size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Close: ${_closeTime.format(context)}",
+                          style: const TextStyle(color: Colors.black87, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

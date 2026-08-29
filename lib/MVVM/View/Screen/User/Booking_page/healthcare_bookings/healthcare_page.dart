@@ -271,8 +271,11 @@ class _HealthcarePageState extends State<HealthcarePage> {
       final typeMatch = firebaseType == selectedType;
       final categoryMatch =
           categoryStr == 'healthcare' || categoryStr.isEmpty;
-      final statusMatch =
-          statusStr == 'active' || selectedType == 'emergency services';
+      final statusMatch = statusStr == 'active' || 
+                          statusStr == 'approved' || 
+                          statusStr == 'available' || 
+                          statusStr == 'pending' || 
+                          selectedType == 'emergency services';
 
       final shouldShow = typeMatch && categoryMatch && statusMatch;
 

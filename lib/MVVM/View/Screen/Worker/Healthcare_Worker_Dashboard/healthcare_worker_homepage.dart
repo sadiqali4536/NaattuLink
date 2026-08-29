@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/controller/healthcare_dashboard_controller.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/new_consultation.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/available_doctors_list.dart';
+import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 
 class HealthcareWorkerHomepage extends StatelessWidget {
   const HealthcareWorkerHomepage({super.key});
@@ -147,6 +148,12 @@ class HealthcareWorkerHomepage extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.store, color: Colors.white),
+                onPressed: () {
+                  Get.to(() => const user_Dashboard());
+                },
               ),
             ],
           ),

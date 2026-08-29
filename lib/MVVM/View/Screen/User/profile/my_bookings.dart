@@ -7,6 +7,9 @@ import 'package:flutter/services.dart';
 
 import 'confirmed_booking_details.dart';
 import 'cancelled_booking_details.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/confirmed_booking_details.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/order_details_page.dart';
+import 'package:naattulink/MVVM/utils/order_status_utils.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 
 class MyBookings extends StatefulWidget {
@@ -23,8 +26,14 @@ class _MyBookingsState extends State<MyBookings> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedStatus = 'All';
+  final Rx<MyBookingSection> selectedSection = MyBookingSection.bookings.obs;
 
-  final _statusFilters = ['All', 'Confirmed', 'Cancelled', 'Completed'];
+  List<String> get _statusFilters {
+    if (selectedSection.value == MyBookingSection.orders) {
+      return ['All', 'Pending', 'Cancelled', 'Completed'];
+    }
+    return ['All', 'Confirmed', 'Cancelled', 'Completed'];
+  }
 
   @override
   void dispose() {
@@ -32,10 +41,18 @@ class _MyBookingsState extends State<MyBookings> {
     super.dispose();
   }
 
-  Stream<QuerySnapshot> get _stream {
+  Stream<QuerySnapshot> get serviceBookingsStream {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return FirebaseFirestore.instance
         .collection('service_bookings')
+        .where('userId', isEqualTo: uid)
+        .snapshots();
+  }
+
+  Stream<QuerySnapshot> get ordersStream {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    return FirebaseFirestore.instance
+        .collection('bookings')
         .where('userId', isEqualTo: uid)
         .snapshots();
   }
@@ -45,13 +62,17 @@ class _MyBookingsState extends State<MyBookings> {
 
     // Status filter
     if (_selectedStatus != 'All') {
-      list = list
-          .where((d) =>
-              (d.data() as Map<String, dynamic>)['status']
-                  ?.toString()
-                  .toLowerCase() ==
-              _selectedStatus.toLowerCase())
-          .toList();
+      list = list.where((d) {
+        final status =
+            ((d.data() as Map<String, dynamic>)['status']?.toString() ?? '')
+                .toLowerCase();
+        final sel = _selectedStatus.toLowerCase();
+        if (sel == 'pending' &&
+            (status == 'pending' || status == 'pending_verification')) {
+          return true;
+        }
+        return status == sel;
+      }).toList();
     }
 
     // Search query
@@ -59,10 +80,11 @@ class _MyBookingsState extends State<MyBookings> {
       final q = _searchQuery.toLowerCase();
       list = list.where((d) {
         final data = d.data() as Map<String, dynamic>;
-        return (data['serviceName']?.toString().toLowerCase().contains(q) ??
-                false) ||
-            (data['providerName']?.toString().toLowerCase().contains(q) ??
-                false);
+        final isProduct = data['bookingType'] == 'Product Order';
+        final title = isProduct ? data['serviceTitle'] : data['serviceName'];
+        final provider = isProduct ? 'NaattuLink' : data['providerName'];
+        return (title?.toString().toLowerCase().contains(q) ?? false) ||
+            (provider?.toString().toLowerCase().contains(q) ?? false);
       }).toList();
     }
 
@@ -319,14 +341,125 @@ class _MyBookingsState extends State<MyBookings> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('My Bookings',
-                              style: TextStyle(
+                          Obx(() => Text(
+                              selectedSection.value == MyBookingSection.bookings
+                                  ? 'My Bookings'
+                                  : 'My Orders',
+                              style: const TextStyle(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F2E5A))),
+                                  color: Color(0xFF0F2E5A)))),
                         ],
                       ),
                       const SizedBox(height: 12),
+
+                      // Top Selector (Bookings / Orders)
+                      Obx(() => Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      if (selectedSection.value !=
+                                          MyBookingSection.bookings) {
+                                        selectedSection.value =
+                                            MyBookingSection.bookings;
+                                        setState(() {
+                                          _selectedStatus = 'All';
+                                          _searchController.clear();
+                                          _searchQuery = '';
+                                        });
+                                      }
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: selectedSection.value ==
+                                                MyBookingSection.bookings
+                                            ? const Color(0xFF0F2E5A)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const CustomCalendarIcon(),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'BOOKINGS',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: selectedSection.value ==
+                                                      MyBookingSection.bookings
+                                                  ? Colors.white
+                                                  : Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      if (selectedSection.value !=
+                                          MyBookingSection.orders) {
+                                        selectedSection.value =
+                                            MyBookingSection.orders;
+                                        setState(() {
+                                          _selectedStatus = 'All';
+                                          _searchController.clear();
+                                          _searchQuery = '';
+                                        });
+                                      }
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: selectedSection.value ==
+                                                MyBookingSection.orders
+                                            ? const Color(0xFF0F2E5A)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Text(
+                                            '📦',
+                                            style: TextStyle(fontSize: 16),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'ORDERS',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: selectedSection.value ==
+                                                      MyBookingSection.orders
+                                                  ? Colors.white
+                                                  : Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                      const SizedBox(height: 12),
+
                       // Search bar
                       Container(
                         height: 52,
@@ -341,75 +474,87 @@ class _MyBookingsState extends State<MyBookings> {
                             ),
                           ],
                         ),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (v) => setState(() => _searchQuery = v),
-                          style: const TextStyle(fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText: 'Search your bookings',
-                            hintStyle: TextStyle(
-                                color: Colors.grey.shade500, fontSize: 14),
-                            prefixIcon: const Icon(Icons.search,
-                                color: Colors.grey, size: 20),
-                            border: InputBorder.none,
-                            contentPadding:
-                                const EdgeInsets.symmetric(vertical: 16),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? GestureDetector(
-                                    onTap: () => setState(() {
-                                      _searchController.clear();
-                                      _searchQuery = '';
-                                    }),
-                                    child: const Icon(Icons.close,
-                                        color: Colors.grey, size: 18),
-                                  )
-                                : null,
-                          ),
-                        ),
+                        child: Obx(() => TextField(
+                              controller: _searchController,
+                              onChanged: (v) =>
+                                  setState(() => _searchQuery = v),
+                              style: const TextStyle(fontSize: 14),
+                              decoration: InputDecoration(
+                                hintText: selectedSection.value ==
+                                        MyBookingSection.bookings
+                                    ? 'Search your bookings'
+                                    : 'Search your orders',
+                                hintStyle: TextStyle(
+                                    color: Colors.grey.shade500, fontSize: 14),
+                                prefixIcon: const Icon(Icons.search,
+                                    color: Colors.grey, size: 20),
+                                border: InputBorder.none,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? GestureDetector(
+                                        onTap: () => setState(() {
+                                          _searchController.clear();
+                                          _searchQuery = '';
+                                        }),
+                                        child: const Icon(Icons.close,
+                                            color: Colors.grey, size: 18),
+                                      )
+                                    : Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 8.0),
+                                        child: Icon(Icons.filter_list,
+                                            color: Colors.grey.shade600),
+                                      ),
+                              ),
+                            )),
                       ),
                       const SizedBox(height: 10),
                       // Status chips
                       SizedBox(
                         height: 38,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _statusFilters.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 8),
-                          itemBuilder: (_, i) {
-                            final st = _statusFilters[i];
-                            final sel = _selectedStatus == st;
-                            return GestureDetector(
-                              onTap: () => setState(() => _selectedStatus = st),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 18, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: sel
-                                      ? Color(0xFF0F2E5A).withOpacity(0.15)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: sel
-                                        ? Color(0xFF0F2E5A)
-                                        : Colors.grey.shade200,
-                                    width: sel ? 1.5 : 1,
+                        child: Obx(() => ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _statusFilters.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (_, i) {
+                                final st = _statusFilters[i];
+                                final sel = _selectedStatus == st;
+                                return GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _selectedStatus = st),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 18, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: sel
+                                          ? Color(0xFF0F2E5A).withOpacity(0.15)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: sel
+                                            ? Color(0xFF0F2E5A)
+                                            : Colors.grey.shade200,
+                                        width: sel ? 1.5 : 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      st,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: sel
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
+                                        color: sel
+                                            ? Color(0xFF0F2E5A)
+                                            : Colors.black54,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                child: Text(
-                                  st,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight:
-                                        sel ? FontWeight.bold : FontWeight.w500,
-                                    color: sel
-                                        ? Color(0xFF0F2E5A)
-                                        : Colors.black54,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                                );
+                              },
+                            )),
                       ),
                     ],
                   ),
@@ -419,145 +564,97 @@ class _MyBookingsState extends State<MyBookings> {
                 Expanded(
                   child: Container(
                     color: const Color(0xFFF5F6FA),
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: _stream,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator(
-                                  color: Color(0xFF0F2E5A)));
-                        }
-                        if (snapshot.hasError) {
-                          return Center(
-                              child: Text('Error: ${snapshot.error}'));
-                        }
+                    child: Obx(() {
+                      final stream =
+                          selectedSection.value == MyBookingSection.bookings
+                              ? serviceBookingsStream
+                              : ordersStream;
+                      final isBookings =
+                          selectedSection.value == MyBookingSection.bookings;
 
-                        final filtered = _filter(snapshot.data?.docs ?? []);
+                      return StreamBuilder<QuerySnapshot>(
+                        stream: stream,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator(
+                                    color: Color(0xFF0F2E5A)));
+                          }
+                          if (snapshot.hasError) {
+                            return Center(
+                                child: Text('Error: ${snapshot.error}'));
+                          }
 
-                        if (filtered.isEmpty) {
-                          return SingleChildScrollView(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const SizedBox(height: 40),
-                                Image.asset(
-                                  'assets/icons/my_bookings.png', // Assuming asset exists
-                                  height: 200,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Icon(Icons.event_busy,
-                                          size: 120,
-                                          color: Colors.blue.shade100),
-                                ),
-                                const SizedBox(height: 32),
-                                const Text(
-                                  "No Bookings Yet",
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0F2E5A),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  _searchQuery.isNotEmpty
-                                      ? 'No bookings match "$_searchQuery"'
-                                      : "Your upcoming and past bookings\nwill appear here.",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.blueGrey.shade400,
-                                    height: 1.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 32),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 54,
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                const user_Dashboard(
-                                                    initialHomeCategoryIndex:
-                                                        1)),
-                                        (route) => false,
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color.fromARGB(
-                                          255, 255, 212, 13),
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: const [
-                                        Icon(Icons.search,
-                                            color: Colors.black87, size: 22),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          "Browse Services",
-                                          style: TextStyle(
-                                            color: Colors.black87,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        SizedBox(width: 12),
-                                        Icon(Icons.arrow_forward,
-                                            color: Colors.black87, size: 20),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 40),
-                              ],
-                            ),
-                          );
-                        }
+                          final filtered = _filter(snapshot.data?.docs ?? []);
 
-                        return ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                          itemCount: filtered.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == filtered.length) {
-                              return Column(
-                                children: [
-                                  const SizedBox(height: 8),
-                                  Icon(Icons.inbox_outlined,
-                                      size: 40, color: Colors.grey.shade300),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'End of your booking history',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade400),
-                                  ),
-                                  const SizedBox(height: 16),
-                                ],
-                              );
-                            }
-                            final data =
-                                filtered[index].data() as Map<String, dynamic>;
-                            return _BookingCard(
-                              data: data,
-                              bookingId: filtered[index].id,
-                              onCancel: _showCancelSheet,
+                          if (filtered.isEmpty) {
+                            return EmptyStateWidget(
+                              title:
+                                  isBookings ? 'No Bookings Yet' : 'No Orders',
+                              searchQuery: _searchQuery,
+                              defaultMessage: isBookings
+                                  ? "Your upcoming and past bookings\nwill appear here."
+                                  : "You haven't placed any orders yet.",
+                              buttonText: isBookings
+                                  ? 'Browse Services'
+                                  : 'Continue Shopping',
+                              targetIndex: isBookings ? 1 : 0,
                             );
-                          },
-                        );
-                      },
-                    ),
+                          }
+
+                          return ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                            itemCount: filtered.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == filtered.length) {
+                                return Column(
+                                  children: [
+                                    const SizedBox(height: 24),
+                                    Icon(
+                                      Icons.inventory_2_outlined,
+                                      size: 56,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      isBookings
+                                          ? 'End of your booking history'
+                                          : 'End of your order history',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Colors.grey.shade700),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      isBookings
+                                          ? "You've reached the end. Check back later for\nmore bookings."
+                                          : "You've reached the end. Check back later for\nmore orders.",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          height: 1.4,
+                                          color: Colors.grey.shade500),
+                                    ),
+                                    const SizedBox(height: 24),
+                                  ],
+                                );
+                              }
+                              final data = filtered[index].data()
+                                  as Map<String, dynamic>;
+                              return _BookingCard(
+                                data: data,
+                                bookingId: filtered[index].id,
+                                onCancel: _showCancelSheet,
+                              );
+                            },
+                          );
+                        },
+                      );
+                    }),
                   ),
-                ),
+                )
               ],
             ),
           ),
@@ -575,16 +672,56 @@ class _BookingCard extends StatelessWidget {
   const _BookingCard(
       {required this.data, required this.bookingId, required this.onCancel});
 
+  bool get isProductOrder => data['bookingType'] == 'Product Order';
+
+  String get _title => isProductOrder
+      ? data['serviceTitle']?.toString() ?? 'Product'
+      : data['serviceName']?.toString() ?? 'Service';
+
+  String get _provider => isProductOrder
+      ? data['workerName']?.toString() ?? 'NaattuLink'
+      : data['providerName']?.toString() ?? 'Provider';
+
+  String _formatPrice(dynamic raw) {
+    if (raw == null) return '0';
+    double price = double.tryParse(raw.toString()) ?? 0.0;
+    if (price == price.toInt()) {
+      return price.toInt().toString();
+    }
+    return price.toStringAsFixed(2);
+  }
+
+  String get _price {
+    if (isProductOrder) {
+      return _formatPrice(data['totalAmount'] ?? data['discountPrice']);
+    }
+    return _formatPrice(data['price']);
+  }
+
+  String get _category {
+    if (isProductOrder) return 'Product Order';
+    return data['serviceCategory'] != null
+        ? '${_capitalize(data['serviceCategory'])} Service'
+        : 'Professional Service';
+  }
+
   String get _status => data['status']?.toString().toLowerCase() ?? 'confirmed';
 
   Color get _statusBgColor {
     switch (_status) {
       case 'confirmed':
+      case 'dispatched':
         return const Color(0xFFD1FAE5);
       case 'cancelled':
+      case 'rejected':
         return const Color(0xFFFEE2E2);
       case 'completed':
         return const Color(0xFFDBEAFE);
+      case 'pending':
+        return const Color(0xFFE0F2FE);
+      case 'pending_verification':
+      case 'processing':
+        return const Color(0xFFFEF3C7);
       default:
         return Colors.grey.shade200;
     }
@@ -593,19 +730,38 @@ class _BookingCard extends StatelessWidget {
   Color get _statusTextColor {
     switch (_status) {
       case 'confirmed':
+      case 'dispatched':
         return const Color(0xFF059669);
       case 'cancelled':
+      case 'rejected':
         return const Color(0xFFDC2626);
       case 'completed':
         return const Color(0xFF2563EB);
+      case 'pending':
+        return const Color(0xFF0284C7);
+      case 'pending_verification':
+      case 'processing':
+        return const Color(0xFFD97706);
       default:
-        return Colors.grey;
+        return Colors.grey.shade700;
     }
   }
 
-  String get _statusLabel => _status[0].toUpperCase() + _status.substring(1);
+  String get _statusLabel {
+    if (isProductOrder) {
+      return OrderStatusUtils.getOrderStatusTitle(_status);
+    }
+    return _capitalize(_status.replaceAll('_', ' '));
+  }
 
   String get _formattedDate {
+    if (isProductOrder) {
+      if (data['createdAt'] is Timestamp) {
+        return DateFormat('dd-MMM-yyyy')
+            .format((data['createdAt'] as Timestamp).toDate());
+      }
+      return '';
+    }
     try {
       return DateFormat('dd-MMM-yyyy')
           .format(DateTime.parse(data['selectedDate'] ?? ''));
@@ -616,9 +772,139 @@ class _BookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isProductOrder) return _orderCard(context);
     final isConfirmed = _status == 'confirmed';
-
     return isConfirmed ? _fullCard(context) : _compactCard(context);
+  }
+
+  // ── Order Card (Product Orders) ─────────────────────────────────────────────
+  Widget _orderCard(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: _serviceImage(70),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title + Date
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _title,
+                          style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_outlined,
+                              size: 12, color: Colors.black54),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formattedDate,
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.black54),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Order ID
+                  Text(
+                    'Order ID: #${bookingId.length > 6 ? bookingId.substring(0, 6).toUpperCase() : bookingId.toUpperCase()}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Price
+                  Row(
+                    children: [
+                      const Text(
+                        'PRICE: ',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        '₹$_price',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF059669),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Badge + Button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _statusBadge(),
+                      SizedBox(
+                        height: 32,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Get.to(() => OrderDetailsPage(
+                                  bookingId: bookingId,
+                                ));
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                                color: Color(0xFF0F2E5A), width: 1.2),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                          ),
+                          child: const Text(
+                            'View Details',
+                            style: TextStyle(
+                                color: Color(0xFF0F2E5A),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Full card (Confirmed) ────────────────────────────────────────────────────
@@ -647,7 +933,7 @@ class _BookingCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    data['serviceName'] ?? 'Service',
+                    _title,
                     style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -679,7 +965,7 @@ class _BookingCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            data['providerName'] ?? 'Provider',
+                            _provider,
                             style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -690,9 +976,7 @@ class _BookingCard extends StatelessWidget {
                       ]),
                       const SizedBox(height: 2),
                       Text(
-                        data['serviceCategory'] != null
-                            ? '${_capitalize(data['serviceCategory'])} Service'
-                            : 'Professional Service',
+                        _category,
                         style: const TextStyle(
                             fontSize: 11, color: Colors.black45),
                       ),
@@ -708,7 +992,7 @@ class _BookingCard extends StatelessWidget {
                             color: Colors.black45,
                             fontWeight: FontWeight.w500)),
                     Text(
-                      '₹${data['price'] ?? '0'}',
+                      '₹$_price',
                       style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -732,7 +1016,8 @@ class _BookingCard extends StatelessWidget {
                 Text(_formattedDate,
                     style:
                         const TextStyle(fontSize: 13, color: Colors.black54)),
-                if (data['selectedTimeSlot'] != null &&
+                if (!isProductOrder &&
+                    data['selectedTimeSlot'] != null &&
                     data['selectedTimeSlot'].toString().isNotEmpty) ...[
                   const SizedBox(width: 16),
                   const Icon(Icons.access_time,
@@ -838,7 +1123,7 @@ class _BookingCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    data['serviceName'] ?? 'Service',
+                    _title,
                     style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -863,7 +1148,7 @@ class _BookingCard extends StatelessWidget {
                                 fontWeight: FontWeight.w500),
                           ),
                           Text(
-                            isRefunded ? '₹${data['price'] ?? '0'}' : 'Pending',
+                            isRefunded ? '₹$_price' : 'Pending',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -883,7 +1168,7 @@ class _BookingCard extends StatelessWidget {
                                 fontWeight: FontWeight.w500),
                           ),
                           Text(
-                            '₹${data['price'] ?? '0'}',
+                            '₹$_price',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -944,11 +1229,13 @@ class _BookingCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            _status == 'confirmed'
+            (_status == 'confirmed' || _status == 'dispatched')
                 ? Icons.check_circle
-                : _status == 'cancelled'
+                : (_status == 'cancelled' || _status == 'rejected')
                     ? Icons.cancel
-                    : Icons.done_all,
+                    : (_status == 'processing')
+                        ? Icons.autorenew
+                        : Icons.done_all,
             color: _statusTextColor,
             size: 11,
           ),
@@ -993,4 +1280,206 @@ class _BookingCard extends StatelessWidget {
 
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+}
+
+enum MyBookingSection { bookings, orders }
+
+class EmptyStateWidget extends StatelessWidget {
+  final String title;
+  final String searchQuery;
+  final String defaultMessage;
+  final String buttonText;
+  final int targetIndex;
+
+  const EmptyStateWidget({
+    Key? key,
+    required this.title,
+    required this.searchQuery,
+    required this.defaultMessage,
+    required this.buttonText,
+    required this.targetIndex,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 40),
+          Image.asset(
+            'assets/icons/my_bookings.png', // Assuming asset exists
+            height: 200,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) =>
+                Icon(Icons.event_busy, size: 120, color: Colors.blue.shade100),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F2E5A),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            searchQuery.isNotEmpty
+                ? 'No matches for "$searchQuery"'
+                : defaultMessage,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.blueGrey.shade400,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => user_Dashboard(
+                          initialHomeCategoryIndex: targetIndex)),
+                  (route) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 255, 212, 13),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.search, color: Colors.black87, size: 22),
+                  const SizedBox(width: 12),
+                  Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Icon(Icons.arrow_forward, color: Colors.black87, size: 20),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Custom Calendar Icon ──────────────────────────────────────────────────────
+class CustomCalendarIcon extends StatelessWidget {
+  const CustomCalendarIcon({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Main body
+          Positioned(
+            top: 2,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(3),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 2,
+                      offset: Offset(0, 1))
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Red header
+                  Container(
+                    height: 5,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE53935), // Red
+                      borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(3),
+                          topRight: Radius.circular(3)),
+                    ),
+                  ),
+                  // Grid
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 1.5),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: List.generate(3, (row) {
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: List.generate(4, (col) {
+                              return Container(
+                                width: 2,
+                                height: 1.5,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade400,
+                                  borderRadius: BorderRadius.circular(0.5),
+                                ),
+                              );
+                            }),
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Left ring
+          Positioned(
+            top: -1,
+            left: 3,
+            child: Container(
+              width: 2,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade500,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ),
+          // Right ring
+          Positioned(
+            top: -1,
+            right: 3,
+            child: Container(
+              width: 2,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade500,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

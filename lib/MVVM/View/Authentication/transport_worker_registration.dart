@@ -326,10 +326,16 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         builder: (ctx, child) => MediaQuery(
               data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: false),
               child: Theme(
-                  data: Theme.of(ctx).copyWith(
+                  data: ThemeData.light().copyWith(
                       colorScheme: const ColorScheme.light(
                           primary: Color(0xFF0A235C),
-                          onSurface: Color(0xFF0A235C))),
+                          onPrimary: Colors.white,
+                          onSurface: Color(0xFF0A235C)),
+                      textButtonTheme: TextButtonThemeData(
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF0A235C),
+                        ),
+                      )),
                   child: child!),
             ));
     if (p != null) {

@@ -24,12 +24,16 @@ class SelectLocationMapPage extends StatefulWidget {
   /// storage and refresh its list without closing itself.
   final void Function(AppLocationModel saved)? onAddressSaved;
 
+  /// Whether a detected zone is strictly required to save the address
+  final bool requireZone;
+
   const SelectLocationMapPage({
     super.key,
     required this.initialLat,
     required this.initialLng,
     required this.flow,
     this.onAddressSaved,
+    this.requireZone = true,
   });
 
   @override
@@ -398,16 +402,18 @@ class _SelectLocationMapPageState extends State<SelectLocationMapPage> {
                       onPressed: _isLoading || _currentLocationModel == null
                           ? null
                           : () async {
-                              if (widget.flow == LocationPickerFlow.registration) {
+                              if (widget.flow ==
+                                  LocationPickerFlow.registration) {
                                 Navigator.pop(context, _currentLocationModel);
                                 return;
                               }
 
-                              if (widget.flow == LocationPickerFlow.addAddress) {
+                              if (widget.flow ==
+                                  LocationPickerFlow.addAddress) {
                                 // Show the address form so the user fills in
                                 // delivery details before the map page closes.
-                                final updatedModel =
-                                    await showModalBottomSheet<AppLocationModel>(
+                                final updatedModel = await showModalBottomSheet<
+                                    AppLocationModel>(
                                   context: context,
                                   isScrollControlled: true,
                                   backgroundColor: Colors.transparent,
@@ -418,6 +424,7 @@ class _SelectLocationMapPageState extends State<SelectLocationMapPage> {
                                     // Forward the callback so LocationSelectionPage
                                     // can save to local storage and refresh its list.
                                     onAddressSaved: widget.onAddressSaved,
+                                    requireZone: widget.requireZone,
                                   ),
                                 );
                                 if (updatedModel != null && context.mounted) {

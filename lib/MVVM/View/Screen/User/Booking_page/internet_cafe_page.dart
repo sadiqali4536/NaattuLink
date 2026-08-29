@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
-import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Booking_page/online_services/online_services_page.dart';
 
 class InternetCafePage extends StatefulWidget {
   const InternetCafePage({Key? key}) : super(key: key);
@@ -15,7 +15,8 @@ class _InternetCafePageState extends State<InternetCafePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GenericListingPage(title: title),
+        builder: (_) =>
+            OnlineServicesPage(serviceType: title, pageTitle: title),
       ),
     );
   }
@@ -57,10 +58,10 @@ class _InternetCafePageState extends State<InternetCafePage> {
                 children: [
                   _buildCategoryCard(
                     context,
-                    title: "Internet Cafe",
-                    subtitle: "Browsing, gaming &\ncyber services",
+                    title: "Online Cafe",
+                    subtitle: "Online registration, passport, application",
                     iconData: Icons.computer_outlined,
-                    onTap: () => _navigateToListing(context, "Internet Cafe"),
+                    onTap: () => _navigateToListing(context, "Online Cafe"),
                   ),
                   _buildCategoryCard(
                     context,
@@ -74,7 +75,7 @@ class _InternetCafePageState extends State<InternetCafePage> {
                     title: "DTP",
                     subtitle: "Printing, scanning &\ntyping services",
                     iconData: Icons.print_outlined,
-                    onTap: () => _navigateToListing(context, "DTP"),
+                    onTap: () => _navigateToListing(context, "DTP Center"),
                   ),
                 ],
               ),

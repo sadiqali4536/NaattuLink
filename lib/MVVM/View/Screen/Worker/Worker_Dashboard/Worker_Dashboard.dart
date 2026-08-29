@@ -451,18 +451,25 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   Future<void> fetchWorkerDetails() async {
     if (user == null) return;
 
-    final doc = await FirebaseFirestore.instance
-        .collection('workers')
-        .doc(user!.uid)
-        .get();
+    final collections = ['workers', 'businesses', 'businesses'];
+    for (String col in collections) {
+      final doc =
+          await FirebaseFirestore.instance.collection(col).doc(user!.uid).get();
 
-    if (doc.exists) {
-      final data = doc.data();
-      if (data != null) {
-        setState(() {
-          workerName = data['name'] ?? 'Unnamed';
-          workerCategory = data['category']?.toString().toLowerCase();
-        });
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null) {
+          setState(() {
+            workerName = data['name'] ??
+                data['username'] ??
+                data['facility_name'] ??
+                'Unnamed';
+            workerCategory = (data['category'] ?? data['profession'])
+                ?.toString()
+                .toLowerCase();
+          });
+          break;
+        }
       }
     }
   }

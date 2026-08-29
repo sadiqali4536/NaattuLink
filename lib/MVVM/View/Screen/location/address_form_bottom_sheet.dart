@@ -38,11 +38,15 @@ class AddressFormBottomSheet extends StatefulWidget {
   /// Whether this form is editing an existing saved address
   final bool isEdit;
 
+  /// Whether a detected zone is strictly required to save the address
+  final bool requireZone;
+
   const AddressFormBottomSheet({
     super.key,
     this.initialAddress,
     this.onAddressSaved,
     this.isEdit = false,
+    this.requireZone = true,
   });
 
   @override
@@ -157,7 +161,8 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
       // ============================================================
 
       // Pass the detected district (or empty string) to help fetch zones if needed
-      final zones = await ZoneDetector.getActiveZonesForDistrict(detectedDistrict ?? '');
+      final zones =
+          await ZoneDetector.getActiveZonesForDistrict(detectedDistrict ?? '');
 
       if (!mounted || requestId != _zoneDetectionRequestId) return;
 
@@ -178,8 +183,8 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
           final zoneDistrict = _cleanValue(match.districtId);
 
           if (zoneDistrict != null) {
-            _detectedDistrict = zoneDistrict[0].toUpperCase() + 
-                                zoneDistrict.substring(1).toLowerCase();
+            _detectedDistrict = zoneDistrict[0].toUpperCase() +
+                zoneDistrict.substring(1).toLowerCase();
           }
 
           debugPrint('========== ZONE MATCHED ==========');
@@ -315,7 +320,7 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
       _showError('Please select a location first.');
       return;
     }
-    if (_detectedZoneId == null) {
+    if (widget.requireZone && _detectedZoneId == null) {
       _showError(
           'We couldn\'t find a service zone for this location. Please choose another location.');
       return;
@@ -388,7 +393,7 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
             // Scrollable form
             Flexible(
               child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+                physics: const ClampingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                 child: Form(
                   key: _formKey,
@@ -402,7 +407,7 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
                       _buildHouseField(),
                       const SizedBox(height: 14),
                       _buildLocationTile(),
-                      if (_selectedLocation != null) ...[
+                      if (_selectedLocation != null && widget.requireZone) ...[
                         const SizedBox(height: 14),
                         _buildZoneClassification(),
                       ],

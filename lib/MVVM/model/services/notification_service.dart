@@ -42,7 +42,7 @@ class NotificationService {
 
     // 2. Initialize Local Notifications
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('ic_notification');
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
             requestAlertPermission: true,
@@ -91,12 +91,9 @@ class NotificationService {
     });
 
     // 7. Handling notification when app was terminated
-    RemoteMessage? initialMessage = await _messaging.getInitialMessage();
+    final initialMessage = await _messaging.getInitialMessage();
     if (initialMessage != null) {
-      debugPrint("App opened from terminated state via notification");
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _handleDeepLink(initialMessage.data['deepLink']);
-      });
+      await _handleDeepLink(initialMessage.data['deepLink']);
     }
 
     // 8. Token handling
@@ -131,7 +128,7 @@ class NotificationService {
 
     if (notification != null && android != null) {
       BigPictureStyleInformation? bigPictureStyleInformation;
-      
+
       String? imgUrl = android.imageUrl ?? message.data['imageUrl'] as String?;
       if (imgUrl != null && imgUrl.isNotEmpty) {
         try {
@@ -140,7 +137,6 @@ class NotificationService {
             final Uint8List bytes = response.bodyBytes;
             bigPictureStyleInformation = BigPictureStyleInformation(
               ByteArrayAndroidBitmap(bytes),
-              hideExpandedLargeIcon: true,
             );
           }
         } catch (e) {
@@ -148,7 +144,7 @@ class NotificationService {
         }
       }
 
-      _localNotificationsPlugin.show(
+      await _localNotificationsPlugin.show(
         notification.hashCode,
         notification.title,
         notification.body,
@@ -157,7 +153,7 @@ class NotificationService {
             channel.id,
             channel.name,
             channelDescription: channel.description,
-            icon: '@mipmap/ic_launcher',
+            icon: 'ic_notification',
             styleInformation: bigPictureStyleInformation,
           ),
           iOS: const DarwinNotificationDetails(),
@@ -174,14 +170,22 @@ class NotificationService {
     }
   }
 
-  void _handleDeepLink(dynamic deepLink) {
-    if (deepLink != null && deepLink is String && deepLink.isNotEmpty) {
-      debugPrint("Navigating to deep link: $deepLink");
-      try {
-        Get.toNamed(deepLink);
-      } catch (e) {
-        debugPrint("Error navigating to deep link: $e");
+  Future<void> _handleDeepLink(String? deepLink) async {
+    if (deepLink == null || deepLink.trim().isEmpty) return;
+
+    final link = deepLink.trim();
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (Get.currentRoute.isEmpty) {
+        Get.toNamed(link);
+        return;
       }
+
+      Get.toNamed(link);
+    } catch (e) {
+      debugPrint('Deep link navigation failed: $e');
     }
   }
 

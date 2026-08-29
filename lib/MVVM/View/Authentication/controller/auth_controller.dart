@@ -84,31 +84,22 @@ class AuthController extends GetxController {
       return null;
     }
 
-    // Step 1: Check users collection
-    DocumentSnapshot? foundDoc = await findInCollection('users');
-    if (foundDoc != null) {
-      final role = (foundDoc.data() as Map<String, dynamic>?)?['role'];
-      debugPrint("User found in 'users' collection with role: $role");
-      if (role == 'user') {
-        Get.offAll(() => const FindingLocationPage());
-        return;
-      }
-    }
-
-    // Step 2: Search worker collections
     final collections = [
       'workers',
       'transports',
       'healthcare',
-      'shops_businesses'
+      'shops_businesses',
+      'businesses',
+      'users'
     ];
     String? foundCollection;
+    DocumentSnapshot? foundDoc;
 
     for (var collection in collections) {
       foundDoc = await findInCollection(collection);
       if (foundDoc != null) {
         foundCollection = collection;
-        debugPrint("Worker found in collection: $foundCollection");
+        debugPrint("User/Worker found in collection: $foundCollection");
         break;
       }
     }
@@ -178,8 +169,15 @@ class AuthController extends GetxController {
         } else {
           Get.offAll(() => const HealthcareWorkerDashboard());
         }
-      } else if (foundCollection == 'shops_businesses') {
-        // Shops & Businesses Dashboard placeholder
+      } else if (foundCollection == 'shops_businesses' ||
+          foundCollection == 'businesses') {
+        final category = data['category'] ?? '';
+        if (category == 'Online services') {
+          Get.offAll(() => const user_Dashboard());
+        } else {
+          Get.offAll(() => const FindingLocationPage());
+        }
+      } else if (foundCollection == 'users') {
         Get.offAll(() => const FindingLocationPage());
       }
     } else {
@@ -202,18 +200,37 @@ class AuthController extends GetxController {
 
       String authEmail = loginId;
 
-      QuerySnapshot userQuery;
+      final collections = [
+        'users',
+        'workers',
+        'transports',
+        'healthcare',
+        'shops_businesses',
+        'businesses'
+      ];
+
+      bool userFound = false;
+      Map<String, dynamic>? userData;
+
       if (isEmail) {
         debugPrint("\nEMAIL LOGIN:");
         debugPrint("Normalized email: $loginId");
-        debugPrint("Checking email in users collection...");
-        userQuery = await FirebaseFirestore.instance
-            .collection('users')
-            .where('email', isEqualTo: loginId)
-            .get();
+        debugPrint("Checking all collections for email...");
+        for (var col in collections) {
+          final query = await FirebaseFirestore.instance
+              .collection(col)
+              .where('email', isEqualTo: loginId)
+              .get();
+          if (query.docs.isNotEmpty) {
+            userFound = true;
+            userData = query.docs.first.data() as Map<String, dynamic>;
+            debugPrint("User found in collection: $col");
+            break;
+          }
+        }
       } else {
         debugPrint("\nPHONE LOGIN:");
-        debugPrint("Checking phone number in users collection...");
+        debugPrint("Checking all collections for phone...");
         String phoneWithPrefix = loginId;
         String rawPhone = loginId;
         if (!loginId.startsWith('+91')) {
@@ -222,26 +239,24 @@ class AuthController extends GetxController {
           rawPhone = loginId.replaceFirst('+91', '');
         }
 
-        userQuery = await FirebaseFirestore.instance
-            .collection('users')
-            .where('phone', whereIn: [rawPhone, phoneWithPrefix]).get();
+        for (var col in collections) {
+          final query = await FirebaseFirestore.instance
+              .collection(col)
+              .where('phone', whereIn: [rawPhone, phoneWithPrefix]).get();
+          if (query.docs.isNotEmpty) {
+            userFound = true;
+            userData = query.docs.first.data() as Map<String, dynamic>;
+            debugPrint("User found in collection: $col");
+            break;
+          }
+        }
       }
 
-      bool userFound = userQuery.docs.isNotEmpty;
       debugPrint("User found: $userFound");
 
       if (userFound) {
-        final userDoc = userQuery.docs.first;
-        final userData = userDoc.data() as Map<String, dynamic>;
-
-        if (userData['role'] != 'user') {
-          debugPrint("Access Denied: Role is ${userData['role']}, not 'user'");
-          toastError("Access Denied. This login is for normal users only.");
-          return;
-        }
-
         if (!isEmail) {
-          authEmail = userData['email'] ?? '';
+          authEmail = userData!['email'] ?? '';
           debugPrint("Registered email found: $authEmail");
           if (authEmail.isEmpty) {
             toastError("No email associated with this phone number.");
@@ -258,7 +273,8 @@ class AuthController extends GetxController {
 
       // STEP 2: Authenticate with Firebase using Email & Password
       debugPrint("Authenticating with email: $authEmail");
-      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: authEmail,
         password: password,
       );
@@ -329,13 +345,13 @@ class AuthController extends GetxController {
       debugPrint("Normalized Email: $selectedEmail");
       debugPrint("Checking users collection...");
 
-      // Check all collections for the email
       final collections = [
         'users',
         'workers',
         'transports',
         'healthcare',
-        'shops_businesses'
+        'shops_businesses',
+        'businesses'
       ];
 
       bool found = false;
@@ -345,9 +361,23 @@ class AuthController extends GetxController {
             .where('email', isEqualTo: selectedEmail)
             .get();
         if (query.docs.isNotEmpty) {
-          found = true;
-          debugPrint("User found in collection: \$col");
-          break;
+          if (col == 'businesses' || col == 'shops_businesses') {
+            final data = query.docs.first.data();
+            final category = data['category'] ?? '';
+            if (category == 'Online services') {
+              found = true;
+              debugPrint("User found in collection: $col with Online services");
+              break;
+            } else {
+              debugPrint(
+                  "Found in $col but category is '$category', not 'Online services'. Skipping.");
+              continue;
+            }
+          } else {
+            found = true;
+            debugPrint("User found in collection: $col");
+            break;
+          }
         }
       }
 

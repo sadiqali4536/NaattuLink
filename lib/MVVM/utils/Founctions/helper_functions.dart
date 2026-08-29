@@ -91,7 +91,8 @@ Future<String?> getRole(User? firebaseUser) async {
     'workers',
     'healthcare',
     'transports',
-    'shops_businesses'
+    'shops_businesses',
+    'businesses'
   ];
 
   for (String collection in collections) {

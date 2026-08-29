@@ -33,16 +33,92 @@ class LocationController extends GetxController {
     isLoading.value = true;
 
     try {
-      final loc = await _locationService.getCurrentLocation();
-      if (loc != null) {
-        currentLocationModel.value = loc;
-        _updateLegacyFields(loc);
-        _saveLocationToFirebase(loc, 'gps');
-      } else {
-        _setFallbackLocation();
+      // ── STEP 1: Always try GPS first so the user sees their REAL current location ──
+      final gpsLoc = await _locationService.getCurrentLocation();
+      if (gpsLoc != null) {
+        currentLocationModel.value = gpsLoc;
+        _updateLegacyFields(gpsLoc);
+        // Save silently in background — don't await so UI updates immediately
+        _saveLocationToFirebase(gpsLoc, 'gps');
+        isLoading.value = false;
+        return;
       }
+
+      // ── STEP 2: GPS failed/denied — fall back to saved primaryAddress ──
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists && doc.data()!.containsKey('primaryAddress')) {
+          final pAddr = doc.data()!['primaryAddress'];
+          if (pAddr != null) {
+            final loc = AppLocationModel(
+              latitude: pAddr['latitude']?.toDouble() ?? 0.0,
+              longitude: pAddr['longitude']?.toDouble() ?? 0.0,
+              formattedAddress: pAddr['formattedAddress'] ?? '',
+              city: pAddr['locality'],
+              district: pAddr['district'] ?? '',
+              state: pAddr['state'],
+              pincode: pAddr['postalCode'],
+              zoneId: pAddr['zoneId'],
+              zoneName: pAddr['zoneName'],
+              isPrimary: true,
+              addressType: pAddr['addressType'],
+              receiverName: pAddr['receiverName'],
+              receiverPhone: pAddr['receiverPhone'],
+              alternatePhone: pAddr['alternatePhone'],
+              landmark: pAddr['landmark'],
+            );
+            currentLocationModel.value = loc;
+            _updateLegacyFields(loc);
+            isLoading.value = false;
+            return;
+          }
+        }
+      }
+
+      // ── STEP 3: No GPS and no saved address — use hardcoded fallback ──
+      _setFallbackLocation();
     } catch (e) {
       debugPrint("Error fetching location: $e");
+      // On any error, try saved address before showing fallback
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+          if (doc.exists && doc.data()!.containsKey('primaryAddress')) {
+            final pAddr = doc.data()!['primaryAddress'];
+            if (pAddr != null) {
+              final loc = AppLocationModel(
+                latitude: pAddr['latitude']?.toDouble() ?? 0.0,
+                longitude: pAddr['longitude']?.toDouble() ?? 0.0,
+                formattedAddress: pAddr['formattedAddress'] ?? '',
+                city: pAddr['locality'],
+                district: pAddr['district'] ?? '',
+                state: pAddr['state'],
+                pincode: pAddr['postalCode'],
+                zoneId: pAddr['zoneId'],
+                zoneName: pAddr['zoneName'],
+                isPrimary: true,
+                addressType: pAddr['addressType'],
+                receiverName: pAddr['receiverName'],
+                receiverPhone: pAddr['receiverPhone'],
+                alternatePhone: pAddr['alternatePhone'],
+                landmark: pAddr['landmark'],
+              );
+              currentLocationModel.value = loc;
+              _updateLegacyFields(loc);
+              isLoading.value = false;
+              return;
+            }
+          }
+        }
+      } catch (_) {}
       _setFallbackLocation();
     } finally {
       isLoading.value = false;

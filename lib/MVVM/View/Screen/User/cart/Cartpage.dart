@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/model/models/cart_model.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
+import 'package:naattulink/MVVM/View/Screen/User/checkout/confirm_details_page.dart';
+import 'package:naattulink/MVVM/model/user/cart_item_model.dart';
+import 'package:get/get.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({Key? key}) : super(key: key);
@@ -15,6 +18,7 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   bool _isDialogShown = false;
+  bool _isPriceDetailsExpanded = true;
   final TextEditingController _promoController = TextEditingController();
 
   static const Color _navy = Color(0xFF0F2E5A);
@@ -71,25 +75,67 @@ class _CartPageState extends State<CartPage> {
 
       for (var doc in cartDocs) {
         final data = doc.data() as Map<String, dynamic>;
+
+        String? finalSellerId = data['sellerId'];
+        if (finalSellerId == null || finalSellerId.isEmpty) {
+          final productId = data['productId'];
+          if (productId != null) {
+            try {
+              final productDoc = await FirebaseFirestore.instance
+                  .collection('store_products')
+                  .doc(productId)
+                  .get();
+              if (productDoc.exists) {
+                final pData = productDoc.data();
+                finalSellerId = pData?['sellerId'] ??
+                    pData?['ownerId'] ??
+                    pData?['storeId'];
+              }
+            } catch (e) {
+              debugPrint("Failed to fetch product for sellerId: $e");
+            }
+          }
+        }
+
         final bookingData = {
           'userId': user.uid,
-          'serviceTitle': data['service_name'] ?? '',
-          'image': data['image'] ?? '',
-          'originalPrice': data['original_price'] ?? '',
-          'discountPrice': data['price'] ?? '',
-          'discount': data['discount'] ?? '',
+          'productId': data['productId'],
+          'serviceTitle': data['productName'] ?? data['service_name'] ?? '',
+          'image': data['productImage'] ?? data['image'] ?? '',
+          'originalPrice': data['price']?.toString() ??
+              data['original_price']?.toString() ??
+              '',
+          'discountPrice':
+              data['offerPrice']?.toString() ?? data['price']?.toString() ?? '',
+          'discount': data['discount']?.toString() ?? '',
           'rating': data['rating'] ?? 0,
           'category': data['category'] ?? '',
           'serviceType': data['service_type'] ?? '',
-          'bookingType': 'Exterior',
+          'bookingType': 'Product Order',
           'status': 'pending',
           'workerId': null,
           'workerName': null,
+          'sellerId': finalSellerId,
           'createdAt': FieldValue.serverTimestamp(),
         };
         await FirebaseFirestore.instance
             .collection('bookings')
             .add(bookingData);
+
+        if (finalSellerId != null && finalSellerId.isNotEmpty) {
+          final productName =
+              data['productName'] ?? data['service_name'] ?? 'Product';
+          await FirebaseFirestore.instance
+              .collection('seller_notifications')
+              .add({
+            'sellerId': finalSellerId,
+            'title': 'New Order Received',
+            'message': 'You have received a new order for $productName',
+            'type': 'order',
+            'created_at': FieldValue.serverTimestamp(),
+            'is_read': false,
+          });
+        }
         await doc.reference.delete();
         bookedItems.add(bookingData);
       }
@@ -146,8 +192,7 @@ class _CartPageState extends State<CartPage> {
         stream: FirebaseFirestore.instance
             .collection('carts')
             .doc(user.uid)
-            .collection('cartItems')
-            .orderBy('addedAt', descending: true)
+            .collection('items')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -170,10 +215,17 @@ class _CartPageState extends State<CartPage> {
 
           for (int i = 0; i < cartDocs.length; i++) {
             final data = cartDocs[i].data() as Map<String, dynamic>;
-            double price =
-                double.tryParse(data["price"]?.toString() ?? "0") ?? 0;
-            double orig =
-                double.tryParse(data["original_price"]?.toString() ?? "0") ?? 0;
+            int qty = data['quantity'] ?? 1;
+            double price = (double.tryParse(data["offerPrice"]?.toString() ??
+                        data["price"]?.toString() ??
+                        "0") ??
+                    0) *
+                qty;
+            double orig = (double.tryParse(data["price"]?.toString() ??
+                        data["original_price"]?.toString() ??
+                        "0") ??
+                    0) *
+                qty;
             if (i == 1 && cartDocs.length > 1) {
               cancelledTotal += price;
             } else {
@@ -198,30 +250,57 @@ class _CartPageState extends State<CartPage> {
                         itemBuilder: (context, index) {
                           final doc = cartDocs[index];
                           final data = doc.data() as Map<String, dynamic>;
-                          final item = CartModel.fromFirestore(data);
+                          final item = CartModel(
+                            service_id:
+                                data['productId'] ?? data['service_id'] ?? '',
+                            service_name: data['productName'] ??
+                                data['service_name'] ??
+                                '',
+                            image: data['productImage'] ?? data['image'] ?? '',
+                            original_price: data['price']?.toString() ??
+                                data['original_price']?.toString() ??
+                                '',
+                            price: data['offerPrice']?.toString() ??
+                                data['price']?.toString() ??
+                                '',
+                            discount: data['discount']?.toString() ?? '',
+                            rating: data['rating'] ?? 0,
+                            category:
+                                data['variantName'] ?? data['category'] ?? '',
+                            service_type: data['service_type'] ?? '',
+                            addedAt: data['addedAt'] as Timestamp? ??
+                                Timestamp.now(),
+                          );
                           final isCancelled =
                               (index == 1 && cartDocs.length > 1);
+                          final int quantity = data['quantity'] ?? 1;
                           return _buildCartItemCard(item, doc.reference,
-                              isCancelled: isCancelled);
+                              isCancelled: isCancelled, quantity: quantity);
                         },
                       ),
                       const SizedBox(height: 12),
-                      _buildPromoCodeSection(),
-                      const SizedBox(height: 16),
-                      _buildPriceDetails(
-                        itemCount: cartDocs.length,
-                        totalPrice: totalPrice,
-                        totalOriginal: totalOriginal,
-                        cancelledTotal: cancelledTotal,
-                      ),
+                      const SizedBox.shrink(),
                     ],
                   ),
                 ),
               ),
+              _buildPriceDetails(
+                itemCount: cartDocs.length,
+                totalPrice: totalPrice,
+                totalOriginal: totalOriginal,
+                cancelledTotal: cancelledTotal,
+              ),
               _buildCheckoutBar(
                 itemCount: cartDocs.length,
                 totalPrice: totalPrice,
-                onCheckout: () => _processBooking(cartDocs),
+                onCheckout: () {
+                  final cartItems = cartDocs
+                      .map((doc) => CartItemModel.fromMap(
+                          doc.data() as Map<String, dynamic>, doc.id))
+                      .toList();
+                  Get.to(() => ConfirmDetailsPage(
+                      cartItems: cartItems, isFromCart: true));
+                },
               ),
             ],
           );
@@ -598,188 +677,166 @@ class _CartPageState extends State<CartPage> {
   // ── Cart Item Card ────────────────────────────────────────────────────────
 
   Widget _buildCartItemCard(CartModel item, DocumentReference docRef,
-      {bool isCancelled = false}) {
+      {bool isCancelled = false, int quantity = 1}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            Row(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image
+          Container(
+            height: 90,
+            width: 90,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              image: DecorationImage(
+                image: NetworkImage(item.image.isNotEmpty
+                    ? item.image
+                    : "https://via.placeholder.com/150"),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Content
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image
-                Container(
-                  height: 60,
-                  width: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    image: DecorationImage(
-                      image: NetworkImage(item.image.isNotEmpty
-                          ? item.image
-                          : "https://via.placeholder.com/150"),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.service_name,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: _navy,
-                                decoration: isCancelled
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isCancelled)
-                            Container(
-                              margin: const EdgeInsets.only(left: 6, right: 4),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.cancel,
-                                      color: Colors.red, size: 10),
-                                  SizedBox(width: 3),
-                                  Text("CANCELLED",
-                                      style: TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                          GestureDetector(
-                            onTap: () => _removeItem(docRef),
-                            child: const Icon(Icons.delete_outline,
-                                color: Colors.red, size: 20),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.person_outline,
-                              size: 13, color: _navy.withOpacity(0.7)),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.category.isNotEmpty
-                                ? item.category
-                                : "Expert Service",
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: _navy.withOpacity(0.8)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        "Professional Service",
+                // Title & Delete
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.service_name,
                         style: TextStyle(
-                            fontSize: 12, color: Colors.blueGrey.shade400),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: _navy,
+                          decoration:
+                              isCancelled ? TextDecoration.lineThrough : null,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Date / Price Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _lightBg,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.calendar_today_outlined,
-                          size: 12, color: _navy),
-                      SizedBox(width: 4),
-                      Text("24-Jun-2026",
-                          style: TextStyle(fontSize: 10, color: Colors.grey)),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Text("|",
-                            style: TextStyle(fontSize: 10, color: Colors.grey)),
+                    ),
+                    if (isCancelled)
+                      Container(
+                        margin: const EdgeInsets.only(left: 6, right: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text("CANCELLED",
+                            style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold)),
                       ),
-                      Icon(Icons.access_time, size: 12, color: _navy),
-                      SizedBox(width: 4),
-                      Text("05:00 PM - 07:00 PM",
-                          style: TextStyle(fontSize: 10, color: Colors.grey)),
-                    ],
-                  ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => _removeItem(docRef),
+                      child: const Icon(Icons.delete_outline,
+                          color: Colors.redAccent, size: 22),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 4),
 
-                // Price + Quantity
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                // Subtitles
+                Row(
+                  children: [
+                    const Icon(Icons.person_outline,
+                        size: 14, color: Colors.black54),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.category.isNotEmpty
+                          ? item.category
+                          : "Expert Service",
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black54),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  "Professional Service",
+                  style: TextStyle(fontSize: 12, color: Colors.black45),
+                ),
+                const SizedBox(height: 12),
+
+                // Price & Quantity
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       "₹${item.price}",
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
                         color: isCancelled ? Colors.red : _navy,
                       ),
                     ),
-                    const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: _lightBg,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade200),
                       ),
                       child: Row(
-                        children: const [
-                          Icon(Icons.remove, size: 14, color: Colors.grey),
-                          SizedBox(width: 12),
-                          Text("1",
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: _navy)),
-                          SizedBox(width: 12),
-                          Icon(Icons.add, size: 14, color: Colors.grey),
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              if (quantity > 1) {
+                                docRef.update({'quantity': quantity - 1});
+                              } else {
+                                _removeItem(docRef);
+                              }
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              child: Icon(Icons.remove,
+                                  size: 16, color: Colors.black87),
+                            ),
+                          ),
+                          Text(
+                            "$quantity",
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              docRef.update({'quantity': quantity + 1});
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              child: Icon(Icons.add,
+                                  size: 16, color: Colors.black87),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -787,8 +844,8 @@ class _CartPageState extends State<CartPage> {
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -857,46 +914,67 @@ class _CartPageState extends State<CartPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
-              Icon(Icons.receipt_long_outlined, color: _navy, size: 20),
-              SizedBox(width: 8),
-              Text(
-                "Price Details",
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold, color: _navy),
-              ),
-            ],
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isPriceDetailsExpanded = !_isPriceDetailsExpanded;
+              });
+            },
+            child: Row(
+              children: [
+                const Icon(Icons.receipt_long_outlined, color: _navy, size: 20),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    "Price Details",
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _navy),
+                  ),
+                ),
+                Icon(
+                  _isPriceDetailsExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: _navy,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          _priceRow(
-              "Item Total ($itemCount item)",
-              "₹${(totalOriginal + cancelledTotal).toStringAsFixed(0)}",
-              Colors.black87),
-          const SizedBox(height: 10),
-          if (cancelledTotal > 0) ...[
-            _priceRow("Cancelled Items (1 item)",
-                "- ₹${cancelledTotal.toStringAsFixed(0)}", Colors.red),
+          if (_isPriceDetailsExpanded) ...[
+            const SizedBox(height: 16),
+            _priceRow(
+                "Item Total ($itemCount item)",
+                "₹${(totalOriginal + cancelledTotal).toStringAsFixed(0)}",
+                Colors.black87),
             const SizedBox(height: 10),
-          ],
-          _priceRow("Delivery Charge", "₹0", Colors.black87),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(color: Color(0xFFDDE3EE), thickness: 1),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Total Amount",
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold, color: _navy)),
-              Text(
-                "₹${totalPrice.toStringAsFixed(0)}",
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold, color: _navy),
-              ),
+            if (cancelledTotal > 0) ...[
+              _priceRow("Cancelled Items (1 item)",
+                  "- ₹${cancelledTotal.toStringAsFixed(0)}", Colors.red),
+              const SizedBox(height: 10),
             ],
-          ),
+            _priceRow("Delivery Charge", "₹0", Colors.black87),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Divider(color: Color(0xFFDDE3EE), thickness: 1),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Total Amount",
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _navy)),
+                Text(
+                  "₹${totalPrice.toStringAsFixed(0)}",
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold, color: _navy),
+                ),
+              ],
+            ),
+          ]
         ],
       ),
     );
