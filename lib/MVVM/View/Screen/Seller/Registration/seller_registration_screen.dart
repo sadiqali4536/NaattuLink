@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/controller/seller/seller_registration_controller.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:intl_phone_field/country_picker_dialog.dart';
 
 class SellerRegistrationScreen extends StatelessWidget {
   const SellerRegistrationScreen({super.key});
@@ -162,11 +164,33 @@ class SellerRegistrationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               _buildInputLabel("Phone Number"),
-              _buildTextField(
+              IntlPhoneField(
                 controller: controller.phoneController,
-                hint: "Enter phone number",
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  hintText: 'Enter phone number',
+                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF0F2E5A)),
+                  ),
+                ),
+                initialCountryCode: 'IN', // Set default country code
+                pickerDialogStyle: PickerDialogStyle(
+                  backgroundColor: Colors.white,
+                ),
+                onChanged: (phone) {
+                  controller.fullPhoneNumber.value = phone.completeNumber;
+                },
               ),
               const SizedBox(height: 20),
               _buildInputLabel("Store Name"),
@@ -183,13 +207,29 @@ class SellerRegistrationScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+              _buildInputLabel("UPI ID"),
+              _buildTextField(
+                controller: controller.upiIdController,
+                hint: "Enter your UPI ID (e.g. name@bank)",
+                icon: Icons.account_balance_wallet_outlined,
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 6, left: 4),
+                child: Text(
+                  "Used for receiving payments from customers.",
+                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 20),
               _buildInputLabel("Category"),
               Obx(() => Container(
                     decoration: BoxDecoration(
+                      color: Colors.white,
                       border: Border.all(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: DropdownButtonFormField<String>(
+                      dropdownColor: Colors.white,
                       decoration: const InputDecoration(
                         border: InputBorder.none,
                         prefixIcon:
@@ -211,11 +251,28 @@ class SellerRegistrationScreen extends StatelessWidget {
                                 Text(c, style: const TextStyle(fontSize: 14)));
                       }).toList(),
                       onChanged: (val) {
-                        if (val != null)
+                        if (val != null) {
                           controller.selectedCategory.value = val;
+                        }
                       },
                     ),
                   )),
+              Obx(() => controller.selectedCategory.value == 'Other'
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInputLabel("Please Specify Category"),
+                          _buildTextField(
+                            controller: controller.otherCategoryController,
+                            hint: "Type your category",
+                            icon: Icons.edit_outlined,
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink()),
               const SizedBox(height: 20),
               _buildInputLabel("About Your Business"),
               _buildTextField(
@@ -227,114 +284,25 @@ class SellerRegistrationScreen extends StatelessWidget {
             ],
           ),
         ),
+        // Padding(
+        //   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        //   child: Row(
+        //     children: const [
+        //       Icon(Icons.check_circle_outline,
+        //           color: Color(0xFF0F2E5A), size: 16),
+        //       SizedBox(width: 8),
+        //       Expanded(
+        //         child: Text(
+        //           "Your information helps us create your NaattuLink seller profile.",
+        //           style: TextStyle(color: Color(0xFF0F2E5A), fontSize: 11),
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: Row(
-            children: const [
-              Icon(Icons.check_circle_outline,
-                  color: Color(0xFF0F2E5A), size: 16),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  "Your information helps us create your NaattuLink seller profile.",
-                  style: TextStyle(color: Color(0xFF0F2E5A), fontSize: 11),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildReviewMode(SellerRegistrationController controller) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Please review your details carefully. This information will be visible to customers on NaattuLink.",
-            style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.4),
-          ),
-          const SizedBox(height: 24),
-          _buildReviewCard(
-            title: "Business Profile",
-            icon: Icons.storefront,
-            onEdit: controller.goBackToForm,
-            children: [
-              _buildReviewField(
-                  "Seller Name", controller.sellerNameController.text),
-              const Divider(height: 24, color: Color(0xFFF1F5F9)),
-              _buildReviewField(
-                  "Store Name", controller.storeNameController.text),
-              const Divider(height: 24, color: Color(0xFFF1F5F9)),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Category",
-                      style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F6FF),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      controller.selectedCategory.value,
-                      style: const TextStyle(
-                          color: Color(0xFF0F2E5A),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildReviewCard(
-            title: "Contact & Location",
-            icon: Icons.location_on,
-            onEdit: controller.goBackToForm,
-            children: [
-              _buildReviewField(
-                  "Phone Number", controller.phoneController.text),
-              const Divider(height: 24, color: Color(0xFFF1F5F9)),
-              _buildReviewField("Location", controller.locationController.text),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildReviewCard(
-            title: "About Your Business",
-            icon: Icons.info,
-            onEdit: controller.goBackToForm,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFF1F5F9)),
-                ),
-                child: Text(
-                  '"${controller.aboutController.text}"',
-                  style: const TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Colors.black87,
-                    fontSize: 13,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Obx(() => Row(
+          child: Obx(() => Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
@@ -370,6 +338,102 @@ class SellerRegistrationScreen extends StatelessWidget {
                   ),
                 ],
               )),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildReviewMode(SellerRegistrationController controller) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Please review your details carefully. This information will be visible to customers on NaattuLink.",
+            style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.4),
+          ),
+          const SizedBox(height: 24),
+          _buildReviewCard(
+            title: "Business Profile",
+            icon: Icons.storefront,
+            onEdit: controller.goBackToForm,
+            children: [
+              _buildReviewField(
+                  "Seller Name", controller.sellerNameController.text),
+              const Divider(height: 24, color: Color(0xFFF1F5F9)),
+              _buildReviewField(
+                  "Store Name", controller.storeNameController.text),
+              const Divider(height: 24, color: Color(0xFFF1F5F9)),
+              _buildReviewField("UPI ID", controller.upiIdController.text),
+              const Divider(height: 24, color: Color(0xFFF1F5F9)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Category",
+                      style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F6FF),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      controller.selectedCategory.value == 'Other'
+                          ? controller.otherCategoryController.text.trim()
+                          : controller.selectedCategory.value,
+                      style: const TextStyle(
+                          color: Color(0xFF0F2E5A),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildReviewCard(
+            title: "Contact & Location",
+            icon: Icons.location_on,
+            onEdit: controller.goBackToForm,
+            children: [
+              _buildReviewField(
+                  "Phone Number", controller.fullPhoneNumber.value),
+              const Divider(height: 24, color: Color(0xFFF1F5F9)),
+              _buildReviewField("Location", controller.locationController.text),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildReviewCard(
+            title: "About Your Business",
+            icon: Icons.info,
+            onEdit: controller.goBackToForm,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                ),
+                child: Text(
+                  '"${controller.aboutController.text}"',
+                  style: const TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.black87,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
           const SizedBox(height: 20),
         ],
       ),
@@ -514,47 +578,61 @@ class SellerRegistrationScreen extends StatelessWidget {
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: SafeArea(
-        child: SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: Obx(() => ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0F2E5A),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: controller.isLoading.value
-                    ? null
-                    : (isReview
-                        ? controller.submitRegistration
-                        : controller.proceedToReview),
-                child: controller.isLoading.value
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            "Create My Store",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward,
-                              color: Colors.white, size: 20),
-                        ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: Obx(() => ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F2E5A),
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-              )),
+                    ),
+                    onPressed: (controller.isLoading.value ||
+                            !controller.acceptedTerms.value)
+                        ? null
+                        : (isReview
+                            ? controller.submitRegistration
+                            : controller.proceedToReview),
+                    child: controller.isLoading.value
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                isReview
+                                    ? "Submit Application"
+                                    : "Create My Store",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: controller.acceptedTerms.value
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(Icons.arrow_forward,
+                                  color: controller.acceptedTerms.value
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
+                                  size: 20),
+                            ],
+                          ),
+                  )),
+            ),
+          ],
         ),
       ),
     );

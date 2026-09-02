@@ -1,7 +1,11 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
+import 'package:naattulink/core/imagekit/imagekit_config.dart';
+import 'package:naattulink/core/imagekit/image_storage_type.dart';
 import 'package:get/get.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cherry_toast/cherry_toast.dart';
@@ -17,6 +21,8 @@ class HealthcareDashboardController extends GetxController {
   RxMap<String, dynamic> userData = <String, dynamic>{}.obs;
   RxList<Map<String, dynamic>> doctors = <Map<String, dynamic>>[].obs;
   RxList<Map<String, dynamic>> consultations = <Map<String, dynamic>>[].obs;
+  RxInt consultationsLimit = 10.obs;
+  final ScrollController scrollController = ScrollController();
 
   RxBool isLoading = true.obs;
   final TextEditingController searchController = TextEditingController();
@@ -47,10 +53,16 @@ class HealthcareDashboardController extends GetxController {
     searchFocusNode.addListener(() {
       isSearchFocused.value = searchFocusNode.hasFocus;
     });
+    scrollController.addListener(() {
+      if (scrollController.position.pixels >= scrollController.position.maxScrollExtent * 0.9) {
+        fetchMoreConsultations();
+      }
+    });
   }
 
   @override
   void onClose() {
+    scrollController.dispose();
     searchController.dispose();
     searchFocusNode.dispose();
     _userSub?.cancel();
@@ -95,23 +107,37 @@ class HealthcareDashboardController extends GetxController {
       });
 
       // Listen to Consultations subcollection
-      _consultationsSub = _firestore
-          .collection('healthcare')
-          .doc(uid)
-          .collection('consultations')
-          .orderBy('created_at', descending: true)
-          .snapshots()
-          .listen((snapshot) {
-        consultations.assignAll(snapshot.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-          return data;
-        }).toList());
-      });
+      _listenToConsultations(uid);
     } catch (e) {
       print("Error initializing HealthcareDashboardController: $e");
     } finally {
       isLoading(false);
+    }
+  }
+
+  void _listenToConsultations(String uid) {
+    _consultationsSub?.cancel();
+    _consultationsSub = _firestore
+        .collection('healthcare')
+        .doc(uid)
+        .collection('consultations')
+        .orderBy('created_at', descending: true)
+        .limit(consultationsLimit.value)
+        .snapshots()
+        .listen((snapshot) {
+      consultations.assignAll(snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList());
+    });
+  }
+
+  void fetchMoreConsultations() {
+    consultationsLimit.value += 10;
+    final uid = _auth.currentUser?.uid;
+    if (uid != null) {
+      _listenToConsultations(uid);
     }
   }
 
@@ -312,13 +338,26 @@ class HealthcareDashboardController extends GetxController {
     try {
       String? imageUrl;
       if (imageFile != null) {
-        // Upload to Firebase Storage
-        final ref = FirebaseStorage.instance
-            .ref()
-            .child('profile_images')
-            .child('$uid.jpg');
-        await ref.putFile(imageFile);
-        imageUrl = await ref.getDownloadURL();
+        final config =
+            ImageKitConfigManager.getConfig(ImageStorageType.workers);
+        final imageKitService = ImageKitBaseService(
+          publicKey: config.publicKey,
+          urlEndpoint: config.urlEndpoint,
+          storageType: ImageStorageType.workers,
+        );
+
+        final originalName = imageFile.path.split('/').last;
+        final fileName =
+            imageKitService.generateFileName(originalName, 'profile');
+        final bytes = await imageFile.readAsBytes();
+
+        final result = await imageKitService.uploadImage(
+          imageBytes: bytes,
+          fileName: fileName,
+          folder: config.defaultFolder,
+        );
+
+        imageUrl = result.imageUrl;
       }
 
       final updateData = {...data};

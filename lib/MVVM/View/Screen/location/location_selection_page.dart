@@ -31,6 +31,11 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   List<AppLocationModel> _firebaseAddresses = [];
   List<AppLocationModel> _historyAddresses = [];
 
+  DocumentSnapshot? _lastDocument;
+  bool _hasMoreAddresses = true;
+  bool _isLoadingMore = false;
+  final ScrollController _scrollController = ScrollController();
+
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   List<dynamic> _predictions = [];
@@ -42,6 +47,11 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   void initState() {
     super.initState();
     _loadSavedAddresses();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
+        _loadMoreAddresses();
+      }
+    });
   }
 
   String get _storageKey {
@@ -58,9 +68,13 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
             .doc(user.uid)
             .collection('delivery_addresses')
             .orderBy('createdAt', descending: true)
+            .limit(10)
             .get();
 
         if (querySnapshot.docs.isNotEmpty) {
+          _lastDocument = querySnapshot.docs.last;
+          _hasMoreAddresses = querySnapshot.docs.length == 10;
+          
           final fetched = querySnapshot.docs.map((doc) {
             final data = doc.data();
             return AppLocationModel(
@@ -85,6 +99,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
             _firebaseAddresses = fetched;
           });
         } else {
+          _hasMoreAddresses = false;
           setState(() {
             _firebaseAddresses = [];
           });
@@ -108,6 +123,67 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
       setState(() {
         _isLoadingAddresses = false;
       });
+    }
+  }
+
+  Future<void> _loadMoreAddresses() async {
+    if (_isLoadingMore || !_hasMoreAddresses || _lastDocument == null) return;
+    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('delivery_addresses')
+          .orderBy('createdAt', descending: true)
+          .startAfterDocument(_lastDocument!)
+          .limit(10)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        _lastDocument = querySnapshot.docs.last;
+        _hasMoreAddresses = querySnapshot.docs.length == 10;
+
+        final fetched = querySnapshot.docs.map((doc) {
+          final data = doc.data();
+          return AppLocationModel(
+            id: doc.id,
+            latitude: data['latitude'] ?? 11.2588,
+            longitude: data['longitude'] ?? 75.7804,
+            formattedAddress: data['address'] ?? '',
+            district: data['district'] ?? '',
+            city: data['city'] ?? '',
+            state: data['state'] ?? '',
+            pincode: data['pincode'] ?? '',
+            receiverName: data['name'] ?? '',
+            receiverPhone: data['phone'] ?? '',
+            alternatePhone: data['alternativeNumber'] ?? '',
+            landmark: data['buildingName'] ?? '',
+            addressType: data['addressType'] ?? 'Home',
+            isPrimary: data['isDefault'] == 1,
+          );
+        }).toList();
+
+        setState(() {
+          _firebaseAddresses.addAll(fetched);
+        });
+      } else {
+        _hasMoreAddresses = false;
+      }
+    } catch (e) {
+      debugPrint("Error fetching more addresses: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
     }
   }
 
@@ -308,6 +384,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     _debounce?.cancel();
@@ -333,6 +410,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
         elevation: 0,
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -585,6 +663,11 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                 ]
               ];
             }(),
+            if (_isLoadingMore) 
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator(color: Color(0xFF0F2E5A))),
+              ),
             const SizedBox(height: 32),
           ],
         ),

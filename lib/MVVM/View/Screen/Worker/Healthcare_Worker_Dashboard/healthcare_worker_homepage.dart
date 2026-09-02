@@ -36,6 +36,7 @@ class HealthcareWorkerHomepage extends StatelessWidget {
         final profileImage = user['profile_image'] ?? '';
 
         return CustomScrollView(
+          controller: controller.scrollController,
           slivers: [
             SliverToBoxAdapter(
               child: _buildHeader(

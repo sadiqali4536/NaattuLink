@@ -16,6 +16,138 @@ class SellerOrdersScreen extends StatefulWidget {
 class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
   String selectedFilter = 'All';
   final List<String> filters = ['All', 'New', 'Processing', 'Dispatched'];
+  
+  final ScrollController _scrollController = ScrollController();
+  
+  List<QueryDocumentSnapshot> _orders = [];
+  DocumentSnapshot? _lastDocument;
+  bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+  
+  int _totalCount = 0;
+  int _newCount = 0;
+  int _processingCount = 0;
+  int _dispatchedCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCounts();
+    _fetchOrders();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent * 0.9) {
+        _fetchMoreOrders();
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+  
+  Future<void> _fetchCounts() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    final baseQuery = FirebaseFirestore.instance
+        .collection('bookings')
+        .where('sellerId', isEqualTo: currentUser.uid)
+        .where('bookingType', isEqualTo: 'Product Order');
+        
+    try {
+      final totalSnap = await baseQuery.count().get();
+      final newSnap = await baseQuery.where('status', whereIn: ['pending', 'pending_verification']).count().get();
+      final processingSnap = await baseQuery.where('status', isEqualTo: 'processing').count().get();
+      final dispatchedSnap = await baseQuery.where('status', whereIn: ['shipped', 'dispatched']).count().get();
+      
+      if (mounted) {
+        setState(() {
+          _totalCount = totalSnap.count ?? 0;
+          _newCount = newSnap.count ?? 0;
+          _processingCount = processingSnap.count ?? 0;
+          _dispatchedCount = dispatchedSnap.count ?? 0;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching counts: $e");
+    }
+  }
+
+  Query _buildQuery() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    Query query = FirebaseFirestore.instance
+        .collection('bookings')
+        .where('sellerId', isEqualTo: currentUser?.uid)
+        .where('bookingType', isEqualTo: 'Product Order');
+
+    if (selectedFilter == 'New') {
+      query = query.where('status', whereIn: ['pending', 'pending_verification']);
+    } else if (selectedFilter == 'Processing') {
+      query = query.where('status', isEqualTo: 'processing');
+    } else if (selectedFilter == 'Dispatched') {
+      query = query.where('status', whereIn: ['shipped', 'dispatched']);
+    }
+
+    return query.orderBy('createdAt', descending: true).limit(10);
+  }
+
+  Future<void> _fetchOrders() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _orders = [];
+      _lastDocument = null;
+      _hasMoreData = true;
+    });
+
+    try {
+      final snapshot = await _buildQuery().get();
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+        _orders = snapshot.docs;
+      } else {
+        _hasMoreData = false;
+      }
+    } catch (e) {
+      debugPrint("Error fetching orders: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchMoreOrders() async {
+    if (_isLoadingMore || !_hasMoreData || _lastDocument == null) return;
+    
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final snapshot = await _buildQuery().startAfterDocument(_lastDocument!).get();
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+        _orders.addAll(snapshot.docs);
+      } else {
+        _hasMoreData = false;
+      }
+    } catch (e) {
+      debugPrint("Error fetching more orders: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,97 +181,64 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('bookings')
-            .where('sellerId', isEqualTo: currentUser.uid)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            debugPrint("Orders Stream Error: ${snapshot.error}");
-            return Center(
-                child: Text("Error loading orders: ${snapshot.error}"));
-          }
-
-          final allDocs = snapshot.data?.docs ?? [];
-          final allOrders = allDocs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return data['bookingType'] == 'Product Order';
-          }).toList();
-
-          final newOrders = allOrders.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final status =
-                (data['status'] ?? 'pending').toString().toLowerCase();
-            return status == 'pending' || status == 'pending_verification';
-          }).toList();
-
-          final processingOrders = allOrders.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final status = (data['status'] ?? '').toString().toLowerCase();
-            return status == 'processing';
-          }).toList();
-
-          final dispatchedOrders = allOrders.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final status = (data['status'] ?? '').toString().toLowerCase();
-            return status == 'shipped' || status == 'dispatched';
-          }).toList();
-
-          List<QueryDocumentSnapshot> displayedOrders = [];
-          if (selectedFilter == 'All') {
-            displayedOrders = allOrders;
-          } else if (selectedFilter == 'New') {
-            displayedOrders = newOrders;
-          } else if (selectedFilter == 'Processing') {
-            displayedOrders = processingOrders;
-          } else if (selectedFilter == 'Dispatched') {
-            displayedOrders = dispatchedOrders;
-          }
-
-          // Sort by creation date descending
-          displayedOrders.sort((a, b) {
-            final aData = a.data() as Map<String, dynamic>;
-            final bData = b.data() as Map<String, dynamic>;
-            final aTime = aData['createdAt'] as Timestamp?;
-            final bTime = bData['createdAt'] as Timestamp?;
-            if (aTime == null || bTime == null) return 0;
-            return bTime.compareTo(aTime);
-          });
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(allOrders.length),
-                const SizedBox(height: 16),
-                _buildSummaryCards(newOrders.length, processingOrders.length,
-                    dispatchedOrders.length),
-                const SizedBox(height: 20),
-                _buildFilterChips(),
-                const SizedBox(height: 20),
-                if (displayedOrders.isEmpty)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text(
-                        "No orders found in this category.",
-                        style: TextStyle(color: Colors.grey, fontSize: 16),
-                      ),
-                    ),
-                  )
-                else
-                  ...displayedOrders.map((doc) => _buildOrderCard(doc)),
-                const SizedBox(height: 80), // Space for bottom nav
-              ],
-            ),
-          );
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _fetchCounts();
+          await _fetchOrders();
         },
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(_totalCount),
+              const SizedBox(height: 16),
+              _buildSummaryCards(_newCount, _processingCount, _dispatchedCount),
+              const SizedBox(height: 20),
+              _buildFilterChips(),
+              const SizedBox(height: 20),
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (_orders.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Text(
+                      "No orders found in this category.",
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  ),
+                )
+              else
+                ..._orders.map((doc) => _buildOrderCard(doc)),
+              
+              if (_isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              if (!_hasMoreData && _orders.isNotEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(
+                    child: Text(
+                      "No more orders",
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ),
+                ),
+                
+              const SizedBox(height: 80), // Space for bottom nav
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -242,9 +341,12 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
               onTap: () {
-                setState(() {
-                  selectedFilter = filter;
-                });
+                if (selectedFilter != filter) {
+                  setState(() {
+                    selectedFilter = filter;
+                  });
+                  _fetchOrders();
+                }
               },
               child: Chip(
                 label: Text(
@@ -302,6 +404,9 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
 
     final price =
         data['totalAmount'] ?? data['price'] ?? data['discountPrice'] ?? 0;
+    
+    final numPrice = num.tryParse(price.toString()) ?? 0;
+    final displayPrice = numPrice == numPrice.toInt() ? numPrice.toInt().toString() : numPrice.toString();
 
     final orderId =
         data['orderId']?.toString() ?? doc.id.substring(0, 8).toUpperCase();
@@ -380,7 +485,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '₹$price',
+                              '₹$displayPrice',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

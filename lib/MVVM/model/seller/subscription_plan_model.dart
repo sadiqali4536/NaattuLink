@@ -9,6 +9,7 @@ class SubscriptionPlanModel {
   final int durationDays;
   final int maxProducts;
   final bool isActive;
+  final int sortOrder;
   final List<String> features;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -22,6 +23,7 @@ class SubscriptionPlanModel {
     this.durationDays = 30,
     required this.maxProducts,
     this.isActive = true,
+    this.sortOrder = 0,
     required this.features,
     this.createdAt,
     this.updatedAt,
@@ -37,6 +39,7 @@ class SubscriptionPlanModel {
       durationDays: map['durationDays'] ?? 30,
       maxProducts: map['maxProducts'] ?? 50,
       isActive: map['isActive'] ?? true,
+      sortOrder: map['sortOrder'] ?? 0,
       features: List<String>.from(map['features'] ?? []),
       createdAt: _parseTimestamp(map['createdAt']),
       updatedAt: _parseTimestamp(map['updatedAt']),
@@ -53,6 +56,7 @@ class SubscriptionPlanModel {
       'durationDays': durationDays,
       'maxProducts': maxProducts,
       'isActive': isActive,
+      'sortOrder': sortOrder,
       'features': features,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),

@@ -21,6 +21,28 @@ class _CartPageState extends State<CartPage> {
   bool _isPriceDetailsExpanded = true;
   final TextEditingController _promoController = TextEditingController();
 
+  int _limit = 10;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
+        setState(() {
+          _limit += 10;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _promoController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   static const Color _navy = Color(0xFF0F2E5A);
   static const Color _lightBg = Color(0xFFEEF3FB);
   static const Color _amber = Color(0xFFFFCA28);
@@ -193,6 +215,7 @@ class _CartPageState extends State<CartPage> {
             .collection('carts')
             .doc(user.uid)
             .collection('items')
+            .limit(_limit)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -238,6 +261,7 @@ class _CartPageState extends State<CartPage> {
             children: [
               Expanded(
                 child: SingleChildScrollView(
+                  controller: _scrollController,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   child: Column(

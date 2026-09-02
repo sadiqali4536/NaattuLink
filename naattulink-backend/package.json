@@ -7,8 +7,12 @@
     "start": "node api/reset-password.js"
   },
   "dependencies": {
+    "@imagekit/nodejs": "^7.11.0",
     "axios": "^1.19.0",
+    "busboy": "^1.6.0",
     "cors": "^2.8.5",
-    "firebase-admin": "^12.0.0"
+    "firebase-admin": "^12.0.0",
+    "imagekit": "^6.0.0",
+    "multer": "^2.3.0"
   }
 }

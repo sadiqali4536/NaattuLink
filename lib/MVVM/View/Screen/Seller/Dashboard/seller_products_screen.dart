@@ -5,9 +5,131 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:naattulink/MVVM/model/seller/store_product_model.dart';
 import 'package:naattulink/MVVM/model/seller/product_variant.dart';
+import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
+import 'package:naattulink/core/imagekit/imagekit_config.dart';
+import 'package:naattulink/core/imagekit/image_storage_type.dart';
 
-class SellerProductsScreen extends StatelessWidget {
+class SellerProductsScreen extends StatefulWidget {
   const SellerProductsScreen({super.key});
+
+  @override
+  State<SellerProductsScreen> createState() => _SellerProductsScreenState();
+}
+
+class _SellerProductsScreenState extends State<SellerProductsScreen> {
+  final ScrollController _scrollController = ScrollController();
+  List<QueryDocumentSnapshot> _products = [];
+  DocumentSnapshot? _lastDocument;
+  bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+
+  int _totalCount = 0;
+  int _activeCount = 0;
+  int _draftCount = 0;
+  int _outOfStockCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCounts();
+    _fetchProducts();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent * 0.9) {
+        _fetchMoreProducts();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchCounts() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final base = FirebaseFirestore.instance
+        .collection('store_products')
+        .where('sellerId', isEqualTo: uid);
+    try {
+      final total = await base.count().get();
+      final active =
+          await base.where('status', isEqualTo: 'ACTIVE').count().get();
+      final draft =
+          await base.where('status', isEqualTo: 'DRAFT').count().get();
+      final out =
+          await base.where('status', isEqualTo: 'OUT OF STOCK').count().get();
+      if (mounted) {
+        setState(() {
+          _totalCount = total.count ?? 0;
+          _activeCount = active.count ?? 0;
+          _draftCount = draft.count ?? 0;
+          _outOfStockCount = out.count ?? 0;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching counts: $e");
+    }
+  }
+
+  Query _buildQuery() {
+    return FirebaseFirestore.instance
+        .collection('store_products')
+        .where('sellerId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+        .limit(10);
+  }
+
+  Future<void> _fetchProducts() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _products = [];
+      _lastDocument = null;
+      _hasMoreData = true;
+    });
+    try {
+      final snap = await _buildQuery().get();
+      if (snap.docs.isNotEmpty) {
+        _lastDocument = snap.docs.last;
+        _products = snap.docs;
+      } else {
+        _hasMoreData = false;
+      }
+    } catch (e) {
+      debugPrint("Error fetching products: $e");
+    } finally {
+      if (mounted)
+        setState(() {
+          _isLoading = false;
+        });
+    }
+  }
+
+  Future<void> _fetchMoreProducts() async {
+    if (_isLoadingMore || !_hasMoreData || _lastDocument == null) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    try {
+      final snap = await _buildQuery().startAfterDocument(_lastDocument!).get();
+      if (snap.docs.isNotEmpty) {
+        _lastDocument = snap.docs.last;
+        _products.addAll(snap.docs);
+      } else {
+        _hasMoreData = false;
+      }
+    } catch (e) {
+      debugPrint("Error fetching more products: $e");
+    } finally {
+      if (mounted)
+        setState(() {
+          _isLoadingMore = false;
+        });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,55 +161,36 @@ class SellerProductsScreen extends StatelessWidget {
           ],
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('store_products')
-              .where('sellerId',
-                  isEqualTo: FirebaseAuth.instance.currentUser?.uid)
-              .snapshots(),
-          builder: (context, snapshot) {
-            int total = 0;
-            int active = 0;
-            int draft = 0;
-            int outOfStock = 0;
-
-            if (snapshot.hasData) {
-              total = snapshot.data!.docs.length;
-              for (var doc in snapshot.data!.docs) {
-                final data = doc.data() as Map<String, dynamic>;
-                final status = (data['status'] ?? '').toString().toUpperCase();
-
-                if (status == 'ACTIVE') {
-                  active++;
-                } else if (status == 'DRAFT') {
-                  draft++;
-                } else if (status == 'OUT OF STOCK') {
-                  outOfStock++;
-                }
-              }
-            }
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildYourProductsHeader(total),
-                  const SizedBox(height: 16),
-                  _buildSummaryCards(active, draft, outOfStock),
-                  const SizedBox(height: 20),
-                  _buildAddProductButton(),
-                  const SizedBox(height: 20),
-                  _buildSearchBar(),
-                  const SizedBox(height: 16),
-                  _buildFilterChips(),
-                  const SizedBox(height: 20),
-                  _buildProductList(snapshot),
-                  const SizedBox(height: 80), // For bottom nav bar
-                ],
-              ),
-            );
-          }),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _fetchCounts();
+          await _fetchProducts();
+        },
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildYourProductsHeader(_totalCount),
+              const SizedBox(height: 16),
+              _buildSummaryCards(_activeCount, _draftCount, _outOfStockCount),
+              const SizedBox(height: 20),
+              _buildAddProductButton(),
+              const SizedBox(height: 20),
+              _buildSearchBar(),
+              const SizedBox(height: 16),
+              _buildFilterChips(),
+              const SizedBox(height: 20),
+              _buildProductList(),
+              if (_isLoadingMore)
+                const Center(child: CircularProgressIndicator()),
+              const SizedBox(height: 80), // For bottom nav bar
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -267,8 +370,8 @@ class SellerProductsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductList(AsyncSnapshot<QuerySnapshot> snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
+  Widget _buildProductList() {
+    if (_isLoading) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 40.0),
@@ -277,16 +380,7 @@ class SellerProductsScreen extends StatelessWidget {
       );
     }
 
-    if (snapshot.hasError) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40.0),
-          child: Text("Error: ${snapshot.error}"),
-        ),
-      );
-    }
-
-    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+    if (_products.isEmpty) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 40.0),
@@ -298,7 +392,7 @@ class SellerProductsScreen extends StatelessWidget {
       );
     }
 
-    final docs = snapshot.data!.docs;
+    final docs = _products;
 
     return ListView.separated(
       shrinkWrap: true,
@@ -548,32 +642,220 @@ class SellerProductsScreen extends StatelessWidget {
                           } else if (value == 'update_stock') {
                             _showStockUpdateDialog(product);
                           } else if (value == 'delete') {
-                            bool confirm = await Get.defaultDialog(
-                                  title: 'Delete Product',
-                                  middleText:
-                                      'Are you sure you want to delete this product?',
-                                  textConfirm: 'Delete',
-                                  textCancel: 'Cancel',
-                                  confirmTextColor: Colors.white,
-                                  buttonColor: Colors.red,
-                                  cancelTextColor: Colors.black,
-                                  backgroundColor: Colors.white,
-                                  onConfirm: () => Get.back(result: true),
-                                  onCancel: () => Get.back(result: false),
+                            bool confirm = await Get.dialog<bool>(
+                                  Dialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    backgroundColor: Colors.white,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red.shade50,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.delete_outline,
+                                              color: Colors.red,
+                                              size: 32,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          const Text(
+                                            'Delete Product',
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1E293B),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            'Are you sure you want to delete this product? This action cannot be undone.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.black54,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 24),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: TextButton(
+                                                  onPressed: () =>
+                                                      Get.back(result: false),
+                                                  style: TextButton.styleFrom(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 14),
+                                                    backgroundColor:
+                                                        Colors.grey.shade100,
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              10),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                    'Cancel',
+                                                    style: TextStyle(
+                                                      color: Colors.black87,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: ElevatedButton(
+                                                  onPressed: () =>
+                                                      Get.back(result: true),
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.red,
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 14),
+                                                    elevation: 0,
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              10),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                    'Delete',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ) ??
                                 false;
 
                             if (confirm) {
                               try {
+                                // Show blocking loading dialog
+                                Get.dialog(
+                                  Center(
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.all(
+                                              Radius.circular(10)),
+                                        ),
+                                        child: const Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            CircularProgressIndicator(
+                                                color: Color(0xFF0F2E5A)),
+                                            SizedBox(height: 16),
+                                            Text("Deleting product...",
+                                                style: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  barrierDismissible: false,
+                                );
+
+                                // 1. Delete images from ImageKit first
+                                if (product.imageMetadata.isNotEmpty) {
+                                  for (var meta in product.imageMetadata) {
+                                    final fileId = meta['imageFileId'];
+                                    final providerId = meta['providerId'];
+                                    final storageTypeStr = meta['storageType'];
+
+                                    if (fileId != null &&
+                                        storageTypeStr != null) {
+                                      try {
+                                        ImageStorageType type =
+                                            ImageStorageType.values.firstWhere(
+                                                (e) => e.name == storageTypeStr,
+                                                orElse: () => ImageStorageType
+                                                    .seller_product_1);
+                                        final config =
+                                            ImageKitConfigManager.getConfig(
+                                                type);
+                                        final imageKitService =
+                                            ImageKitBaseService(
+                                          publicKey: config.publicKey,
+                                          urlEndpoint: config.urlEndpoint,
+                                          storageType: type,
+                                        );
+                                        await imageKitService.deleteImage(
+                                            fileId,
+                                            providerId: providerId);
+                                      } catch (e) {
+                                        debugPrint(
+                                            "Failed to delete image $fileId: $e");
+                                        if (Get.isDialogOpen ?? false)
+                                          Get.back();
+                                        Get.snackbar('Error Deleting Image',
+                                            e.toString(),
+                                            backgroundColor: Colors.red,
+                                            colorText: Colors.white,
+                                            snackPosition: SnackPosition.BOTTOM,
+                                            duration:
+                                                const Duration(seconds: 10),
+                                            margin: const EdgeInsets.all(16));
+                                        return; // Abort product deletion
+                                      }
+                                    }
+                                  }
+                                }
+
+                                // 2. Delete from Firestore
                                 await FirebaseFirestore.instance
                                     .collection('store_products')
                                     .doc(product.id)
                                     .delete();
+
+                                // Close loading dialog
+                                Get.back();
+
                                 Get.snackbar(
-                                    'Success', 'Product deleted successfully');
+                                    'Success', 'Product deleted successfully',
+                                    backgroundColor: Colors.green,
+                                    colorText: Colors.white,
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    margin: const EdgeInsets.all(16));
                               } catch (e) {
+                                // Close loading dialog if open
+                                if (Get.isDialogOpen ?? false) Get.back();
                                 Get.snackbar(
-                                    'Error', 'Failed to delete product');
+                                    'Error', 'Failed to delete product',
+                                    backgroundColor: Colors.red,
+                                    colorText: Colors.white,
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    margin: const EdgeInsets.all(16));
                               }
                             }
                           }

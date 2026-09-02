@@ -8,6 +8,7 @@ import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/my_bookings.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/edit_profile.dart';
 import 'package:naattulink/MVVM/controller/seller/seller_access_controller.dart';
+import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 import 'package:flutter/services.dart';
 
 class AccountProfileScreen extends StatefulWidget {
@@ -64,8 +65,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
           future: _resolveUserIdentity(),
           builder: (context, futureSnapshot) {
             if (futureSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF0F2E5A)));
+              return const AccountProfileSkeleton();
             }
 
             if (!futureSnapshot.hasData || futureSnapshot.data == null) {
@@ -80,9 +80,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                   .snapshots(),
               builder: (context, userSnapshot) {
                 if (userSnapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                      child:
-                          CircularProgressIndicator(color: Color(0xFF0F2E5A)));
+                  return const AccountProfileSkeleton();
                 }
 
                 if (userSnapshot.hasData && userSnapshot.data!.exists) {

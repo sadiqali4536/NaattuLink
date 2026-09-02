@@ -28,6 +28,7 @@ class StoreProductModel {
       : 0;
 
   final List<String> images;
+  final List<Map<String, dynamic>> imageMetadata;
   final String coverImage;
 
   final String sku;
@@ -74,6 +75,7 @@ class StoreProductModel {
     required this.price,
     required this.discountPrice,
     this.images = const [],
+    this.imageMetadata = const [],
     this.coverImage = '',
     this.sku = '',
     this.stockQuantity = 0,
@@ -141,6 +143,7 @@ class StoreProductModel {
           (map['discountPrice'] ?? map['discount_price'] ?? map['price'] ?? 0)
               .toDouble(),
       images: parsedImages,
+      imageMetadata: (map['imageMetadata'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
       coverImage: map['coverImage'] ??
           (parsedImages.isNotEmpty ? parsedImages.first : ''),
       sku: map['sku'] ?? '',
@@ -197,6 +200,7 @@ class StoreProductModel {
       'price': price,
       'discountPrice': discountPrice,
       'images': images,
+      'imageMetadata': imageMetadata,
       'coverImage': coverImage.isNotEmpty
           ? coverImage
           : (images.isNotEmpty ? images.first : ''),

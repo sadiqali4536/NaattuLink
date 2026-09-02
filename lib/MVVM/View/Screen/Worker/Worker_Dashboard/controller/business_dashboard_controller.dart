@@ -2,12 +2,16 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
+import 'package:naattulink/core/imagekit/imagekit_config.dart';
+import 'package:naattulink/core/imagekit/image_storage_type.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 
 class BusinessDashboardController extends GetxController {
   static BusinessDashboardController get to => Get.find<BusinessDashboardController>();
-
+  
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -61,13 +65,24 @@ class BusinessDashboardController extends GetxController {
     try {
       String? imageUrl;
       if (imageFile != null) {
-        // Upload to Firebase Storage
-        final ref = FirebaseStorage.instance
-            .ref()
-            .child('profile_images')
-            .child('$uid.jpg');
-        await ref.putFile(imageFile);
-        imageUrl = await ref.getDownloadURL();
+        final config = ImageKitConfigManager.getConfig(ImageStorageType.workers);
+        final imageKitService = ImageKitBaseService(
+          publicKey: config.publicKey,
+          urlEndpoint: config.urlEndpoint,
+          storageType: ImageStorageType.workers,
+        );
+
+        final originalName = imageFile.path.split('/').last;
+        final fileName = imageKitService.generateFileName(originalName, 'profile');
+        final bytes = await imageFile.readAsBytes();
+
+        final result = await imageKitService.uploadImage(
+          imageBytes: bytes,
+          fileName: fileName,
+          folder: config.defaultFolder,
+        );
+        
+        imageUrl = result.imageUrl;
       }
 
       final updateData = {...data};

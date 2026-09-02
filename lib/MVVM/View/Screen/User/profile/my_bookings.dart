@@ -28,6 +28,21 @@ class _MyBookingsState extends State<MyBookings> {
   String _selectedStatus = 'All';
   final Rx<MyBookingSection> selectedSection = MyBookingSection.bookings.obs;
 
+  int _limit = 10;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
+        setState(() {
+          _limit += 10;
+        });
+      }
+    });
+  }
+
   List<String> get _statusFilters {
     if (selectedSection.value == MyBookingSection.orders) {
       return ['All', 'Pending', 'Cancelled', 'Completed'];
@@ -38,6 +53,7 @@ class _MyBookingsState extends State<MyBookings> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -46,6 +62,8 @@ class _MyBookingsState extends State<MyBookings> {
     return FirebaseFirestore.instance
         .collection('service_bookings')
         .where('userId', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .limit(_limit)
         .snapshots();
   }
 
@@ -54,6 +72,8 @@ class _MyBookingsState extends State<MyBookings> {
     return FirebaseFirestore.instance
         .collection('bookings')
         .where('userId', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .limit(_limit)
         .snapshots();
   }
 
@@ -604,12 +624,18 @@ class _MyBookingsState extends State<MyBookings> {
                           }
 
                           return ListView.builder(
+                            controller: _scrollController,
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                             itemCount: filtered.length + 1,
                             itemBuilder: (context, index) {
                               if (index == filtered.length) {
                                 return Column(
                                   children: [
+                                    if (snapshot.connectionState == ConnectionState.active && (snapshot.data?.docs.length ?? 0) == _limit)
+                                      const Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: Center(child: CircularProgressIndicator()),
+                                      ),
                                     const SizedBox(height: 24),
                                     Icon(
                                       Icons.inventory_2_outlined,

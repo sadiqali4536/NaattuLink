@@ -6,7 +6,7 @@ import 'package:naattulink/MVVM/View/Screen/location/select_location_map_page.da
     as naattulink_map;
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
-import 'package:naattulink/MVVM/View/Screen/Seller/Registration/seller_verification_screen.dart';
+import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/subscription_plans_screen.dart';
 
 class SellerRegistrationController extends GetxController {
   static SellerRegistrationController get to => Get.find();
@@ -14,8 +14,11 @@ class SellerRegistrationController extends GetxController {
   final sellerNameController = TextEditingController();
   final locationController = TextEditingController();
   final phoneController = TextEditingController();
+  final RxString fullPhoneNumber = ''.obs;
   final storeNameController = TextEditingController();
+  final upiIdController = TextEditingController();
   final aboutController = TextEditingController();
+  final otherCategoryController = TextEditingController();
 
   final RxString selectedCategory = ''.obs;
   final RxBool isReviewMode = false.obs;
@@ -37,16 +40,21 @@ class SellerRegistrationController extends GetxController {
     locationController.dispose();
     phoneController.dispose();
     storeNameController.dispose();
+    upiIdController.dispose();
     aboutController.dispose();
+    otherCategoryController.dispose();
     super.onClose();
   }
 
   void proceedToReview() {
     if (sellerNameController.text.isEmpty ||
         locationController.text.isEmpty ||
-        phoneController.text.isEmpty ||
+        fullPhoneNumber.value.isEmpty ||
         storeNameController.text.isEmpty ||
+        upiIdController.text.isEmpty ||
         selectedCategory.value.isEmpty ||
+        (selectedCategory.value == 'Other' &&
+            otherCategoryController.text.isEmpty) ||
         aboutController.text.isEmpty) {
       toastError("Please fill all required fields");
       return;
@@ -80,13 +88,18 @@ class SellerRegistrationController extends GetxController {
     try {
       final sellerSnapshot = await sellerRef.get();
 
+      final categoryToSave = selectedCategory.value == 'Other'
+          ? otherCategoryController.text.trim()
+          : selectedCategory.value;
+
       if (sellerSnapshot.exists) {
         await sellerRef.update({
           'sellerName': sellerNameController.text.trim(),
           'location': locationController.text.trim(),
-          'phone': phoneController.text.trim(),
+          'phone': fullPhoneNumber.value,
           'storeName': storeNameController.text.trim(),
-          'category': selectedCategory.value,
+          'upiId': upiIdController.text.trim(),
+          'category': categoryToSave,
           'aboutBusiness': aboutController.text.trim(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -95,19 +108,19 @@ class SellerRegistrationController extends GetxController {
           'uid': uid,
           'sellerName': sellerNameController.text.trim(),
           'location': locationController.text.trim(),
-          'phone': phoneController.text.trim(),
+          'phone': fullPhoneNumber.value,
           'storeName': storeNameController.text.trim(),
-          'category': selectedCategory.value,
+          'upiId': upiIdController.text.trim(),
+          'category': categoryToSave,
           'aboutBusiness': aboutController.text.trim(),
-          'status': 'pending',
           'storeOpenedAt': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
 
-      toastSuccess("Store created successfully!");
-      Get.offAll(() => const SellerVerificationScreen());
+      toastSuccess("Store created successfully! Please choose a plan.");
+      Get.offAll(() => const SubscriptionPlansScreen());
     } on FirebaseException catch (e) {
       debugPrint("Firebase error: $e");
       toastError(

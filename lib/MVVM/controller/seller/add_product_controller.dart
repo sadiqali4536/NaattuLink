@@ -11,6 +11,9 @@ import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/model/seller/store_product_model.dart';
 import 'package:naattulink/MVVM/model/seller/product_variant.dart';
 import 'package:naattulink/MVVM/model/seller/dynamic_specifications_config.dart';
+import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
+import 'package:naattulink/core/imagekit/imagekit_config.dart';
+import 'package:naattulink/core/imagekit/image_storage_type.dart';
 import 'package:uuid/uuid.dart';
 
 class AddProductController extends GetxController {
@@ -30,9 +33,12 @@ class AddProductController extends GetxController {
   final subcategoryController = TextEditingController();
   final productTypeController = TextEditingController();
 
+  final Rx<File?> coverImage = Rx<File?>(null);
+  final RxString existingCoverImage = ''.obs;
+
   final RxList<File> images = <File>[].obs;
   final RxList<String> existingImages = <String>[].obs;
-  final int maxImages = 8;
+  final int maxImages = 4;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -56,16 +62,18 @@ class AddProductController extends GetxController {
   // --- Computed Stock Getters ---
   int get totalStock => int.tryParse(stockQuantityController.text) ?? 0;
   int get allocatedStock {
-    if (variants.isNotEmpty) {
-      return variants.fold(0, (sum, v) => sum + v.stockQuantity);
-    } else {
-      if (selectedVariantOptions.isEmpty) return 0;
-      return selectedVariantOptions.values.first
-          .fold(0, (sum, opt) => sum + ((opt['stock'] as int?) ?? 0));
+    if (selectedVariantOptions.isEmpty) return 0;
+    int total = 0;
+    for (var list in selectedVariantOptions.values) {
+      total += list.fold(0, (sum, opt) => sum + ((opt['stock'] as int?) ?? 0));
     }
+    return total;
   }
 
-  int get availableStock => totalStock - allocatedStock;
+  int get availableStock {
+    int remain = totalStock - allocatedStock;
+    return remain < 0 ? 0 : remain;
+  }
 
   // --- Step 4: Pricing & Stock (Global for no-variants) ---
   final priceController = TextEditingController();
@@ -80,7 +88,12 @@ class AddProductController extends GetxController {
   final estimatedDeliveryTimeController = TextEditingController();
   final returnPolicyController = TextEditingController();
 
-  final RxBool isSubmitting = false.obs;
+  final RxBool isCashOnDelivery = true.obs;
+  final RxBool isOnlinePayment = true.obs;
+  final RxBool isFreeShipping = false.obs;
+  final RxBool isReturnsAvailable = false.obs;
+
+  final RxString submittingStatus = ''.obs;
   StoreProductModel? productToEdit;
 
   @override
@@ -115,11 +128,45 @@ class AddProductController extends GetxController {
 
   // --- Image Handling ---
 
+  int get currentTotalImages =>
+      (coverImage.value != null || existingCoverImage.value.isNotEmpty
+          ? 1
+          : 0) +
+      existingImages.length +
+      images.length;
+
+  Future<void> pickCoverImage() async {
+    try {
+      final hasCover =
+          coverImage.value != null || existingCoverImage.value.isNotEmpty;
+      if (!hasCover && currentTotalImages >= maxImages) {
+        toastError("Maximum $maxImages images allowed in total.");
+        return;
+      }
+      final XFile? picked =
+          await _picker.pickImage(source: ImageSource.gallery);
+      if (picked != null) {
+        File? compressed = await _compressImage(File(picked.path), 1600);
+        if (compressed != null) {
+          coverImage.value = compressed;
+          existingCoverImage.value = '';
+        }
+      }
+    } catch (e) {
+      toastError("Error picking cover image.");
+    }
+  }
+
+  void removeCoverImage() {
+    coverImage.value = null;
+    existingCoverImage.value = '';
+  }
+
   Future<void> pickImages() async {
     try {
-      final int remaining = maxImages - (existingImages.length + images.length);
+      final int remaining = maxImages - currentTotalImages;
       if (remaining <= 0) {
-        toastError("Maximum $maxImages images allowed.");
+        toastError("Maximum $maxImages images allowed in total.");
         return;
       }
       final List<XFile> picked = await _picker.pickMultiImage();
@@ -173,11 +220,12 @@ class AddProductController extends GetxController {
     int currentAlloc = allocatedStock;
     if (currentAlloc + stock > totalStock) {
       toastError(
-          "Cannot allocate more than available stock (${totalStock - currentAlloc})");
+          "Cannot allocate more than available stock ${totalStock - currentAlloc}");
       return;
     }
 
-    final list = selectedVariantOptions[attribute] ?? [];
+    final list = List<Map<String, dynamic>>.from(
+        selectedVariantOptions[attribute] ?? []);
     if (!list.any((item) => item['name'] == option)) {
       list.add({
         'name': option,
@@ -186,20 +234,59 @@ class AddProductController extends GetxController {
         'stock': stock
       });
       selectedVariantOptions[attribute] = list;
+    } else {
+      toastError("Option '$option' already exists for $attribute.");
+      return;
     }
+
+    final currentMap = Map<String, List<Map<String, dynamic>>>.from(
+      selectedVariantOptions,
+    );
+    currentMap[attribute] = list;
+    selectedVariantOptions.assignAll(currentMap);
+
+    _syncGeneratedVariantsWithOptions();
     _calculateExpectedVariants();
+
+    debugPrint("DEBUG AddVariant: attribute=$attribute, option=$option");
+    debugPrint(
+        "DEBUG selectedVariantOptions: ${selectedVariantOptions.toString()}");
+    debugPrint("DEBUG Variant keys: ${selectedVariantOptions.keys.toList()}");
   }
 
   void removeVariantOption(String attribute, String optionName) {
-    final list = selectedVariantOptions[attribute] ?? [];
+    final list = List<Map<String, dynamic>>.from(
+        selectedVariantOptions[attribute] ?? []);
     list.removeWhere((item) => item['name'] == optionName);
     selectedVariantOptions[attribute] = list;
+    selectedVariantOptions.refresh();
+    _syncGeneratedVariantsWithOptions();
     _calculateExpectedVariants();
   }
 
   void removeVariantAttribute(String attribute) {
     selectedVariantOptions.remove(attribute);
+    selectedVariantOptions.refresh();
+    _syncGeneratedVariantsWithOptions();
     _calculateExpectedVariants();
+  }
+
+  void _syncGeneratedVariantsWithOptions() {
+    variants.removeWhere((variant) {
+      bool containsDeleted = false;
+      variant.attributes.forEach((attrKey, optVal) {
+        if (!selectedVariantOptions.containsKey(attrKey)) {
+          containsDeleted = true;
+        } else {
+          final list = selectedVariantOptions[attrKey]!;
+          if (!list.any((item) => item['name'] == optVal)) {
+            containsDeleted = true;
+          }
+        }
+      });
+      return containsDeleted;
+    });
+    variants.refresh();
   }
 
   void _calculateExpectedVariants() {
@@ -208,13 +295,30 @@ class AddProductController extends GetxController {
       return;
     }
     int count = 1;
+    bool hasAny = false;
     for (var opts in selectedVariantOptions.values) {
-      if (opts.isNotEmpty) count *= opts.length;
+      if (opts.isNotEmpty) {
+        count *= opts.length;
+        hasAny = true;
+      }
     }
-    expectedVariantCount.value = count;
+    expectedVariantCount.value = hasAny ? count : 0;
+    debugPrint("DEBUG ExpectedVariants: count=${expectedVariantCount.value}");
   }
 
   void generateVariants() {
+    debugPrint(
+      'Stage 1 — Selected variant keys: '
+      '${selectedVariantOptions.keys.toList()}',
+    );
+
+    if (selectedVariantOptions.isEmpty) return;
+
+    if (expectedVariantCount.value == 0) {
+      toastError("Please add at least one option to generate variants.");
+      return;
+    }
+
     if (expectedVariantCount.value > 50) {
       toastError(
           "Cannot generate more than 50 variants. Please reduce options.");
@@ -242,14 +346,14 @@ class AddProductController extends GetxController {
           double p = (option['origPrice'] != null &&
                   (option['origPrice'] as double) > 0)
               ? (option['origPrice'] as double)
-              : (map['origPrice'] as double);
+              : 0.0;
           double d = (option['discPrice'] != null &&
                   (option['discPrice'] as double) > 0)
               ? (option['discPrice'] as double)
-              : (map['discPrice'] as double);
+              : 0.0;
           int s = (option['stock'] != null && (option['stock'] as int) > 0)
               ? (option['stock'] as int)
-              : (map['stock'] as int);
+              : 0;
 
           newCombinations.add({
             'attributes': newAttrs,
@@ -273,19 +377,20 @@ class AddProductController extends GetxController {
 
     final existingVariantsMap = <String, ProductVariant>{};
     for (var v in variants) {
-      final key =
-          v.attributes.entries.map((e) => '${e.key}:${e.value}').join('|');
+      final sortedKeys = v.attributes.keys.toList()..sort();
+      final key = sortedKeys.map((k) => '$k:${v.attributes[k]}').join('|');
       existingVariantsMap[key] = v;
     }
 
-    variants.clear();
+    final newVariantsList = <ProductVariant>[];
 
     for (var combo in combinations) {
       final attrs = combo['attributes'] as Map<String, String>;
-      final key = attrs.entries.map((e) => '${e.key}:${e.value}').join('|');
+      final sortedKeys = attrs.keys.toList()..sort();
+      final key = sortedKeys.map((k) => '$k:${attrs[k]}').join('|');
 
       if (existingVariantsMap.containsKey(key)) {
-        variants.add(existingVariantsMap[key]!);
+        newVariantsList.add(existingVariantsMap[key]!);
       } else {
         double finalOrig = (combo['origPrice'] as double) > 0
             ? (combo['origPrice'] as double)
@@ -295,7 +400,7 @@ class AddProductController extends GetxController {
             : baseDiscount;
         int finalStock = combo['stock'] as int;
 
-        variants.add(ProductVariant(
+        newVariantsList.add(ProductVariant(
           id: const Uuid().v4(),
           attributes: attrs,
           price: finalOrig,
@@ -305,6 +410,20 @@ class AddProductController extends GetxController {
         ));
       }
     }
+
+    variants.assignAll(newVariantsList);
+
+    debugPrint(
+      'Stage 2 — Generated combinations: ${combinations.length}',
+    );
+    debugPrint(
+      'Stage 3 — Stock allocation cards: ${variants.length}',
+    );
+
+    for (final variant in variants) {
+      debugPrint('Generated variant: ${variant.toString()}');
+    }
+
     toastSuccess("Generated ${variants.length} variants.");
   }
 
@@ -349,8 +468,58 @@ class AddProductController extends GetxController {
     }
   }
 
+  // --- Grouped Stock Allocation UI Methods ---
+
+  final RxMap<String, bool> expandedAllocations = <String, bool>{}.obs;
+
+  void toggleAllocationExpanded(String attribute) {
+    expandedAllocations[attribute] = !(expandedAllocations[attribute] ?? false);
+  }
+
+  void updateOptionPrice(
+      String attribute, String optionName, double price, double discount) {
+    final currentMap =
+        Map<String, List<Map<String, dynamic>>>.from(selectedVariantOptions);
+    if (currentMap.containsKey(attribute)) {
+      final list = List<Map<String, dynamic>>.from(currentMap[attribute]!);
+      final index = list.indexWhere((item) => item['name'] == optionName);
+      if (index != -1) {
+        final item = Map<String, dynamic>.from(list[index]);
+        item['origPrice'] = price;
+        item['discPrice'] = discount;
+        list[index] = item;
+        currentMap[attribute] = list;
+        selectedVariantOptions.assignAll(currentMap);
+      }
+    }
+  }
+
+  void updateOptionStock(String attribute, String optionName, int stock) {
+    final currentMap =
+        Map<String, List<Map<String, dynamic>>>.from(selectedVariantOptions);
+    if (currentMap.containsKey(attribute)) {
+      final list = List<Map<String, dynamic>>.from(currentMap[attribute]!);
+      final index = list.indexWhere((item) => item['name'] == optionName);
+      if (index != -1) {
+        final item = Map<String, dynamic>.from(list[index]);
+        final currentStock = item['stock'] as int? ?? 0;
+        final diff = stock - currentStock;
+        if (diff > availableStock) {
+          toastError(
+              "Cannot allocate more than available stock ($availableStock)");
+          return;
+        }
+        item['stock'] = stock;
+        list[index] = item;
+        currentMap[attribute] = list;
+        selectedVariantOptions.assignAll(currentMap);
+      }
+    }
+  }
+
   void deleteVariant(String id) {
     variants.removeWhere((v) => v.id == id);
+    variants.refresh();
   }
 
   // --- Step Navigation ---
@@ -417,7 +586,12 @@ class AddProductController extends GetxController {
         ? product.productTypeName
         : product.productTypeId;
 
-    existingImages.addAll(product.images);
+    existingCoverImage.value = product.coverImage;
+    List<String> imgs = List.from(product.images);
+    if (product.coverImage.isNotEmpty) {
+      imgs.remove(product.coverImage);
+    }
+    existingImages.assignAll(imgs);
     specifications.assignAll(product.specifications);
 
     hasVariants.value = product.hasVariants;
@@ -440,7 +614,7 @@ class AddProductController extends GetxController {
 
   // --- Submit ---
   Future<void> submitProduct(String status) async {
-    if (isSubmitting.value) return;
+    if (submittingStatus.value.isNotEmpty) return;
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -448,16 +622,66 @@ class AddProductController extends GetxController {
       return;
     }
 
-    isSubmitting.value = true;
+    submittingStatus.value = status;
     try {
       List<String> uploadedImageUrls = List.from(existingImages);
+      List<Map<String, dynamic>> uploadedImageMetadata =
+          List.from(productToEdit?.imageMetadata ?? []);
+
+      final config =
+          ImageKitConfigManager.getConfig(ImageStorageType.seller_product_1);
+      final imageKitService = ImageKitBaseService(
+        publicKey: config.publicKey,
+        urlEndpoint: config.urlEndpoint,
+        storageType: ImageStorageType.seller_product_1,
+      );
+
+      String finalCoverImageUrl = existingCoverImage.value;
+
+      if (coverImage.value != null) {
+        final originalName = coverImage.value!.path.split('/').last;
+        final fileName =
+            imageKitService.generateFileName(originalName, 'product_cover');
+        final bytes = await coverImage.value!.readAsBytes();
+
+        final result = await imageKitService.uploadImage(
+          imageBytes: bytes,
+          fileName: fileName,
+          folder: config.defaultFolder,
+        );
+
+        finalCoverImageUrl = result.imageUrl;
+        uploadedImageUrls.insert(0, result.imageUrl);
+        uploadedImageMetadata.insert(0, {
+          'imageUrl': result.imageUrl,
+          'imageFileId': result.imageFileId,
+          'providerId': result.providerId,
+          'storageType': ImageStorageType.seller_product_1.name,
+        });
+      } else if (finalCoverImageUrl.isNotEmpty &&
+          !uploadedImageUrls.contains(finalCoverImageUrl)) {
+        uploadedImageUrls.insert(0, finalCoverImageUrl);
+      }
 
       for (File file in images) {
-        final ref = FirebaseStorage.instance.ref().child(
-            'product_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}_${const Uuid().v4()}');
-        await ref.putFile(file);
-        final url = await ref.getDownloadURL();
-        uploadedImageUrls.add(url);
+        final originalName = file.path.split('/').last;
+        final fileName =
+            imageKitService.generateFileName(originalName, 'product');
+        final bytes = await file.readAsBytes();
+
+        final result = await imageKitService.uploadImage(
+          imageBytes: bytes,
+          fileName: fileName,
+          folder: config.defaultFolder,
+        );
+
+        uploadedImageUrls.add(result.imageUrl);
+        uploadedImageMetadata.add({
+          'imageUrl': result.imageUrl,
+          'imageFileId': result.imageFileId,
+          'providerId': result.providerId,
+          'storageType': ImageStorageType.seller_product_1.name,
+        });
       }
 
       final docId = productToEdit?.id ??
@@ -470,6 +694,7 @@ class AddProductController extends GetxController {
       final product = StoreProductModel(
         id: docId,
         sellerId: user.uid,
+        ownerId: user.uid,
         productName: productNameController.text.trim(),
         categoryId: selectedCategoryId.value,
         categoryName: cat.name,
@@ -489,6 +714,8 @@ class AddProductController extends GetxController {
         discountPrice:
             double.tryParse(discountPriceController.text.trim()) ?? 0.0,
         images: uploadedImageUrls,
+        imageMetadata: uploadedImageMetadata,
+        coverImage: finalCoverImageUrl,
         sku: skuController.text.trim(),
         stockQuantity: int.tryParse(stockQuantityController.text.trim()) ?? 0,
         status: status, // e.g. 'active', 'draft', 'pendingApproval'
@@ -498,9 +725,13 @@ class AddProductController extends GetxController {
         variants: hasVariants.value ? variants : [],
         weight: double.tryParse(weightController.text.trim()),
         dimensions: dimensionsController.text.trim(),
-        deliveryCharge: double.tryParse(deliveryChargeController.text.trim()),
+        deliveryCharge: isFreeShipping.value
+            ? 0.0
+            : double.tryParse(deliveryChargeController.text.trim()),
         estimatedDeliveryTime: estimatedDeliveryTimeController.text.trim(),
-        returnPolicy: returnPolicyController.text.trim(),
+        returnPolicy: isReturnsAvailable.value
+            ? returnPolicyController.text.trim()
+            : null,
       );
 
       await FirebaseFirestore.instance
@@ -514,7 +745,7 @@ class AddProductController extends GetxController {
       debugPrint("Error saving product: $e");
       toastError("An error occurred while saving. Please try again.");
     } finally {
-      isSubmitting.value = false;
+      submittingStatus.value = '';
     }
   }
 

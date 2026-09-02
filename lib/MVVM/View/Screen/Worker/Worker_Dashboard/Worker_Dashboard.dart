@@ -441,11 +441,27 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   final user = FirebaseAuth.instance.currentUser;
   String? workerName;
   String? workerCategory;
+  
+  int _limit = 10;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     fetchWorkerDetails();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
+        setState(() {
+          _limit += 10;
+        });
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> fetchWorkerDetails() async {
@@ -530,7 +546,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('bookings').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('bookings')
+            .orderBy('createdAt', descending: true)
+            .limit(_limit)
+            .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const WorkerDashboardSkeleton();
 
@@ -563,6 +583,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           final hasActiveJob = myRequested.isNotEmpty || myApproved.isNotEmpty;
 
           return ListView(
+            controller: _scrollController,
             padding: const EdgeInsets.all(16),
             children: [
               if (myRequested.isNotEmpty)
@@ -598,6 +619,12 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                 const Text("No jobs available at the moment.")
               else
                 ...available.map((doc) => _availableJobCard(doc)),
+              
+              if (snapshot.connectionState == ConnectionState.active && allBookings.length == _limit)
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
             ],
           );
         },

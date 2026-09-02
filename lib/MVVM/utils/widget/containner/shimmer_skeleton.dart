@@ -997,3 +997,156 @@ class WorkerProfileSkeleton extends StatelessWidget {
     );
   }
 }
+
+// 18. Account Profile Skeleton
+class AccountProfileSkeleton extends StatelessWidget {
+  const AccountProfileSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerEffect(
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Top Header Skeleton
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.only(top: 50, bottom: 30),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0F2E5A),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 48),
+                  const SkeletonPlaceholder(
+                      width: 80, height: 80, shape: BoxShape.circle),
+                  const SizedBox(height: 12),
+                  const SkeletonPlaceholder(
+                      width: 140, height: 20, borderRadius: 6),
+                  const SizedBox(height: 8),
+                  const SkeletonPlaceholder(
+                      width: 100, height: 12, borderRadius: 4),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  const SkeletonPlaceholder(
+                      width: 100, height: 15, borderRadius: 4),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 60,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: const [
+                        SkeletonPlaceholder(
+                            width: 36, height: 36, shape: BoxShape.circle),
+                        SizedBox(width: 16),
+                        SkeletonPlaceholder(
+                            width: 120, height: 14, borderRadius: 4),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const SkeletonPlaceholder(
+                      width: 150, height: 15, borderRadius: 4),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 60,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: const [
+                        SkeletonPlaceholder(
+                            width: 36, height: 36, shape: BoxShape.circle),
+                        SizedBox(width: 16),
+                        SkeletonPlaceholder(
+                            width: 140, height: 14, borderRadius: 4),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const SkeletonPlaceholder(
+                      width: 100, height: 15, borderRadius: 4),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: List.generate(
+                        3,
+                        (index) => Row(
+                          children: const [
+                            SkeletonPlaceholder(
+                                width: 36, height: 36, shape: BoxShape.circle),
+                            SizedBox(width: 16),
+                            SkeletonPlaceholder(
+                                width: 120, height: 14, borderRadius: 4),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const SkeletonPlaceholder(
+                      width: 80, height: 15, borderRadius: 4),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 240,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: List.generate(
+                        4,
+                        (index) => Row(
+                          children: const [
+                            SkeletonPlaceholder(
+                                width: 36, height: 36, shape: BoxShape.circle),
+                            SizedBox(width: 16),
+                            SkeletonPlaceholder(
+                                width: 120, height: 14, borderRadius: 4),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 120),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

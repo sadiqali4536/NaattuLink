@@ -45,7 +45,7 @@ class SellerDashboardScreen extends StatelessWidget {
                         const SizedBox(
                             height: 70), // space for overlapping card
                         //_buildQuickActions(),
-                        _buildTodaysOverview(),
+                        _buildTodaysOverview(controller),
                         _buildPromotionalBanner(),
                         _buildRecentOrders(),
                         _buildBottomStats(),
@@ -131,6 +131,36 @@ class SellerDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildStoreCard(SellerDashboardController controller) {
+    final seller = controller.currentSeller;
+
+    String subscriptionText = "Active Subscription";
+    Color subscriptionColor = Colors.green;
+
+    if (seller != null) {
+      if (seller.subscriptionStatus == 'trial' && seller.trialEndDate != null) {
+        final daysLeft = seller.trialEndDate!.difference(DateTime.now()).inDays;
+        subscriptionText =
+            daysLeft > 0 ? "$daysLeft days left trial" : "Trial expired";
+        if (daysLeft <= 0) subscriptionColor = Colors.red;
+      } else if (seller.subscriptionStatus == 'active' &&
+          seller.subscriptionEndDate != null) {
+        final daysLeft =
+            seller.subscriptionEndDate!.difference(DateTime.now()).inDays;
+        subscriptionText =
+            daysLeft > 0 ? "$daysLeft days left" : "Subscription expired";
+        if (daysLeft <= 0) subscriptionColor = Colors.red;
+      } else {
+        subscriptionText = seller.subscriptionStatus.toUpperCase();
+      }
+    }
+
+    String openSince = "Open recently";
+    if (seller?.storeOpenedAt != null) {
+      openSince = "Open since ${seller!.storeOpenedAt!.year}";
+    } else if (seller?.createdAt != null) {
+      openSince = "Open since ${seller!.createdAt!.year}";
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -215,21 +245,21 @@ class SellerDashboardScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.circle, color: Colors.green, size: 8),
+                  Icon(Icons.circle, color: subscriptionColor, size: 8),
                   const SizedBox(width: 6),
                   Text(
-                    "12 days left trial",
+                    subscriptionText,
                     style: TextStyle(
-                      color: Colors.green.shade600,
+                      color: subscriptionColor,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
                   ),
                 ],
               ),
-              const Text(
-                "Open since 2025",
-                style: TextStyle(
+              Text(
+                openSince,
+                style: const TextStyle(
                   color: Colors.grey,
                   fontSize: 12,
                 ),
@@ -333,7 +363,7 @@ class SellerDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTodaysOverview() {
+  Widget _buildTodaysOverview(SellerDashboardController controller) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -366,20 +396,26 @@ class SellerDashboardScreen extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildStatItem(
-                        icon: Icons.receipt_long_outlined,
-                        iconColor: Colors.orange,
-                        title: "Orders",
-                        value: "0",
-                      ),
+                      child: Obx(() => _buildStatItem(
+                            icon: Icons.receipt_long_outlined,
+                            iconColor: Colors.orange,
+                            title: "Orders",
+                            value: controller.totalOrders.value.toString(),
+                          )),
                     ),
                     Expanded(
-                      child: _buildStatItem(
-                        icon: Icons.payments_outlined,
-                        iconColor: Colors.green,
-                        title: "Sales",
-                        value: "₹0",
-                      ),
+                      child: Obx(() {
+                        final sales = controller.totalSales.value;
+                        final displaySales = sales == sales.toInt()
+                            ? sales.toInt().toString()
+                            : sales.toStringAsFixed(2);
+                        return _buildStatItem(
+                          icon: Icons.payments_outlined,
+                          iconColor: Colors.green,
+                          title: "Sales",
+                          value: "₹$displaySales",
+                        );
+                      }),
                     ),
                   ],
                 ),
@@ -387,20 +423,20 @@ class SellerDashboardScreen extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildStatItem(
-                        icon: Icons.inventory_2_outlined,
-                        iconColor: const Color(0xFF0EA5E9),
-                        title: "Products",
-                        value: "0",
-                      ),
+                      child: Obx(() => _buildStatItem(
+                            icon: Icons.inventory_2_outlined,
+                            iconColor: const Color(0xFF0EA5E9),
+                            title: "Products",
+                            value: controller.totalProducts.value.toString(),
+                          )),
                     ),
                     Expanded(
-                      child: _buildStatItem(
-                        icon: Icons.people_outline,
-                        iconColor: Colors.purple,
-                        title: "Customers",
-                        value: "0",
-                      ),
+                      child: Obx(() => _buildStatItem(
+                            icon: Icons.people_outline,
+                            iconColor: Colors.purple,
+                            title: "Customers",
+                            value: controller.totalCustomers.value.toString(),
+                          )),
                     ),
                   ],
                 ),

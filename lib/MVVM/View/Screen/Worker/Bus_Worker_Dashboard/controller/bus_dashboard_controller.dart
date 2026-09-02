@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class BusDashboardController extends GetxController {
@@ -11,6 +12,9 @@ class BusDashboardController extends GetxController {
   final RxBool isLoading = true.obs;
   final RxBool hasError = false.obs;
 
+  RxInt busLimit = 10.obs;
+  final ScrollController scrollController = ScrollController();
+
   String? get uid => FirebaseAuth.instance.currentUser?.uid;
   bool _isInitializing = false;
   bool _isInitialized = false;
@@ -20,6 +24,18 @@ class BusDashboardController extends GetxController {
     super.onInit();
     // Start initialization if not already started (useful for hot reloads)
     initialize();
+    scrollController.addListener(() {
+      if (scrollController.position.pixels >=
+          scrollController.position.maxScrollExtent * 0.9) {
+        fetchMoreBuses();
+      }
+    });
+  }
+
+  @override
+  void onClose() {
+    scrollController.dispose();
+    super.onClose();
   }
 
   Future<void> initialize() async {
@@ -55,6 +71,7 @@ class BusDashboardController extends GetxController {
           .collection('transports')
           .doc(uid)
           .collection('buses')
+          .limit(busLimit.value)
           .get();
       buses.assignAll(busesQuery.docs);
 
@@ -84,14 +101,26 @@ class BusDashboardController extends GetxController {
       }
     });
 
+    _listenToBuses();
+  }
+
+  void _listenToBuses() {
+    if (uid == null) return;
+
     FirebaseFirestore.instance
         .collection('transports')
         .doc(uid)
         .collection('buses')
+        .limit(busLimit.value)
         .snapshots()
         .listen((query) {
       buses.assignAll(query.docs);
     });
+  }
+
+  void fetchMoreBuses() {
+    busLimit.value += 10;
+    _listenToBuses();
   }
 
   Future<void> refreshData() async {

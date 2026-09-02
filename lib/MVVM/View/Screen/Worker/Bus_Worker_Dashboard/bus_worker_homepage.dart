@@ -364,6 +364,7 @@ class _BusWorkerhomepageState extends State<BusWorkerhomepage> {
                                   }
 
                                   return ListView(
+                                    controller: controller.scrollController,
                                     children: busCards,
                                   );
                                 },

@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:naattulink/MVVM/View/Screen/Seller/Registration/seller_registration_screen.dart';
+import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/payment_options_screen.dart';
+import 'package:naattulink/MVVM/controller/seller/subscription_plans_controller.dart';
+import 'package:naattulink/MVVM/model/seller/subscription_plan_model.dart';
 
 class SubscriptionPlansScreen extends StatelessWidget {
   const SubscriptionPlansScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    if (!Get.isRegistered<SubscriptionPlansController>()) {
+      Get.put(SubscriptionPlansController());
+    }
+    final controller = Get.find<SubscriptionPlansController>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -21,77 +28,110 @@ class SubscriptionPlansScreen extends StatelessWidget {
         ),
         iconTheme: const IconThemeData(color: Color(0xFF0F2E5A)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              "Start your journey with NaattuLink",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E293B),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Select a plan that fits your business needs.",
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            _buildPlanCard(
-              title: "Free Trial",
-              price: "₹0",
-              duration: "for 14 days",
-              features: [
-                "List up to 10 products",
-                "Basic store analytics",
-                "Local search visibility"
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF0F2E5A)));
+        }
+
+        if (controller.error.isNotEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(controller.error.value,
+                    style: const TextStyle(color: Colors.red)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: controller.retry,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F2E5A)),
+                  child: const Text("Retry",
+                      style: TextStyle(color: Colors.white)),
+                ),
               ],
-              buttonText: "Start Free Trial",
-              isPopular: false,
-              onSelect: () => _proceedToRegistration(),
             ),
-            const SizedBox(height: 20),
-            _buildPlanCard(
-              title: "Premium Plan",
-              price: "₹499",
-              duration: "per month",
-              features: [
-                "Unlimited product listings",
-                "Advanced analytics & reports",
-                "Priority local search visibility",
-                "Customer support"
+          );
+        }
+
+        if (controller.plans.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon(Icons.inventory_2_outlined,
+                //     size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                const Text(
+                  "Currently no subscription available",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
-              buttonText: "Choose Premium",
-              isPopular: true,
-              onSelect: () => _proceedToRegistration(),
             ),
-          ],
-        ),
-      ),
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Text(
+                "Start your journey with NaattuLink",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Select a plan that fits your business needs.",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              ...controller.plans.map((plan) {
+                // Determine if a plan is popular just as an example (e.g. Premium Plan)
+                final isPopular = plan.name.toLowerCase().contains('premium') ||
+                    plan.sortOrder == 2;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: _buildPlanCard(
+                    plan: plan,
+                    isPopular: isPopular,
+                    onSelect: () => _proceedToPayment(plan),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      }),
     );
   }
 
-  void _proceedToRegistration() {
-    Get.to(() => const SellerRegistrationScreen());
+  void _proceedToPayment(SubscriptionPlanModel plan) {
+    Get.to(() => PaymentOptionsScreen(plan: plan));
   }
 
   Widget _buildPlanCard({
-    required String title,
-    required String price,
-    required String duration,
-    required List<String> features,
-    required String buttonText,
+    required SubscriptionPlanModel plan,
     required bool isPopular,
     required VoidCallback onSelect,
   }) {
+    String priceDisplay =
+        plan.price == 0 ? "₹0" : "₹${plan.price.toStringAsFixed(0)}";
+    String buttonText = plan.price == 0 ? "Start Free Trial" : "Subscribe";
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -139,7 +179,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  plan.name,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -148,10 +188,11 @@ class SubscriptionPlansScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      price,
+                      priceDisplay,
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -159,14 +200,11 @@ class SubscriptionPlansScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        duration,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
+                    Text(
+                      plan.billingPeriod,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
                       ),
                     ),
                   ],
@@ -174,7 +212,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 const Divider(color: Color(0xFFF1F5F9)),
                 const SizedBox(height: 16),
-                ...features.map((feature) => Padding(
+                ...plan.features.map((feature) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
                         children: [
@@ -196,19 +234,19 @@ class SubscriptionPlansScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
                   child: ElevatedButton(
                     onPressed: onSelect,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isPopular
                           ? const Color(0xFF0F2E5A)
-                          : const Color(0xFFF1F5F9),
+                          : const Color(0xFFF0F6FF),
                       foregroundColor:
                           isPopular ? Colors.white : const Color(0xFF0F2E5A),
-                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 0,
                     ),
                     child: Text(
                       buttonText,
