@@ -3,9 +3,12 @@ import 'package:get/get.dart';
 import 'package:naattulink/MVVM/controller/seller/seller_registration_controller.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl_phone_field/country_picker_dialog.dart';
+import 'package:naattulink/MVVM/model/seller/subscription_plan_model.dart';
 
 class SellerRegistrationScreen extends StatelessWidget {
-  const SellerRegistrationScreen({super.key});
+  final SubscriptionPlanModel plan;
+
+  const SellerRegistrationScreen({super.key, required this.plan});
 
   @override
   Widget build(BuildContext context) {
@@ -14,6 +17,7 @@ class SellerRegistrationScreen extends StatelessWidget {
       Get.put(SellerRegistrationController());
     }
     final controller = SellerRegistrationController.to;
+    controller.selectedPlan = plan;
 
     return Obx(() {
       final isReview = controller.isReviewMode.value;

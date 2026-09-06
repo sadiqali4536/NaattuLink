@@ -112,6 +112,47 @@ class SellerVerificationScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
+            // Progress Bar
+            SizedBox(
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Text(
+                        "Progress",
+                        style: TextStyle(
+                          color: Color(0xFF0A235C),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "50%",
+                        style: TextStyle(
+                          color: Color(0xFF0A235C),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: 0.5,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF0A235C)),
+                      minHeight: 8,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
+
             // Partner Welcome Card
             Container(
               padding: const EdgeInsets.all(20),
@@ -166,24 +207,26 @@ class SellerVerificationScreen extends StatelessWidget {
 
             // Vertical Stepper
             _buildStepperItem(
-              title: "Registration Submitted",
-              subtitle: "Completed recently",
-              icon: Icons.check,
+              title: "Store Created",
+              subtitle: "Completed",
+              icon: Icons.store,
               iconBgColor: const Color(0xFF0A235C),
               iconColor: Colors.white,
+              lineColor: const Color(0xFF0A235C),
               isLast: false,
             ),
+
             _buildStepperItem(
-              title: "Manual Verification",
+              title: "Admin Verification",
               subtitle: "In Progress",
               subtitleColor: Colors.yellow[700],
-              icon: Icons.search,
+              icon: Icons.admin_panel_settings,
               iconBgColor: Colors.yellow[700]!,
               iconColor: const Color(0xFF0A235C),
               isLast: false,
             ),
             _buildStepperItem(
-              title: "Account Activation",
+              title: "Store Activation",
               subtitle: "Expected in 24h",
               icon: Icons.verified_user_outlined,
               iconBgColor: Colors.transparent,
@@ -248,6 +291,7 @@ class SellerVerificationScreen extends StatelessWidget {
     required Color iconColor,
     Color? borderColor,
     Color? subtitleColor,
+    Color? lineColor,
     required bool isLast,
   }) {
     return IntrinsicHeight(
@@ -272,7 +316,7 @@ class SellerVerificationScreen extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: Colors.grey[200],
+                    color: lineColor ?? Colors.grey[200],
                     margin: const EdgeInsets.symmetric(vertical: 4),
                   ),
                 )

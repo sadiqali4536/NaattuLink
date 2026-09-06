@@ -5,11 +5,13 @@ import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Screen/location/select_location_map_page.dart'
     as naattulink_map;
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
-import 'package:naattulink/MVVM/utils/Config/Toast.dart';
-import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/subscription_plans_screen.dart';
+import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/payment_options_screen.dart';
+import 'package:naattulink/MVVM/model/seller/subscription_plan_model.dart';
 
 class SellerRegistrationController extends GetxController {
   static SellerRegistrationController get to => Get.find();
+
+  SubscriptionPlanModel? selectedPlan;
 
   final sellerNameController = TextEditingController();
   final locationController = TextEditingController();
@@ -101,6 +103,7 @@ class SellerRegistrationController extends GetxController {
           'upiId': upiIdController.text.trim(),
           'category': categoryToSave,
           'aboutBusiness': aboutController.text.trim(),
+          'status': 'draft',
           'updatedAt': FieldValue.serverTimestamp(),
         });
       } else {
@@ -113,14 +116,19 @@ class SellerRegistrationController extends GetxController {
           'upiId': upiIdController.text.trim(),
           'category': categoryToSave,
           'aboutBusiness': aboutController.text.trim(),
+          'status': 'draft',
           'storeOpenedAt': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
 
-      toastSuccess("Store created successfully! Please choose a plan.");
-      Get.offAll(() => const SubscriptionPlansScreen());
+      toastSuccess("Store drafted successfully! Please proceed to payment.");
+      if (selectedPlan != null) {
+        Get.offAll(() => PaymentOptionsScreen(plan: selectedPlan!));
+      } else {
+        toastError("No plan selected, please restart the process.");
+      }
     } on FirebaseException catch (e) {
       debugPrint("Firebase error: $e");
       toastError(

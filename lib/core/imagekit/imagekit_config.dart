@@ -16,7 +16,7 @@ class ImageKitConfigManager {
       case ImageStorageType.seller_product_2:
         return const ImageKitConfig(
           publicKey:
-              'public_seller_product_2', // Make sure to put your real PUBLIC key here
+              'public_Cbw3KbrgViTi3MbL8hSLwxyXrxI=', // Make sure to put your real PUBLIC key here
           privateKey:
               '', // Leave empty! The backend will fetch the private key securely from Firebase!
           urlEndpoint: 'https:seller_product_2',

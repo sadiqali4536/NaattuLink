@@ -34,7 +34,11 @@ class SellerAccessController extends GetxController {
         // Document does not exist -> SellerIntroductionScreen
         Get.to(() => const SellerIntroductionScreen());
       } else {
-        if (seller.status == 'pending' || seller.status == 'Pending') {
+        if (seller.status == 'draft' || seller.status == 'Draft') {
+          Get.to(() => const SubscriptionPlansScreen());
+        } else if (seller.status == 'pending' ||
+            seller.status == 'Pending' ||
+            seller.status == 'pending_verification') {
           Get.to(() => const SellerVerificationScreen());
         } else if (seller.status == 'active' || seller.status == 'Active') {
           Get.to(() => const SellerDashboardScreen());

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:naattulink/MVVM/View/Screen/Seller/Registration/seller_registration_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/payment_options_screen.dart';
 import 'package:naattulink/MVVM/controller/seller/subscription_plans_controller.dart';
 import 'package:naattulink/MVVM/model/seller/subscription_plan_model.dart';
@@ -120,7 +121,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
   }
 
   void _proceedToPayment(SubscriptionPlanModel plan) {
-    Get.to(() => PaymentOptionsScreen(plan: plan));
+    Get.to(() => SellerRegistrationScreen(plan: plan));
   }
 
   Widget _buildPlanCard({

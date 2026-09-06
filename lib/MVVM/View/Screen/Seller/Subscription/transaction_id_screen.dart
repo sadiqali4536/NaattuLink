@@ -88,13 +88,31 @@ class TransactionIdScreen extends StatelessWidget {
               
               const SizedBox(height: 32),
               
-              const Text(
-                "Transaction ID",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF334155),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Transaction ID",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                  if (paymentMethod == 'UPI')
+                    Obx(() {
+                      int minutes = controller.remainingSeconds.value ~/ 60;
+                      int seconds = controller.remainingSeconds.value % 60;
+                      return Text(
+                        "Time left: ${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      );
+                    }),
+                ],
               ),
               const SizedBox(height: 8),
               TextField(

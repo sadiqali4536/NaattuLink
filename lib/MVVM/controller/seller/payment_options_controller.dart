@@ -52,13 +52,10 @@ class PaymentOptionsController extends GetxController {
 
     isProcessing.value = false;
 
-    // Mock Transaction ID generated from mock payment gateway
-    String mockTransactionId = 'TXN${DateTime.now().millisecondsSinceEpoch}';
-
     Get.to(() => TransactionIdScreen(
           plan: plan,
           paymentMethod: selectedPaymentMethod.value,
-          initialTransactionId: mockTransactionId,
+          initialTransactionId: '',
         ));
   }
 }
