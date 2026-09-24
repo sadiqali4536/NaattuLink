@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
 import 'package:naattulink/core/imagekit/imagekit_config.dart';
-import 'package:naattulink/core/imagekit/image_storage_type.dart';
+
 import 'package:get/get.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cherry_toast/cherry_toast.dart';
@@ -339,11 +339,11 @@ class HealthcareDashboardController extends GetxController {
       String? imageUrl;
       if (imageFile != null) {
         final config =
-            ImageKitConfigManager.getConfig(ImageStorageType.workers);
+            await ImageKitConfigManager.getConfig(storageType: 'workers');
         final imageKitService = ImageKitBaseService(
           publicKey: config.publicKey,
           urlEndpoint: config.urlEndpoint,
-          storageType: ImageStorageType.workers,
+          storageType: config.storageType,
         );
 
         final originalName = imageFile.path.split('/').last;

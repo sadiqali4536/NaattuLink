@@ -13,7 +13,7 @@ class user_Dashboard extends StatefulWidget {
   final int initialHomeCategoryIndex;
   final int initialIndex;
   const user_Dashboard({
-    super.key, 
+    super.key,
     this.initialHomeCategoryIndex = 0,
     this.initialIndex = 0,
   });
@@ -34,9 +34,9 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    // Ensure CartController is put into memory
-    Get.put(CartController());
-    
+    // Ensure CartController is put into memory permanently
+    Get.put(CartController(), permanent: true);
+
     _bottomBarPages = [
       Homepage(
           key: _homepageKey,
@@ -51,9 +51,10 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final iconPaths = [
-      "assets/icons/cart_bottombar.png",
-      "assets/icons/booking.png",
-      "assets/icons/profile_bottombar.png",
+      "assets/icons/home_new.png",
+      "assets/icons/cart_new.png",
+      "assets/icons/bookings_new.png",
+      "assets/icons/profile_new.png",
     ];
 
     for (final path in iconPaths) {
@@ -78,18 +79,20 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
 
   Widget _buildIcon(int index, bool isActive) {
     final color = isActive
-        ? Color.fromARGB(255, 18, 56, 110)
-        : const Color(0xFF858282); // Purple for active
+        ? Colors.white
+        : const Color(0xFF858282); // Active is white, inactive is grey
     switch (index) {
       case 0:
-        return Icon(Icons.home_outlined, color: color, size: 26);
+        return Image.asset("assets/icons/home_new.png",
+            color: color, width: 26, height: 26);
       case 1:
         return Obx(() {
-          final cartCount = Get.find<CartController>().totalItemCount;
+          final cartCount = Get.find<CartController>().cartItems.length;
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              Icon(Icons.shopping_cart_outlined, color: color, size: 26),
+              Image.asset("assets/icons/cart_new.png",
+                  color: color, width: 26, height: 26),
               if (cartCount > 0)
                 Positioned(
                   right: -6,
@@ -120,9 +123,79 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
           );
         });
       case 2:
-        return Icon(Icons.assignment_outlined, color: color, size: 26);
+        return Image.asset("assets/icons/bookings_new.png",
+            color: color, width: 26, height: 26);
       case 3:
-        return Icon(Icons.person_outline, color: color, size: 26);
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid == null) {
+          return Image.asset("assets/icons/profile_new.png",
+              color: color, width: 26, height: 26);
+        }
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('store_products')
+              .where('sellerId', isEqualTo: uid)
+              .limit(20)
+              .snapshots(),
+          builder: (context, snapshot) {
+            int outOfStockCount = 0;
+            if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+              for (var doc in snapshot.data!.docs) {
+                final data = doc.data() as Map<String, dynamic>;
+                bool isProductOutOfStock = false;
+                final status = (data['status']?.toString().toUpperCase() ?? '');
+                if (status == 'OUT OF STOCK' || status == 'OUT_OF_STOCK') {
+                  isProductOutOfStock = true;
+                } else {
+                  final stockQty = data['stockQuantity'];
+                  if (stockQty != null) {
+                    final qty = num.tryParse(stockQty.toString()) ?? 0;
+                    if (qty <= 0) isProductOutOfStock = true;
+                  }
+                  if (!isProductOutOfStock) {
+                    final variants = data['variants'];
+                    if (variants is List && variants.isNotEmpty) {
+                      isProductOutOfStock = variants.every((v) {
+                        final vStock = num.tryParse(
+                                (v is Map ? v['stockQuantity'] : null)
+                                        ?.toString() ??
+                                    '1') ??
+                            1;
+                        return vStock <= 0;
+                      });
+                    }
+                  }
+                }
+                if (isProductOutOfStock) outOfStockCount++;
+              }
+            }
+
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Image.asset("assets/icons/profile_new.png",
+                    color: color, width: 26, height: 26),
+                if (outOfStockCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.warning,
+                        color: Colors.red,
+                        size: 14,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
       default:
         return const SizedBox.shrink();
     }
@@ -151,32 +224,25 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
               AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isActive
-                      ? Color.fromARGB(255, 255, 212, 13).withOpacity(0.08)
-                      : Colors.transparent,
+                  color:
+                      isActive ? const Color(0xFF0F2E5A) : Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildIcon(index, isActive),
-                    const SizedBox(height: 4),
-                    Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: isActive
-                            ? Color(0xFF0F2E5A)
-                            : const Color(0xFF858282),
-                        fontWeight:
-                            isActive ? FontWeight.w600 : FontWeight.w500,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
+                child: _buildIcon(index, isActive),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isActive
+                      ? const Color(0xFF0F2E5A)
+                      : const Color(0xFF858282),
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -189,6 +255,7 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromRGBO(255, 255, 255, 1),
       body: FadeIndexedStack(
         index: _currentIndex,
         children: _bottomBarPages,
@@ -196,16 +263,19 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
       extendBody: true,
       bottomNavigationBar: SafeArea(
         child: Container(
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: Colors.grey.shade200, width: 1),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 15,
-                spreadRadius: 2,
-                offset: const Offset(0, 4),
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                spreadRadius: 0,
+                offset: const Offset(0, -4),
               ),
             ],
           ),

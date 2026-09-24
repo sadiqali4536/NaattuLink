@@ -8,6 +8,8 @@ import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/payment_options_screen.dart';
 import 'package:naattulink/MVVM/model/seller/subscription_plan_model.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class SellerRegistrationController extends GetxController {
   static SellerRegistrationController get to => Get.find();
 
@@ -26,15 +28,38 @@ class SellerRegistrationController extends GetxController {
   final RxBool isReviewMode = false.obs;
   final RxBool acceptedTerms = false.obs;
 
-  final categories = [
-    'Groceries & Spices',
-    'Fashion & Accessories',
-    'Electronics',
-    'Home & Kitchen',
-    'Handmade Products',
-    'Gifts & Toys',
-    'Other'
-  ];
+  final RxList<String> categories = <String>[].obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('store_product_categories')
+          .get();
+
+      final List<String> fetchedCategories = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return (data['name'] ?? data['Name'] ?? data['category'] ?? 'Unknown')
+            .toString();
+      }).toList();
+
+      if (!fetchedCategories.contains('Other')) {
+        fetchedCategories.add('Other');
+      }
+
+      categories.assignAll(fetchedCategories);
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to fetch categories: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 5));
+      categories.assignAll(['Other']);
+    }
+  }
 
   @override
   void onClose() {

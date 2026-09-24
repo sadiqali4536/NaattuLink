@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { authenticateAdmin } = require('./utils');
+const { authenticateAdmin } = require('./_utils');
 const cors = require('cors')({ origin: true });
 
 // Ensure Firebase is initialized

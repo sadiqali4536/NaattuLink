@@ -15,20 +15,24 @@ class SellerOrdersScreen extends StatefulWidget {
 
 class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
   String selectedFilter = 'All';
-  final List<String> filters = ['All', 'New', 'Processing', 'Dispatched'];
-  
+  final List<String> filters = ['All', 'New', 'Processing'];
+
   final ScrollController _scrollController = ScrollController();
-  
+
   List<QueryDocumentSnapshot> _orders = [];
   DocumentSnapshot? _lastDocument;
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
-  
+
   int _totalCount = 0;
   int _newCount = 0;
   int _processingCount = 0;
   int _dispatchedCount = 0;
+
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  List<QueryDocumentSnapshot> _allFilteredOrders = [];
 
   @override
   void initState() {
@@ -41,35 +45,55 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
         _fetchMoreOrders();
       }
     });
+    _searchController.addListener(() {
+      _applySearch();
+    });
   }
-  
+
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _fetchCounts() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     final baseQuery = FirebaseFirestore.instance
         .collection('bookings')
         .where('sellerId', isEqualTo: currentUser.uid)
-        .where('bookingType', isEqualTo: 'Product Order');
-        
+        .where('bookingType', isEqualTo: 'Product Order')
+        .limit(20);
+
     try {
-      final totalSnap = await baseQuery.count().get();
-      final newSnap = await baseQuery.where('status', whereIn: ['pending', 'pending_verification']).count().get();
-      final processingSnap = await baseQuery.where('status', isEqualTo: 'processing').count().get();
-      final dispatchedSnap = await baseQuery.where('status', whereIn: ['shipped', 'dispatched']).count().get();
-      
+      final snapshot = await baseQuery.get();
+      int total = 0;
+      int newC = 0;
+      int procC = 0;
+      int dispC = 0;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = (data['status']?.toString() ?? '').toLowerCase();
+        if (status == 'pending' || status == 'pending_verification') {
+          newC++;
+          total++;
+        } else if (status == 'processing') {
+          procC++;
+          total++;
+        } else if (status == 'shipped' || status == 'dispatched') {
+          dispC++;
+        }
+      }
+
       if (mounted) {
         setState(() {
-          _totalCount = totalSnap.count ?? 0;
-          _newCount = newSnap.count ?? 0;
-          _processingCount = processingSnap.count ?? 0;
-          _dispatchedCount = dispatchedSnap.count ?? 0;
+          _totalCount = total;
+          _newCount = newC;
+          _processingCount = procC;
+          _dispatchedCount = dispC;
         });
       }
     } catch (e) {
@@ -77,41 +101,56 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
     }
   }
 
-  Query _buildQuery() {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    Query query = FirebaseFirestore.instance
-        .collection('bookings')
-        .where('sellerId', isEqualTo: currentUser?.uid)
-        .where('bookingType', isEqualTo: 'Product Order');
-
-    if (selectedFilter == 'New') {
-      query = query.where('status', whereIn: ['pending', 'pending_verification']);
-    } else if (selectedFilter == 'Processing') {
-      query = query.where('status', isEqualTo: 'processing');
-    } else if (selectedFilter == 'Dispatched') {
-      query = query.where('status', whereIn: ['shipped', 'dispatched']);
-    }
-
-    return query.orderBy('createdAt', descending: true).limit(10);
-  }
-
   Future<void> _fetchOrders() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
     if (_isLoading) return;
     setState(() {
       _isLoading = true;
       _orders = [];
-      _lastDocument = null;
-      _hasMoreData = true;
+      _hasMoreData = false;
     });
 
     try {
-      final snapshot = await _buildQuery().get();
-      if (snapshot.docs.isNotEmpty) {
-        _lastDocument = snapshot.docs.last;
-        _orders = snapshot.docs;
-      } else {
-        _hasMoreData = false;
-      }
+      final baseQuery = FirebaseFirestore.instance
+          .collection('bookings')
+          .where('sellerId', isEqualTo: currentUser.uid)
+          .where('bookingType', isEqualTo: 'Product Order');
+
+      final snapshot = await baseQuery.get();
+      List<QueryDocumentSnapshot> allDocs = snapshot.docs;
+
+      // Sort locally by createdAt descending
+      allDocs.sort((a, b) {
+        final aData = a.data() as Map<String, dynamic>;
+        final bData = b.data() as Map<String, dynamic>;
+        final aDate = (aData['createdAt'] as Timestamp?)?.toDate() ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = (bData['createdAt'] as Timestamp?)?.toDate() ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+
+      // Filter locally based on selected tab
+      allDocs = allDocs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = (data['status']?.toString() ?? '').toLowerCase();
+
+        if (selectedFilter == 'New') {
+          return status == 'pending' || status == 'pending_verification';
+        } else if (selectedFilter == 'Processing') {
+          return status == 'processing';
+        } else {
+          // 'All' only shows New and Processing
+          return status == 'pending' ||
+              status == 'pending_verification' ||
+              status == 'processing';
+        }
+      }).toList();
+
+      _allFilteredOrders = allDocs;
+      _orders = allDocs;
     } catch (e) {
       debugPrint("Error fetching orders: $e");
     } finally {
@@ -119,34 +158,29 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
         setState(() {
           _isLoading = false;
         });
+        _applySearch();
       }
     }
   }
 
-  Future<void> _fetchMoreOrders() async {
-    if (_isLoadingMore || !_hasMoreData || _lastDocument == null) return;
-    
-    setState(() {
-      _isLoadingMore = true;
-    });
-
-    try {
-      final snapshot = await _buildQuery().startAfterDocument(_lastDocument!).get();
-      if (snapshot.docs.isNotEmpty) {
-        _lastDocument = snapshot.docs.last;
-        _orders.addAll(snapshot.docs);
-      } else {
-        _hasMoreData = false;
-      }
-    } catch (e) {
-      debugPrint("Error fetching more orders: $e");
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingMore = false;
-        });
-      }
+  void _applySearch() {
+    final query =
+        _searchController.text.trim().toLowerCase().replaceAll('#', '');
+    if (query.isEmpty) {
+      if (mounted) setState(() => _orders = _allFilteredOrders);
+      return;
     }
+    final filtered = _allFilteredOrders.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      String orderId = data['orderId']?.toString() ?? '';
+      if (orderId.isEmpty) orderId = doc.id;
+      return orderId.toLowerCase().contains(query);
+    }).toList();
+    if (mounted) setState(() => _orders = filtered);
+  }
+
+  Future<void> _fetchMoreOrders() async {
+    // Disabled pagination since we are doing in-memory filtering and fetching all
   }
 
   @override
@@ -161,24 +195,47 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF8FAFC),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.search, color: Color(0xFF0F2E5A)),
-          onPressed: () {},
-        ),
-        title: const Text(
-          'Orders',
-          style: TextStyle(
-            color: Color(0xFF0F2E5A),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
+        leading: _isSearching
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF0F2E5A)),
+                onPressed: () {
+                  setState(() {
+                    _isSearching = false;
+                    _searchController.clear();
+                  });
+                },
+              )
+            : IconButton(
+                icon: const Icon(Icons.search, color: Color(0xFF0F2E5A)),
+                onPressed: () {
+                  setState(() => _isSearching = true);
+                },
+              ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                onChanged: (v) => _applySearch(),
+                decoration: const InputDecoration(
+                  hintText: 'Search by Order ID...',
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(color: Color(0xFF0F2E5A)),
+              )
+            : const Text(
+                'Orders',
+                style: TextStyle(
+                  color: Color(0xFF0F2E5A),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+        centerTitle: !_isSearching,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined,
-                color: Color(0xFF0F2E5A)),
-            onPressed: () {},
-          ),
+          if (_isSearching && _searchController.text.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.clear, color: Color(0xFF0F2E5A)),
+              onPressed: () => _searchController.clear(),
+            ),
         ],
       ),
       body: RefreshIndicator(
@@ -218,7 +275,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                 )
               else
                 ..._orders.map((doc) => _buildOrderCard(doc)),
-              
+
               if (_isLoadingMore)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -234,7 +291,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                     ),
                   ),
                 ),
-                
+
               const SizedBox(height: 80), // Space for bottom nav
             ],
           ),
@@ -266,7 +323,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
     );
   }
 
-  Widget _buildSummaryCards(int newCount, int prepCount, int completedCount) {
+  Widget _buildSummaryCards(int newCount, int prepCount, int dispatchedCount) {
     return Row(
       children: [
         Expanded(
@@ -289,10 +346,10 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
         const SizedBox(width: 8),
         Expanded(
           child: _buildSummaryCard(
-            completedCount.toString(),
+            dispatchedCount.toString(),
             'Dispatched',
-            Colors.white,
-            Colors.black,
+            const Color(0xFFECFDF5),
+            Colors.green,
           ),
         ),
       ],
@@ -390,23 +447,32 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
     Color statusColor = const Color(0xFF0F2E5A);
     Color statusBgColor = const Color(0xFFE2E8F0);
 
-    if (rawStatus == 'processing') {
+    final String lowerStatus = rawStatus.toString().toLowerCase();
+
+    if (lowerStatus == 'processing') {
       displayStatus = 'PROCESSING';
       statusIcon = Icons.circle;
       statusColor = Colors.orange;
       statusBgColor = Colors.orange.withOpacity(0.1);
-    } else if (rawStatus == 'shipped' || rawStatus == 'dispatched') {
+    } else if (lowerStatus == 'shipped' || lowerStatus == 'dispatched') {
       displayStatus = 'DISPATCHED';
       statusIcon = Icons.local_shipping;
       statusColor = Colors.green;
       statusBgColor = Colors.green.withOpacity(0.1);
+    } else if (lowerStatus == 'cancelled' || lowerStatus == 'rejected') {
+      displayStatus = lowerStatus.toUpperCase();
+      statusIcon = Icons.cancel;
+      statusColor = Colors.red;
+      statusBgColor = Colors.red.withOpacity(0.1);
     }
 
     final price =
         data['totalAmount'] ?? data['price'] ?? data['discountPrice'] ?? 0;
-    
+
     final numPrice = num.tryParse(price.toString()) ?? 0;
-    final displayPrice = numPrice == numPrice.toInt() ? numPrice.toInt().toString() : numPrice.toString();
+    final displayPrice = numPrice == numPrice.toInt()
+        ? numPrice.toInt().toString()
+        : numPrice.toString();
 
     final orderId =
         data['orderId']?.toString() ?? doc.id.substring(0, 8).toUpperCase();
@@ -531,6 +597,22 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                         color: Colors.grey,
                       ),
                     ),
+                    if ((lowerStatus == 'cancelled' ||
+                            lowerStatus == 'rejected') &&
+                        data['cancellationReason'] != null &&
+                        data['cancellationReason'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Reason: ${data['cancellationReason']}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.red,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -563,8 +645,11 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                               }
                             ],
                           };
-                          Get.to(() =>
-                              SellerOrderDetailsScreen(orderData: mappedData));
+                          Get.to(() => SellerOrderDetailsScreen(
+                              orderData: mappedData))?.then((_) {
+                            _fetchCounts();
+                            _fetchOrders();
+                          });
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,

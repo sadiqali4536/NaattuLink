@@ -11,6 +11,8 @@ class CartItemModel {
   final String? variantId;
   final String? variantName;
   final String? sellerId;
+  final bool? isCashOnDelivery;
+  final bool? isOnlinePayment;
   final DateTime addedAt;
   final DateTime updatedAt;
 
@@ -25,6 +27,8 @@ class CartItemModel {
     this.variantId,
     this.variantName,
     this.sellerId,
+    this.isCashOnDelivery = true,
+    this.isOnlinePayment = true,
     required this.addedAt,
     required this.updatedAt,
   });
@@ -41,6 +45,8 @@ class CartItemModel {
       variantId: map['variantId'],
       variantName: map['variantName'],
       sellerId: map['sellerId'],
+      isCashOnDelivery: map['isCashOnDelivery'] ?? true,
+      isOnlinePayment: map['isOnlinePayment'] ?? true,
       addedAt: map['addedAt'] != null
           ? (map['addedAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -61,6 +67,8 @@ class CartItemModel {
       'variantId': variantId,
       'variantName': variantName,
       'sellerId': sellerId,
+      'isCashOnDelivery': isCashOnDelivery,
+      'isOnlinePayment': isOnlinePayment,
       'addedAt': Timestamp.fromDate(addedAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -76,6 +84,8 @@ class CartItemModel {
     int? quantity,
     String? variantId,
     String? variantName,
+    bool? isCashOnDelivery,
+    bool? isOnlinePayment,
     DateTime? addedAt,
     DateTime? updatedAt,
   }) {
@@ -89,6 +99,8 @@ class CartItemModel {
       quantity: quantity ?? this.quantity,
       variantId: variantId ?? this.variantId,
       variantName: variantName ?? this.variantName,
+      isCashOnDelivery: isCashOnDelivery ?? this.isCashOnDelivery,
+      isOnlinePayment: isOnlinePayment ?? this.isOnlinePayment,
       addedAt: addedAt ?? this.addedAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

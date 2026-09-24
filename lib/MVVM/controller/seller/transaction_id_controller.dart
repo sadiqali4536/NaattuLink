@@ -72,6 +72,22 @@ class TransactionIdController extends GetxController {
     final subscriptionRef = sellerRef.collection('subscription').doc('details');
 
     try {
+      // Fetch authoritative plan from Firestore
+      final planDoc = await FirebaseFirestore.instance
+          .collection('subscription_plans')
+          .doc(plan.planId)
+          .get();
+
+      if (!planDoc.exists) {
+        toastError("Selected plan is no longer valid. Please try again.");
+        isLoading.value = false;
+        return;
+      }
+      final authPlanData = planDoc.data()!;
+      final authDurationDays = authPlanData['durationDays'] ?? 30;
+      final authPrice = (authPlanData['price'] ?? 0).toDouble();
+      final authPlanName = authPlanData['name'] ?? plan.name;
+
       // Create a batch to ensure both operations succeed or fail together
       final batch = FirebaseFirestore.instance.batch();
 
@@ -81,9 +97,9 @@ class TransactionIdController extends GetxController {
       final String formattedTime =
           "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
 
-      // 1. Save Subscription Details
+      // 1. Save Subscription Transaction Details
       batch.set(subscriptionRef, {
-        'planId': plan.planId, // Using Firestore auto-generated document ID
+        'planId': plan.planId,
         'transactionId': transactionId,
         'paymentMethod': paymentMethod,
         'paymentStatus': 'completed',
@@ -94,9 +110,19 @@ class TransactionIdController extends GetxController {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 2. Update Seller Status
+      // 2. Update Seller Document with snapshot and strict flags
       batch.update(sellerRef, {
-        'status': 'pending_verification',
+        'registrationStatus': 'pending_verification',
+        'subscriptionStatus': 'pending',
+        'adminVerified': false,
+        'storeAccess': false,
+        'selectedPlanId': plan.planId,
+        'selectedPlanName': authPlanName,
+        'planDurationDays': authDurationDays,
+        'planPrice': authPrice,
+        // Explicitly null out dates until admin approves
+        'subscriptionStartDate': null,
+        'subscriptionEndDate': null,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 

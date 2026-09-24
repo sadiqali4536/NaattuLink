@@ -9,6 +9,9 @@ import 'package:naattulink/MVVM/View/Screen/location/location_selection_page.dar
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart';
 import 'package:naattulink/MVVM/View/Screen/User/checkout/payment_page.dart';
+import 'package:naattulink/MVVM/viewmodel/cart_controller.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class ConfirmDetailsPage extends StatefulWidget {
   final List<CartItemModel> cartItems;
@@ -27,11 +30,87 @@ class ConfirmDetailsPage extends StatefulWidget {
 class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
   bool _isLoading = false;
   final Rxn<AppLocationModel> _deliveryAddress = Rxn<AppLocationModel>();
+  List<CartItemModel>? _localCartItems;
+  final CartController _cartController = Get.find<CartController>();
+  Map<String, int> _liveStockCounts = {};
+  bool _isPlatformFeeActive = false;
+  double _platformFee = 0.0;
 
   @override
   void initState() {
     super.initState();
+    _localCartItems = List.from(widget.cartItems);
     _fetchDefaultAddress();
+    _fetchLiveStock();
+    _fetchPlatformSettings();
+  }
+
+  Future<void> _fetchPlatformSettings() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('platform_settings')
+          .doc('general')
+          .get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = data['PlatformFeeStatus'];
+        final feeStr = data['PlatformFee']?.toString();
+
+        bool isActive = false;
+        if (status != null) {
+          if (status is bool) isActive = status;
+          if (status is String)
+            isActive = status.toLowerCase() == 'active' ||
+                status.toLowerCase() == 'true';
+        }
+
+        if (isActive && feeStr != null) {
+          final fee = double.tryParse(feeStr);
+          if (fee != null && mounted) {
+            setState(() {
+              _isPlatformFeeActive = true;
+              _platformFee = fee;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching platform settings: $e");
+    }
+  }
+
+  Future<void> _fetchLiveStock() async {
+    for (var item in _localCartItems ?? <CartItemModel>[]) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('store_products')
+            .doc(item.productId)
+            .get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          int maxStock = data['stockQuantity'] ?? 0;
+
+          if (item.variantId != null && item.variantId!.isNotEmpty) {
+            final variantsList = data['variants'] as List<dynamic>?;
+            if (variantsList != null) {
+              for (var v in variantsList) {
+                if (v['id'] == item.variantId) {
+                  maxStock = v['stockQuantity'] ?? 0;
+                  break;
+                }
+              }
+            }
+          }
+          if (mounted) {
+            setState(() {
+              _liveStockCounts[item.id] = maxStock;
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint("Error fetching stock for ${item.id}: $e");
+      }
+    }
   }
 
   Future<void> _fetchDefaultAddress() async {
@@ -80,9 +159,79 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
     setState(() => _isLoading = false);
   }
 
+  List<CartItemModel> get localCartItems {
+    _localCartItems ??= List.from(widget.cartItems);
+    return _localCartItems!;
+  }
+
   double get _totalAmount {
-    return widget.cartItems
-        .fold(0.0, (sum, item) => sum + (item.offerPrice * item.quantity));
+    double offerTotal = localCartItems.fold(
+        0.0, (sum, item) => sum + (item.offerPrice * item.quantity));
+    return offerTotal + (_isPlatformFeeActive ? _platformFee : 0.0);
+  }
+
+  Future<void> _increaseQuantity(int index) async {
+    final item = localCartItems[index];
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('store_products')
+          .doc(item.productId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        int maxStock = data['stockQuantity'] ?? 0;
+
+        if (item.variantId != null && item.variantId!.isNotEmpty) {
+          final variantsList = data['variants'] as List<dynamic>?;
+          if (variantsList != null) {
+            for (var v in variantsList) {
+              if (v['id'] == item.variantId) {
+                maxStock = v['stockQuantity'] ?? 0;
+                break;
+              }
+            }
+          }
+        }
+
+        if (item.quantity >= maxStock && maxStock > 0) {
+          if (mounted) {
+            CherryToast.warning(
+              title: Text(
+                  'This quantity is out of stock. Only $maxStock available.',
+                  style: const TextStyle(color: Colors.black)),
+              animationType: AnimationType.fromTop,
+              toastPosition: Position.top,
+              toastDuration: const Duration(seconds: 4),
+            ).show(context);
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error checking stock: $e");
+    }
+
+    if (mounted) {
+      setState(() {
+        localCartItems[index] = item.copyWith(quantity: item.quantity + 1);
+      });
+      if (widget.isFromCart) {
+        _cartController.increaseQuantity(item.id, 9999);
+      }
+    }
+  }
+
+  void _decreaseQuantity(int index) {
+    final item = localCartItems[index];
+    if (item.quantity > 1) {
+      setState(() {
+        localCartItems[index] = item.copyWith(quantity: item.quantity - 1);
+      });
+      if (widget.isFromCart) {
+        _cartController.decreaseQuantity(localCartItems[index].id);
+      }
+    }
   }
 
   Future<void> _showLocationBottomSheet() async {
@@ -126,7 +275,7 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
 
     Get.to(
       () => PaymentPage(
-        cartItems: widget.cartItems,
+        cartItems: localCartItems,
         totalAmount: _totalAmount,
         address: loc,
         isFromCart: widget.isFromCart,
@@ -313,7 +462,14 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
 
   Widget _buildProductList() {
     return Column(
-      children: widget.cartItems.map((item) {
+      children: localCartItems.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+        final hasDiscount = item.price > item.offerPrice;
+        final discountPercentage = hasDiscount
+            ? ((item.price - item.offerPrice) / item.price * 100).toInt()
+            : 0;
+
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
@@ -331,21 +487,72 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: item.productImage.isNotEmpty
-                    ? Image.network(
-                        item.productImage,
-                        width: 70,
-                        height: 70,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        width: 70,
-                        height: 70,
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.image, color: Colors.grey),
-                      ),
+              Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: item.productImage.isNotEmpty
+                        ? Image.network(
+                            item.productImage,
+                            width: 70,
+                            height: 70,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            width: 70,
+                            height: 70,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.image, color: Colors.grey),
+                          ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: () => _decreaseQuantity(index),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            child: Icon(Icons.remove,
+                                size: 18, color: Color(0xFF0F2E5A)),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border.symmetric(
+                              vertical: BorderSide(color: Colors.grey.shade300),
+                            ),
+                          ),
+                          child: Text(
+                            '${item.quantity}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F2E5A),
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => _increaseQuantity(index),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            child: Icon(Icons.add,
+                                size: 18, color: Color(0xFF0F2E5A)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -373,18 +580,22 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
                         ),
                       ),
                     ],
+                    if (_liveStockCounts[item.id] != null &&
+                        _liveStockCounts[item.id]! > 0) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Available stock: ${_liveStockCounts[item.id]}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          'Qty: ${item.quantity}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
                         Text(
                           '₹${item.offerPrice.toStringAsFixed(0)}',
                           style: const TextStyle(
@@ -393,7 +604,47 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
                             color: Color(0xFF0F2E5A),
                           ),
                         ),
+                        if (hasDiscount) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            '₹${item.price.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '$discountPercentage% OFF',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Text(
+                        'Total: ₹${(item.offerPrice * item.quantity).toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F2E5A),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -406,6 +657,14 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
   }
 
   Widget _buildPriceDetails() {
+    double totalMRP = localCartItems.fold(
+        0.0, (sum, item) => sum + (item.price * item.quantity));
+    double totalOfferPrice = localCartItems.fold(
+        0.0, (sum, item) => sum + (item.offerPrice * item.quantity));
+    double discount = totalMRP - totalOfferPrice;
+    double platformFee = _isPlatformFeeActive ? _platformFee : 0.0;
+    double finalAmount = totalOfferPrice + platformFee;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -434,20 +693,33 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Item Total',
-                  style: TextStyle(color: Color(0xFF64748B))),
-              Text('₹${_totalAmount.toStringAsFixed(0)}',
+              const Text('MRP', style: TextStyle(color: Color(0xFF64748B))),
+              Text('₹${totalMRP.toStringAsFixed(0)}',
                   style: const TextStyle(
                       fontWeight: FontWeight.w500, color: Color(0xFF0F2E5A))),
             ],
           ),
           const SizedBox(height: 8),
-          const Row(
+          if (_isPlatformFeeActive) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Platform Fee',
+                    style: TextStyle(color: Color(0xFF64748B))),
+                Text('₹${platformFee.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w500, color: Color(0xFF0F2E5A))),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Delivery Fee', style: TextStyle(color: Color(0xFF64748B))),
-              Text('Free',
-                  style: TextStyle(
+              const Text('Discount Price',
+                  style: TextStyle(color: Color(0xFF64748B))),
+              Text('- ₹${discount.toStringAsFixed(0)}',
+                  style: const TextStyle(
                       fontWeight: FontWeight.bold, color: Colors.green)),
             ],
           ),
@@ -467,7 +739,7 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
                 ),
               ),
               Text(
-                '₹${_totalAmount.toStringAsFixed(0)}',
+                '₹${finalAmount.toStringAsFixed(0)}',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

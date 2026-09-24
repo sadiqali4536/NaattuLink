@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:naattulink/MVVM/viewmodel/cart_controller.dart';
 import 'package:naattulink/MVVM/model/models/cart_model.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
@@ -28,7 +29,8 @@ class _CartPageState extends State<CartPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent * 0.9) {
         setState(() {
           _limit += 10;
         });
@@ -234,7 +236,8 @@ class _CartPageState extends State<CartPage> {
           // Totals
           double totalPrice = 0;
           double totalOriginal = 0;
-          double cancelledTotal = 0;
+          double cancelledTotal =
+              0; // Removed usage, keeping for parameter compatibility
 
           for (int i = 0; i < cartDocs.length; i++) {
             final data = cartDocs[i].data() as Map<String, dynamic>;
@@ -249,14 +252,9 @@ class _CartPageState extends State<CartPage> {
                         "0") ??
                     0) *
                 qty;
-            if (i == 1 && cartDocs.length > 1) {
-              cancelledTotal += price;
-            } else {
-              totalPrice += price;
-              totalOriginal += orig;
-            }
+            totalPrice += price;
+            totalOriginal += orig;
           }
-
           return Column(
             children: [
               Expanded(
@@ -295,8 +293,7 @@ class _CartPageState extends State<CartPage> {
                             addedAt: data['addedAt'] as Timestamp? ??
                                 Timestamp.now(),
                           );
-                          final isCancelled =
-                              (index == 1 && cartDocs.length > 1);
+                          final isCancelled = false;
                           final int quantity = data['quantity'] ?? 1;
                           return _buildCartItemCard(item, doc.reference,
                               isCancelled: isCancelled, quantity: quantity);
@@ -370,25 +367,29 @@ class _CartPageState extends State<CartPage> {
                 ),
                 child: const Icon(Icons.shopping_cart_outlined, color: _navy),
               ),
-              Positioned(
-                top: 8,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: const BoxDecoration(
-                    color: _amber,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Text(
-                    "0",
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+              Obx(() {
+                final cartCount = Get.find<CartController>().cartItems.length;
+                if (cartCount == 0) return const SizedBox.shrink();
+                return Positioned(
+                  top: 8,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: _amber,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$cartCount',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              }),
             ],
           ),
         ),
@@ -968,16 +969,9 @@ class _CartPageState extends State<CartPage> {
           ),
           if (_isPriceDetailsExpanded) ...[
             const SizedBox(height: 16),
-            _priceRow(
-                "Item Total ($itemCount item)",
-                "₹${(totalOriginal + cancelledTotal).toStringAsFixed(0)}",
-                Colors.black87),
+            _priceRow("Item Total ($itemCount item)",
+                "₹${totalOriginal.toStringAsFixed(0)}", Colors.black87),
             const SizedBox(height: 10),
-            if (cancelledTotal > 0) ...[
-              _priceRow("Cancelled Items (1 item)",
-                  "- ₹${cancelledTotal.toStringAsFixed(0)}", Colors.red),
-              const SizedBox(height: 10),
-            ],
             _priceRow("Delivery Charge", "₹0", Colors.black87),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),

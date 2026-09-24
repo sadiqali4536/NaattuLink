@@ -19,49 +19,55 @@ class SellerRegistrationScreen extends StatelessWidget {
     final controller = SellerRegistrationController.to;
     controller.selectedPlan = plan;
 
-    return Obx(() {
-      final isReview = controller.isReviewMode.value;
-      return Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBar(
-          backgroundColor: isReview ? Colors.white : const Color(0xFF0F2E5A),
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              color: isReview ? const Color(0xFF0F2E5A) : Colors.white,
-            ),
-            onPressed: () {
-              if (isReview) {
-                controller.goBackToForm();
-              } else {
-                Get.back();
-              }
-            },
-          ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isReview ? "Review & Submit" : "Create Your Store",
-                style: TextStyle(
-                  color: isReview ? const Color(0xFF0F2E5A) : Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: Obx(() {
+          final isReview = controller.isReviewMode.value;
+          return AppBar(
+            backgroundColor: isReview ? Colors.white : const Color(0xFF0F2E5A),
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back,
+                color: isReview ? const Color(0xFF0F2E5A) : Colors.white,
               ),
-              if (!isReview)
-                const Text(
-                  "NaattuLink Seller",
+              onPressed: () {
+                if (isReview) {
+                  controller.goBackToForm();
+                } else {
+                  Get.back();
+                }
+              },
+            ),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isReview ? "Review & Submit" : "Create Your Store",
                   style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
+                    color: isReview ? const Color(0xFF0F2E5A) : Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-            ],
-          ),
-        ),
-        body: Column(
+                if (!isReview)
+                  const Text(
+                    "NaattuLink Seller",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }),
+      ),
+      body: Obx(() {
+        final isReview = controller.isReviewMode.value;
+        return Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
@@ -72,9 +78,9 @@ class SellerRegistrationScreen extends StatelessWidget {
             ),
             _buildBottomBar(controller, isReview),
           ],
-        ),
-      );
-    });
+        );
+      }),
+    );
   }
 
   Widget _buildFormMode(SellerRegistrationController controller) {
@@ -248,8 +254,8 @@ class SellerRegistrationScreen extends StatelessWidget {
                           : controller.selectedCategory.value,
                       icon: const Icon(Icons.keyboard_arrow_down,
                           color: Colors.grey),
-                      items: controller.categories.map((c) {
-                        return DropdownMenuItem(
+                      items: controller.categories.map((String c) {
+                        return DropdownMenuItem<String>(
                             value: c,
                             child:
                                 Text(c, style: const TextStyle(fontSize: 14)));

@@ -4,6 +4,7 @@ import 'package:naattulink/MVVM/model/user/cart_item_model.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/View/Screen/User/checkout/controller/payment_controller.dart';
+import 'package:naattulink/MVVM/utils/payment_ocr_service.dart';
 
 class PaymentPage extends StatelessWidget {
   final List<CartItemModel> cartItems;
@@ -22,9 +23,42 @@ class PaymentPage extends StatelessWidget {
   final PaymentController controller = Get.put(PaymentController());
   final TextEditingController _transactionIdController =
       TextEditingController();
+  final RxBool isExtractingOcr = false.obs;
+
+  Future<void> _handleOcrUpload() async {
+    isExtractingOcr.value = true;
+    final extractedId = await PaymentOcrService.extractTransactionId();
+    isExtractingOcr.value = false;
+
+    if (extractedId != null && extractedId.isNotEmpty) {
+      _transactionIdController.text = extractedId;
+      controller.updateTransactionId(extractedId);
+      Get.snackbar('Success', 'Transaction ID extracted. Please verify.',
+          backgroundColor: Colors.green, colorText: Colors.white);
+    } else {
+      Get.snackbar('Not Found',
+          'Could not extract a valid Transaction ID. Please enter manually.',
+          backgroundColor: Colors.orange, colorText: Colors.white);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bool isCodAvailable = cartItems.isEmpty ||
+        cartItems.every((item) => (item.isCashOnDelivery ?? true));
+    final bool isOnlineAvailable = cartItems.isEmpty ||
+        cartItems.every((item) => (item.isOnlinePayment ?? true));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!isCodAvailable &&
+          controller.selectedPaymentMethod.value ==
+              PaymentMethod.cashOnDelivery) {
+        if (isOnlineAvailable) {
+          controller.selectPaymentMethod(PaymentMethod.upi);
+        }
+      }
+    });
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -57,17 +91,26 @@ class PaymentPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildPaymentOption(
-                title: 'Cash on Delivery',
-                method: PaymentMethod.cashOnDelivery,
-                icon: Icons.local_shipping,
-              ),
-              const SizedBox(height: 12),
-              _buildPaymentOption(
-                title: 'UPI',
-                method: PaymentMethod.upi,
-                icon: Icons.currency_rupee,
-              ),
+              if (isCodAvailable) ...[
+                _buildPaymentOption(
+                  title: 'Cash on Delivery',
+                  method: PaymentMethod.cashOnDelivery,
+                  icon: Icons.local_shipping,
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (isOnlineAvailable) ...[
+                _buildPaymentOption(
+                  title: 'UPI',
+                  method: PaymentMethod.upi,
+                  icon: Icons.currency_rupee,
+                ),
+              ],
+              if (!isCodAvailable && !isOnlineAvailable)
+                const Text(
+                  'No payment methods available for the selected items.',
+                  style: TextStyle(color: Colors.red),
+                ),
               if (controller.selectedPaymentMethod.value == PaymentMethod.upi)
                 _buildUpiSection(),
             ],
@@ -210,7 +253,13 @@ class PaymentPage extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                controller.initiateUpiPayment(totalAmount);
+                final sellerId = cartItems.isNotEmpty
+                    ? (cartItems.first.sellerId ?? '')
+                    : '';
+                final productId =
+                    cartItems.isNotEmpty ? (cartItems.first.productId) : '';
+                controller.initiateUpiPayment(totalAmount,
+                    sellerId: sellerId, productId: productId);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2956D3),
@@ -241,6 +290,41 @@ class PaymentPage extends StatelessWidget {
                 color: Color(0xFF0F2E5A),
               ),
             ),
+            const SizedBox(height: 16),
+            Obx(() {
+              if (isExtractingOcr.value) {
+                return const Center(
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 12),
+                      Text("Extracting Transaction ID...",
+                          style: TextStyle(color: Colors.black54)),
+                    ],
+                  ),
+                );
+              } else {
+                return ElevatedButton.icon(
+                  onPressed: _handleOcrUpload,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0F2E5A),
+                    elevation: 0,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
+                  icon: const Icon(Icons.document_scanner),
+                  label: const Text("Upload Payment Screenshot",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                );
+              }
+            }),
+            const SizedBox(height: 16),
+            const Text("OR Enter Transaction ID Manually",
+                style: TextStyle(color: Colors.black54, fontSize: 12)),
             const SizedBox(height: 8),
             TextField(
               controller: _transactionIdController,

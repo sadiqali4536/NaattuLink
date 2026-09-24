@@ -13,7 +13,7 @@ import 'package:naattulink/MVVM/model/seller/product_variant.dart';
 import 'package:naattulink/MVVM/model/seller/dynamic_specifications_config.dart';
 import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
 import 'package:naattulink/core/imagekit/imagekit_config.dart';
-import 'package:naattulink/core/imagekit/image_storage_type.dart';
+
 import 'package:uuid/uuid.dart';
 
 class AddProductController extends GetxController {
@@ -92,6 +92,7 @@ class AddProductController extends GetxController {
   final RxBool isOnlinePayment = true.obs;
   final RxBool isFreeShipping = false.obs;
   final RxBool isReturnsAvailable = false.obs;
+  final RxBool isFeatured = false.obs;
 
   final RxString submittingStatus = ''.obs;
   StoreProductModel? productToEdit;
@@ -592,10 +593,57 @@ class AddProductController extends GetxController {
       imgs.remove(product.coverImage);
     }
     existingImages.assignAll(imgs);
+
     specifications.assignAll(product.specifications);
+    customSpecControllers.clear();
+    product.specifications.forEach((key, value) {
+      customSpecControllers[key] =
+          TextEditingController(text: value.toString());
+    });
 
     hasVariants.value = product.hasVariants;
     variants.assignAll(product.variants);
+
+    final tempMap = <String, List<Map<String, dynamic>>>{};
+
+    if (product.variantOptionsData.isNotEmpty) {
+      tempMap.addAll(product.variantOptionsData);
+    } else if (product.variants.isNotEmpty) {
+      for (var v in product.variants) {
+        v.attributes.forEach((attrKey, attrVal) {
+          final list = List<Map<String, dynamic>>.from(tempMap[attrKey] ?? []);
+          if (!list.any((item) => item['name'] == attrVal)) {
+            list.add({
+              'name': attrVal,
+              'origPrice': v.price,
+              'discPrice': v.discountPrice,
+              'stock': v.stockQuantity
+            });
+            tempMap[attrKey] = list;
+          }
+        });
+      }
+      // Preserve any keys that were saved but had no options
+      for (var attr in product.variantAttributes) {
+        if (!tempMap.containsKey(attr)) {
+          tempMap[attr] = [];
+        }
+      }
+    } else if (product.variantAttributes.isNotEmpty) {
+      // Legacy products: has simple variantAttributes array but no generated variants
+      // Group them under a generic "Options" attribute
+      tempMap['Options'] = product.variantAttributes
+          .map((attr) => {
+                'name': attr,
+                'origPrice': product.price,
+                'discPrice': product.discountPrice,
+                'stock': product.stockQuantity
+              })
+          .toList();
+    }
+
+    selectedVariantOptions.assignAll(tempMap);
+    _calculateExpectedVariants();
 
     priceController.text = product.price.toInt().toString();
     discountPriceController.text = product.discountPrice.toInt() > 0
@@ -610,6 +658,14 @@ class AddProductController extends GetxController {
         product.deliveryCharge?.toInt().toString() ?? '';
     estimatedDeliveryTimeController.text = product.estimatedDeliveryTime ?? '';
     returnPolicyController.text = product.returnPolicy ?? '';
+
+    isFreeShipping.value =
+        (product.deliveryCharge == null || product.deliveryCharge == 0);
+    isReturnsAvailable.value = product.returnPolicy?.isNotEmpty ?? false;
+    isFeatured.value = product.isFeatured;
+
+    isCashOnDelivery.value = product.isCashOnDelivery;
+    isOnlinePayment.value = product.isOnlinePayment;
   }
 
   // --- Submit ---
@@ -622,18 +678,25 @@ class AddProductController extends GetxController {
       return;
     }
 
+    if (hasVariants.value && expectedVariantCount.value > 0) {
+      generateVariants();
+    }
+
     submittingStatus.value = status;
     try {
+      debugPrint("[ImageKit App] Add Product image upload started");
+      debugPrint("[ImageKit App] storageType: seller_product");
+
       List<String> uploadedImageUrls = List.from(existingImages);
       List<Map<String, dynamic>> uploadedImageMetadata =
           List.from(productToEdit?.imageMetadata ?? []);
 
       final config =
-          ImageKitConfigManager.getConfig(ImageStorageType.seller_product_1);
+          await ImageKitConfigManager.getConfig(storageType: 'seller_product');
       final imageKitService = ImageKitBaseService(
         publicKey: config.publicKey,
         urlEndpoint: config.urlEndpoint,
-        storageType: ImageStorageType.seller_product_1,
+        storageType: config.storageType,
       );
 
       String finalCoverImageUrl = existingCoverImage.value;
@@ -656,7 +719,7 @@ class AddProductController extends GetxController {
           'imageUrl': result.imageUrl,
           'imageFileId': result.imageFileId,
           'providerId': result.providerId,
-          'storageType': ImageStorageType.seller_product_1.name,
+          'storageType': config.storageType,
         });
       } else if (finalCoverImageUrl.isNotEmpty &&
           !uploadedImageUrls.contains(finalCoverImageUrl)) {
@@ -680,7 +743,7 @@ class AddProductController extends GetxController {
           'imageUrl': result.imageUrl,
           'imageFileId': result.imageFileId,
           'providerId': result.providerId,
-          'storageType': ImageStorageType.seller_product_1.name,
+          'storageType': config.storageType,
         });
       }
 
@@ -723,6 +786,8 @@ class AddProductController extends GetxController {
         hasVariants: hasVariants.value,
         variantAttributes: selectedVariantOptions.keys.toList(),
         variants: hasVariants.value ? variants : [],
+        variantOptionsData: Map<String, List<Map<String, dynamic>>>.from(
+            selectedVariantOptions),
         weight: double.tryParse(weightController.text.trim()),
         dimensions: dimensionsController.text.trim(),
         deliveryCharge: isFreeShipping.value
@@ -732,6 +797,9 @@ class AddProductController extends GetxController {
         returnPolicy: isReturnsAvailable.value
             ? returnPolicyController.text.trim()
             : null,
+        isCashOnDelivery: isCashOnDelivery.value,
+        isOnlinePayment: isOnlinePayment.value,
+        isFeatured: isFeatured.value,
       );
 
       await FirebaseFirestore.instance
@@ -749,8 +817,32 @@ class AddProductController extends GetxController {
     }
   }
 
+  Future<void> _addPerfumeCategoryIfNotExists() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('store_product_categories')
+          .where('name', isEqualTo: 'perfume')
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        await FirebaseFirestore.instance
+            .collection('store_product_categories')
+            .add({
+          'name': 'perfume',
+          'createdAt': FieldValue.serverTimestamp(),
+          'isActive': true,
+        });
+        debugPrint("Added 'perfume' category to Firestore.");
+      }
+    } catch (e) {
+      debugPrint("Error adding 'perfume' category: $e");
+    }
+  }
+
   Future<void> _fetchCategories() async {
     try {
+      await _addPerfumeCategoryIfNotExists();
+
       final snapshot = await FirebaseFirestore.instance
           .collection('store_product_categories')
           .get();

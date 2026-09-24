@@ -464,6 +464,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildSellerStockWarning(),
                 _buildSectionTitle('My Activity'),
                 _buildSectionContainer([
                   _buildListItem(
@@ -476,17 +477,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                 const SizedBox(height: 20),
                 _buildSectionTitle('Earn With NaattuLink'),
                 _buildSectionContainer([
-                  _buildListItem(
-                    icon: Icons.shopping_cart_outlined,
-                    title: 'Sell on NaattuLink',
-                    subtitle: 'Start earning by listing your products',
-                    onTap: () {
-                      if (!Get.isRegistered<SellerAccessController>()) {
-                        Get.put(SellerAccessController());
-                      }
-                      SellerAccessController.to.handleSellerNavigation();
-                    },
-                  ),
+                  _buildSellOnNaattuLinkItem(),
                 ]),
 
                 const SizedBox(height: 20),
@@ -566,6 +557,126 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSellerStockWarning() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('store_products')
+          .where('sellerId', isEqualTo: uid)
+          .limit(20)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Text("Error: ${snapshot.error}",
+              style: const TextStyle(color: Colors.red));
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        try {
+          int outOfStockCount = 0;
+          for (var doc in snapshot.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            bool isProductOutOfStock = false;
+
+            final status = (data['status']?.toString().toUpperCase() ?? '');
+            if (status == 'OUT OF STOCK' || status == 'OUT_OF_STOCK') {
+              isProductOutOfStock = true;
+            } else {
+              final stockQty = data['stockQuantity'];
+              if (stockQty != null) {
+                final qty = num.tryParse(stockQty.toString()) ?? 0;
+                if (qty <= 0) isProductOutOfStock = true;
+              }
+              if (!isProductOutOfStock) {
+                final variants = data['variants'];
+                if (variants is List && variants.isNotEmpty) {
+                  isProductOutOfStock = variants.every((v) {
+                    final vStock = num.tryParse(
+                            (v is Map ? v['stockQuantity'] : null)
+                                    ?.toString() ??
+                                '1') ??
+                        1;
+                    return vStock <= 0;
+                  });
+                }
+              }
+            }
+
+            if (isProductOutOfStock) {
+              outOfStockCount++;
+            }
+          }
+
+          if (outOfStockCount > 0) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Products count ($outOfStockCount) are out of stock. Please update the stock in your seller dashboard.",
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return const SizedBox.shrink();
+        } catch (e) {
+          return Text("Crash: $e", style: const TextStyle(color: Colors.red));
+        }
+      },
+    );
+  }
+
+  Widget _buildSellOnNaattuLinkItem() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return const SizedBox.shrink();
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream:
+          FirebaseFirestore.instance.collection('sellers').doc(uid).snapshots(),
+      builder: (context, snapshot) {
+        bool isRegistered = false;
+        if (snapshot.hasData && snapshot.data!.exists) {
+          isRegistered = true;
+        }
+
+        return _buildListItem(
+          icon: Icons.shopping_cart_outlined,
+          title: 'Sell on NaattuLink',
+          subtitle: isRegistered
+              ? 'Manage your store and products'
+              : 'Start earning by listing your products',
+          onTap: () {
+            if (!Get.isRegistered<SellerAccessController>()) {
+              Get.put(SellerAccessController());
+            }
+            SellerAccessController.to.handleSellerNavigation();
+          },
+        );
+      },
     );
   }
 

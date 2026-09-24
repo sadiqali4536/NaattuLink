@@ -1,0 +1,104 @@
+﻿  }
+
+  Widget buildOnlineShopsTab() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('store_products')
+          .where('status', whereIn: ['ACTIVE', 'Active', 'active']).snapshots(),
+      builder: (context, snapshot) {
+        var products = snapshot.hasData ? snapshot.data!.docs : [];
+
+        // Sort locally to avoid needing a Firestore composite index
+        products = products.toList()
+          ..sort((a, b) {
+            final dataA = a.data() as Map<String, dynamic>?;
+            final dataB = b.data() as Map<String, dynamic>?;
+            final timeA = dataA?['createdAt'] as Timestamp?;
+            final timeB = dataB?['createdAt'] as Timestamp?;
+            if (timeA == null && timeB == null) return 0;
+            if (timeA == null) return 1;
+            if (timeB == null) return -1;
+            return timeB.compareTo(timeA); // newest first
+          });
+
+        Map<String, dynamic> pData(int index) {
+          if (products.isEmpty) return {};
+          return products[index % products.length].data()
+              as Map<String, dynamic>;
+        }
+
+        String pId(int index) {
+          if (products.isEmpty) return '';
+          return products[index % products.length].id;
+        }
+
+        final sq = searchQuery.trim().toLowerCase();
+        final searchResults = products.where((doc) {
+          if (sq.isEmpty) return false;
+          final data = doc.data() as Map<String, dynamic>?;
+          final title = (data?['productName'] ?? data?['title'] ?? '')
+              .toString()
+              .toLowerCase();
+          final category = (data?['category'] ?? '').toString().toLowerCase();
+          return title.contains(sq) || category.contains(sq);
+        }).toList();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (sq.isNotEmpty && searchResults.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                // 1. "Sadiq, still looking for these?" purple gradient box
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "${username ?? 'Sadiq'}, still looking for these?",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        height: 145,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: searchResults.length > 5
+                              ? 5
+                              : searchResults.length,
+                          itemBuilder: (context, index) {
+                            final doc = searchResults[index];
+                            final data = doc.data() as Map<String, dynamic>;
+                            final prodId = doc.id;
+
+                            // Calculate discount if available
+                            String actionText = "Shop Now";
+                            final product =
+                                StoreProductModel.fromMap(data, prodId);
+                            if (product.hasDiscount) {
+                              actionText = "${product.discountPercentage}% Off";
+                            }
+
+                            final String imageUrl =
+                                (data['imageUrl']?.toString() ?? '').isNotEmpty
+                                    ? data['imageUrl']
+                                    : (data['image']?.toString() ?? '')
+                                            .isNotEmpty
+                                        ? data['image']
+                                        : "assets/image/car_clean.png";
+

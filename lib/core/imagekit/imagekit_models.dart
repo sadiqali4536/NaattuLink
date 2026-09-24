@@ -19,15 +19,17 @@ class ImageKitUploadResult {
 }
 
 class ImageKitConfig {
+  final String storageType;
   final String publicKey;
-  final String privateKey; // Added back per user request
+  final String privateKey;
   final String urlEndpoint;
   final String defaultFolder;
   final String accountName;
 
   const ImageKitConfig({
+    required this.storageType,
     required this.publicKey,
-    this.privateKey = '', // Make it optional or default to empty string so it doesn't break existing instantiations if omitted
+    this.privateKey = '',
     required this.urlEndpoint,
     required this.defaultFolder,
     required this.accountName,

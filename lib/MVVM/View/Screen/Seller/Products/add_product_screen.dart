@@ -565,28 +565,31 @@ class AddProductScreen extends StatelessWidget {
                     "New Specification",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        autofocus: true,
-                        decoration: InputDecoration(
-                          hintText: "e.g., Battery Life",
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                  content: SizedBox(
+                    width: Get.width,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            hintText: "e.g., Battery Life",
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
+                          onChanged: (v) => newKey = v,
                         ),
-                        onChanged: (v) => newKey = v,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   actions: [
                     TextButton(
@@ -826,111 +829,117 @@ class AddProductScreen extends StatelessWidget {
                                 ),
                               ),
                               content: SingleChildScrollView(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    TextField(
-                                      autofocus: true,
-                                      decoration: InputDecoration(
-                                        labelText: "Option Name (e.g., Large)",
-                                        filled: true,
-                                        fillColor: Colors.grey[100],
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
+                                child: SizedBox(
+                                  width: Get.width,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Option Name (e.g., Large)'),
+                                      const SizedBox(height: 4),
+                                      TextField(
+                                        autofocus: true,
+                                        decoration: InputDecoration(
+                                          filled: true,
+                                          fillColor: Colors.grey[100],
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            borderSide: BorderSide.none,
                                           ),
-                                          borderSide: BorderSide.none,
+                                        ),
+                                        onChanged: (v) => opt = v,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        "Original Price: ${formatPrice(controller.priceController.text)}",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey,
                                         ),
                                       ),
-                                      onChanged: (v) => opt = v,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      "Original Price: ${formatPrice(controller.priceController.text)}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Selling Price: ${formatPrice(controller.discountPriceController.text)}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Available Stock: ${controller.totalStock - controller.allocatedStock}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    TextField(
-                                      keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(
-                                        labelText: "Stock Quantity to Allocate",
-                                        filled: true,
-                                        fillColor: Colors.grey[100],
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          borderSide: BorderSide.none,
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "Selling Price: ${formatPrice(controller.discountPriceController.text)}",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey,
                                         ),
                                       ),
-                                      onChanged: (v) => stockStr = v,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                      "Variant Specific Pricing",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextField(
-                                      keyboardType: TextInputType.number,
-                                      controller: TextEditingController(
-                                        text: origPriceStr,
-                                      ),
-                                      decoration: InputDecoration(
-                                        labelText: "Variant Original Price",
-                                        filled: true,
-                                        fillColor: Colors.grey[100],
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          borderSide: BorderSide.none,
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "Available Stock: ${controller.totalStock - controller.allocatedStock}",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
                                         ),
                                       ),
-                                      onChanged: (v) => origPriceStr = v,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    TextField(
-                                      keyboardType: TextInputType.number,
-                                      controller: TextEditingController(
-                                        text: discPriceStr,
-                                      ),
-                                      decoration: InputDecoration(
-                                        labelText: "Variant Selling Price",
-                                        filled: true,
-                                        fillColor: Colors.grey[100],
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
+                                      const SizedBox(height: 12),
+                                      TextField(
+                                        keyboardType: TextInputType.number,
+                                        decoration: InputDecoration(
+                                          labelText:
+                                              "Stock Quantity to Allocate",
+                                          filled: true,
+                                          fillColor: Colors.grey[100],
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            borderSide: BorderSide.none,
                                           ),
-                                          borderSide: BorderSide.none,
+                                        ),
+                                        onChanged: (v) => stockStr = v,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        "Variant Specific Pricing",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      onChanged: (v) => discPriceStr = v,
-                                    ),
-                                  ],
+                                      const SizedBox(height: 8),
+                                      TextField(
+                                        keyboardType: TextInputType.number,
+                                        controller: TextEditingController(
+                                          text: origPriceStr,
+                                        ),
+                                        decoration: InputDecoration(
+                                          labelText: "Variant Original Price",
+                                          filled: true,
+                                          fillColor: Colors.grey[100],
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                        ),
+                                        onChanged: (v) => origPriceStr = v,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      TextField(
+                                        keyboardType: TextInputType.number,
+                                        controller: TextEditingController(
+                                          text: discPriceStr,
+                                        ),
+                                        decoration: InputDecoration(
+                                          labelText: "Variant Selling Price",
+                                          filled: true,
+                                          fillColor: Colors.grey[100],
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                        ),
+                                        onChanged: (v) => discPriceStr = v,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               actions: [
@@ -1029,28 +1038,31 @@ class AddProductScreen extends StatelessWidget {
                           fontSize: 18,
                         ),
                       ),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          TextField(
-                            autofocus: true,
-                            decoration: InputDecoration(
-                              hintText: "e.g., Material, Color",
-                              filled: true,
-                              fillColor: Colors.grey[100],
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
+                      content: SizedBox(
+                        width: Get.width,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextField(
+                              autofocus: true,
+                              decoration: InputDecoration(
+                                hintText: "e.g., Material, Color",
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
+                              onChanged: (v) => newAttr = v,
                             ),
-                            onChanged: (v) => newAttr = v,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       actions: [
                         TextButton(
@@ -1473,70 +1485,77 @@ class AddProductScreen extends StatelessWidget {
                                                     fontSize: 18,
                                                   ),
                                                 ),
-                                                content: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    TextField(
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      controller:
-                                                          TextEditingController(
-                                                        text: priceInput,
-                                                      ),
-                                                      decoration:
-                                                          InputDecoration(
-                                                        labelText:
-                                                            "Original Price (MRP)",
-                                                        filled: true,
-                                                        fillColor:
-                                                            Colors.grey[100],
-                                                        border:
-                                                            OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            12,
-                                                          ),
-                                                          borderSide:
-                                                              BorderSide.none,
+                                                content: SizedBox(
+                                                  width: Get.width,
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      TextField(
+                                                        keyboardType:
+                                                            TextInputType
+                                                                .number,
+                                                        controller:
+                                                            TextEditingController(
+                                                          text: priceInput,
                                                         ),
-                                                      ),
-                                                      onChanged: (val) =>
-                                                          priceInput = val,
-                                                    ),
-                                                    const SizedBox(height: 12),
-                                                    TextField(
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      controller:
-                                                          TextEditingController(
-                                                        text: discountInput,
-                                                      ),
-                                                      decoration:
-                                                          InputDecoration(
-                                                        labelText:
-                                                            "Selling Price",
-                                                        filled: true,
-                                                        fillColor:
-                                                            Colors.grey[100],
-                                                        border:
-                                                            OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            12,
+                                                        decoration:
+                                                            InputDecoration(
+                                                          labelText:
+                                                              "Original Price (MRP)",
+                                                          filled: true,
+                                                          fillColor:
+                                                              Colors.grey[100],
+                                                          border:
+                                                              OutlineInputBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                              12,
+                                                            ),
+                                                            borderSide:
+                                                                BorderSide.none,
                                                           ),
-                                                          borderSide:
-                                                              BorderSide.none,
                                                         ),
+                                                        onChanged: (val) =>
+                                                            priceInput = val,
                                                       ),
-                                                      onChanged: (val) =>
-                                                          discountInput = val,
-                                                    ),
-                                                  ],
+                                                      const SizedBox(
+                                                          height: 12),
+                                                      TextField(
+                                                        keyboardType:
+                                                            TextInputType
+                                                                .number,
+                                                        controller:
+                                                            TextEditingController(
+                                                          text: discountInput,
+                                                        ),
+                                                        decoration:
+                                                            InputDecoration(
+                                                          labelText:
+                                                              "Selling Price",
+                                                          filled: true,
+                                                          fillColor:
+                                                              Colors.grey[100],
+                                                          border:
+                                                              OutlineInputBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                              12,
+                                                            ),
+                                                            borderSide:
+                                                                BorderSide.none,
+                                                          ),
+                                                        ),
+                                                        onChanged: (val) =>
+                                                            discountInput = val,
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                                 actions: [
                                                   TextButton(
@@ -1634,50 +1653,56 @@ class AddProductScreen extends StatelessWidget {
                                                     fontSize: 18,
                                                   ),
                                                 ),
-                                                content: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      "Available Stock: ${controller.availableStock}",
-                                                      style: const TextStyle(
-                                                        color: Colors.green,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    TextField(
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      controller:
-                                                          TextEditingController(
-                                                        text: stockInput,
-                                                      ),
-                                                      decoration:
-                                                          InputDecoration(
-                                                        labelText:
-                                                            "Stock Quantity",
-                                                        filled: true,
-                                                        fillColor:
-                                                            Colors.grey[100],
-                                                        border:
-                                                            OutlineInputBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            12,
-                                                          ),
-                                                          borderSide:
-                                                              BorderSide.none,
+                                                content: SizedBox(
+                                                  width: Get.width,
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        "Available Stock: ${controller.availableStock}",
+                                                        style: const TextStyle(
+                                                          color: Colors.green,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                         ),
                                                       ),
-                                                      onChanged: (val) =>
-                                                          stockInput = val,
-                                                    ),
-                                                  ],
+                                                      const SizedBox(
+                                                          height: 16),
+                                                      TextField(
+                                                        keyboardType:
+                                                            TextInputType
+                                                                .number,
+                                                        controller:
+                                                            TextEditingController(
+                                                          text: stockInput,
+                                                        ),
+                                                        decoration:
+                                                            InputDecoration(
+                                                          labelText:
+                                                              "Stock Quantity",
+                                                          filled: true,
+                                                          fillColor:
+                                                              Colors.grey[100],
+                                                          border:
+                                                              OutlineInputBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                              12,
+                                                            ),
+                                                            borderSide:
+                                                                BorderSide.none,
+                                                          ),
+                                                        ),
+                                                        onChanged: (val) =>
+                                                            stockInput = val,
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                                 actions: [
                                                   TextButton(
@@ -1953,6 +1978,27 @@ class AddProductScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            buildSectionContainer(
+              title: "Visibility (Promotions)",
+              icon: Icons.campaign_outlined,
+              children: [
+                SwitchListTile(
+                  title: const Text(
+                    "Featured Product",
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: const Text(
+                    "Show this product as a sponsored Ad in customer feeds",
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  value: controller.isFeatured.value,
+                  onChanged: (v) => controller.isFeatured.value = v,
+                  activeColor: const Color(0xFF0F2E5A),
+                  contentPadding: EdgeInsets.zero,
+                ),
               ],
             ),
           ],

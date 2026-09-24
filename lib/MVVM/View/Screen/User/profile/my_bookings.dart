@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:naattulink/MVVM/utils/stock_manager.dart';
 
 import 'confirmed_booking_details.dart';
 import 'cancelled_booking_details.dart';
@@ -35,7 +36,8 @@ class _MyBookingsState extends State<MyBookings> {
   void initState() {
     super.initState();
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent * 0.9) {
         setState(() {
           _limit += 10;
         });
@@ -286,17 +288,52 @@ class _MyBookingsState extends State<MyBookings> {
                     onPressed: selectedReason == null
                         ? null
                         : () async {
+                            final comment = commentController.text.trim();
                             Navigator.pop(ctx);
-                            await FirebaseFirestore.instance
-                                .collection('service_bookings')
-                                .doc(bookingId)
-                                .update({
-                              'status': 'cancelled',
-                              'cancellationReason': selectedReason,
-                              'cancellationComment':
-                                  commentController.text.trim(),
-                              'cancelledAt': FieldValue.serverTimestamp(),
-                            });
+                            try {
+                              // Fetch order details first to check if it's a product order
+                              final bookingDoc = await FirebaseFirestore
+                                  .instance
+                                  .collection(selectedSection.value ==
+                                          MyBookingSection.orders
+                                      ? 'bookings'
+                                      : 'service_bookings')
+                                  .doc(bookingId)
+                                  .get();
+
+                              if (bookingDoc.exists) {
+                                final data = bookingDoc.data()!;
+                                if (data['bookingType'] == 'Product Order') {
+                                  final productId = data['productId'];
+                                  final variantId = data['variantId'];
+                                  final quantity = data['quantity'] ?? 1;
+
+                                  if (productId != null) {
+                                    await StockManager.restoreStock(
+                                      bookingId: bookingId,
+                                      productId: productId.toString(),
+                                      quantity: quantity,
+                                      variantId: variantId?.toString(),
+                                    );
+                                  }
+                                }
+                              }
+
+                              await FirebaseFirestore.instance
+                                  .collection(selectedSection.value ==
+                                          MyBookingSection.orders
+                                      ? 'bookings'
+                                      : 'service_bookings')
+                                  .doc(bookingId)
+                                  .update({
+                                'status': 'cancelled',
+                                'cancellationReason': selectedReason,
+                                'cancellationComment': comment,
+                                'cancelledAt': FieldValue.serverTimestamp(),
+                              });
+                            } catch (e) {
+                              debugPrint("Error cancelling order: $e");
+                            }
                           },
                     icon:
                         const Icon(Icons.close, color: Colors.white, size: 18),
@@ -338,7 +375,9 @@ class _MyBookingsState extends State<MyBookings> {
         ),
       ),
     );
-    commentController.dispose();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      commentController.dispose();
+    });
   }
 
   @override
@@ -596,7 +635,8 @@ class _MyBookingsState extends State<MyBookings> {
                         stream: stream,
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
+                                  ConnectionState.waiting &&
+                              !snapshot.hasData) {
                             return const Center(
                                 child: CircularProgressIndicator(
                                     color: Color(0xFF0F2E5A)));
@@ -629,41 +669,46 @@ class _MyBookingsState extends State<MyBookings> {
                             itemCount: filtered.length + 1,
                             itemBuilder: (context, index) {
                               if (index == filtered.length) {
+                                final hasMore =
+                                    (snapshot.data?.docs.length ?? 0) >= _limit;
                                 return Column(
                                   children: [
-                                    if (snapshot.connectionState == ConnectionState.active && (snapshot.data?.docs.length ?? 0) == _limit)
+                                    if (hasMore)
                                       const Padding(
                                         padding: EdgeInsets.all(16.0),
-                                        child: Center(child: CircularProgressIndicator()),
+                                        child: Center(
+                                            child: CircularProgressIndicator()),
+                                      )
+                                    else ...[
+                                      const SizedBox(height: 24),
+                                      Icon(
+                                        Icons.inventory_2_outlined,
+                                        size: 56,
+                                        color: Colors.grey.shade400,
                                       ),
-                                    const SizedBox(height: 24),
-                                    Icon(
-                                      Icons.inventory_2_outlined,
-                                      size: 56,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      isBookings
-                                          ? 'End of your booking history'
-                                          : 'End of your order history',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: Colors.grey.shade700),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      isBookings
-                                          ? "You've reached the end. Check back later for\nmore bookings."
-                                          : "You've reached the end. Check back later for\nmore orders.",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          height: 1.4,
-                                          color: Colors.grey.shade500),
-                                    ),
-                                    const SizedBox(height: 24),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        isBookings
+                                            ? 'End of your booking history'
+                                            : 'End of your order history',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: Colors.grey.shade700),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        isBookings
+                                            ? "You've reached the end. Check back later for\nmore bookings."
+                                            : "You've reached the end. Check back later for\nmore orders.",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            height: 1.4,
+                                            color: Colors.grey.shade500),
+                                      ),
+                                      const SizedBox(height: 24),
+                                    ],
                                   ],
                                 );
                               }

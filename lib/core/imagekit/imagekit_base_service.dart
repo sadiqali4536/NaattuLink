@@ -1,18 +1,18 @@
 import 'dart:typed_data';
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'imagekit_models.dart';
 import 'imagekit_exceptions.dart';
 import 'imagekit_constants.dart';
-import 'image_storage_type.dart';
 
 /// Base service for interacting with ImageKit.io API via the Vercel Backend.
 /// Matches legacy API surface but routes securely through backend without private keys.
 class ImageKitBaseService {
   final String publicKey;
   final String urlEndpoint;
-  final ImageStorageType storageType; // Used for routing in backend
+  final String storageType; // Used for routing in backend
 
   const ImageKitBaseService({
     required this.publicKey,
@@ -49,19 +49,53 @@ class ImageKitBaseService {
     }
 
     final idToken = await user.getIdToken();
-    final uri = Uri.parse(ImageKitConstants.uploadEndpoint);
-    
-    // Ensure folder starts with /
-    final formattedFolder = folder.startsWith('/') ? folder : '/$folder';
 
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $idToken'
+    // 1. Get Authentication Data from Backend
+    debugPrint("[ImageKit App] Requesting ImageKit auth");
+    debugPrint("[ImageKit App] storageType: $storageType");
+    final authUri =
+        Uri.parse('${ImageKitConstants.authEndpoint}?storageType=$storageType');
+    final authResponse = await http.get(
+      authUri,
+      headers: {'Authorization': 'Bearer $idToken'},
+    );
+
+    if (authResponse.statusCode != 200) {
+      throw ImageKitUploadException(
+          'Failed to retrieve ImageKit auth: ${authResponse.body}');
+    }
+
+    final authData = json.decode(authResponse.body);
+    final String token = authData['token'];
+    final String signature = authData['signature'];
+    final int expire = authData['expire'];
+    final String serverPublicKey = authData['publicKey'];
+    final String providerId = authData['providerId'] ?? '';
+    final String serverFolder = authData['defaultFolder'] ?? folder;
+
+    debugPrint("[ImageKit App] Auth response received");
+    debugPrint("[ImageKit App] providerId: $providerId");
+    debugPrint("[ImageKit App] publicKey: $serverPublicKey");
+
+    final formattedFolder =
+        serverFolder.startsWith('/') ? serverFolder : '/$serverFolder';
+
+    // 2. Direct Upload to ImageKit
+    debugPrint("[ImageKit App] Starting ImageKit upload");
+    debugPrint("[ImageKit App] providerId: $providerId");
+    debugPrint("[ImageKit App] publicKey: $serverPublicKey");
+    final uploadUri = Uri.parse(ImageKitConstants.uploadUrl);
+
+    final request = http.MultipartRequest('POST', uploadUri)
       ..fields['fileName'] = fileName
       ..fields['folder'] = formattedFolder
-      ..fields['storageType'] = storageType.name
+      ..fields['publicKey'] = serverPublicKey
+      ..fields['signature'] = signature
+      ..fields['expire'] = expire.toString()
+      ..fields['token'] = token
       ..files.add(
         http.MultipartFile.fromBytes(
-          'image',
+          'file', // ImageKit expects 'file'
           imageBytes,
           filename: fileName,
         ),
@@ -86,14 +120,20 @@ class ImageKitBaseService {
 
       final responseBody = utf8.decode(chunks);
 
-      if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
+      if (streamedResponse.statusCode == 200 ||
+          streamedResponse.statusCode == 201) {
         final Map<String, dynamic> data = json.decode(responseBody);
-        
-        if (data['success'] == true) {
-          final result = ImageKitUploadResult.fromJson(data);
-          if (result.imageUrl.isNotEmpty && result.imageFileId.isNotEmpty) {
-            return result;
-          }
+
+        final result = ImageKitUploadResult(
+          imageUrl: data['url'] as String? ?? '',
+          imageFileId: data['fileId'] as String? ?? '',
+          providerId: providerId,
+        );
+
+        if (result.imageUrl.isNotEmpty && result.imageFileId.isNotEmpty) {
+          debugPrint("[ImageKit App] Upload successful");
+          debugPrint("[ImageKit App] providerId: $providerId");
+          return result;
         }
         throw ImageKitUploadException(
           'Upload succeeded but missing URL or fileId in response.',
@@ -139,9 +179,10 @@ class ImageKitBaseService {
         },
         body: json.encode({
           'fileId': imageFileId,
-          'storageType': storageType.name,
+          'storageType': storageType,
           // Send providerId if we have it (from newer images), else backend falls back to storageType mapping
-          if (providerId != null && providerId.isNotEmpty) 'providerId': providerId, 
+          if (providerId != null && providerId.isNotEmpty)
+            'providerId': providerId,
         }),
       );
 

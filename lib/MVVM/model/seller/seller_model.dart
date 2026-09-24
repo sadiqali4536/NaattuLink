@@ -5,13 +5,23 @@ class SellerModel {
   final String sellerId;
   final String? storeId;
   final String status; // active, suspended, blocked
-  final String registrationStatus; // not_started, in_progress, completed
-  final String subscriptionStatus; // trial, active, expired, cancelled
+  final String registrationStatus; // pending_verification, approved, rejected
+  final String subscriptionStatus; // pending, active, expired, cancelled
+  
+  final bool adminVerified;
+  final bool storeAccess;
+  
+  final String? selectedPlanId;
+  final String? selectedPlanName;
+  final int? planDurationDays;
+  final double? planPrice;
 
   final DateTime? trialStartDate;
   final DateTime? trialEndDate;
   final DateTime? subscriptionStartDate;
   final DateTime? subscriptionEndDate;
+  final DateTime? verifiedAt;
+  final String? verifiedBy;
 
   final String fullName;
   final String phoneNumber;
@@ -34,12 +44,20 @@ class SellerModel {
     required this.sellerId,
     this.storeId,
     this.status = 'active',
-    this.registrationStatus = 'not_started',
-    this.subscriptionStatus = 'trial',
+    this.registrationStatus = 'pending_verification',
+    this.subscriptionStatus = 'pending',
+    this.adminVerified = false,
+    this.storeAccess = false,
+    this.selectedPlanId,
+    this.selectedPlanName,
+    this.planDurationDays,
+    this.planPrice,
     this.trialStartDate,
     this.trialEndDate,
     this.subscriptionStartDate,
     this.subscriptionEndDate,
+    this.verifiedAt,
+    this.verifiedBy,
     required this.fullName,
     required this.phoneNumber,
     required this.email,
@@ -61,12 +79,20 @@ class SellerModel {
       sellerId: map['sellerId'] ?? map['uid'] ?? id,
       storeId: map['storeId'],
       status: map['status'] ?? 'active',
-      registrationStatus: map['registrationStatus'] ?? 'not_started',
-      subscriptionStatus: map['subscriptionStatus'] ?? 'trial',
+      registrationStatus: map['registrationStatus'] ?? 'pending_verification',
+      subscriptionStatus: map['subscriptionStatus'] ?? 'pending',
+      adminVerified: map['adminVerified'] ?? false,
+      storeAccess: map['storeAccess'] ?? false,
+      selectedPlanId: map['selectedPlanId'],
+      selectedPlanName: map['selectedPlanName'],
+      planDurationDays: map['planDurationDays'],
+      planPrice: (map['planPrice'] ?? 0).toDouble(),
       trialStartDate: _parseTimestamp(map['trialStartDate']),
       trialEndDate: _parseTimestamp(map['trialEndDate']),
       subscriptionStartDate: _parseTimestamp(map['subscriptionStartDate']),
       subscriptionEndDate: _parseTimestamp(map['subscriptionEndDate']),
+      verifiedAt: _parseTimestamp(map['verifiedAt']),
+      verifiedBy: map['verifiedBy'],
       fullName: map['fullName'] ?? map['sellerName'] ?? '',
       phoneNumber: map['phoneNumber'] ?? map['phone'] ?? '',
       email: map['email'] ?? '',
@@ -91,6 +117,12 @@ class SellerModel {
       'status': status,
       'registrationStatus': registrationStatus,
       'subscriptionStatus': subscriptionStatus,
+      'adminVerified': adminVerified,
+      'storeAccess': storeAccess,
+      'selectedPlanId': selectedPlanId,
+      'selectedPlanName': selectedPlanName,
+      'planDurationDays': planDurationDays,
+      'planPrice': planPrice,
       'trialStartDate':
           trialStartDate != null ? Timestamp.fromDate(trialStartDate!) : null,
       'trialEndDate':
@@ -101,6 +133,9 @@ class SellerModel {
       'subscriptionEndDate': subscriptionEndDate != null
           ? Timestamp.fromDate(subscriptionEndDate!)
           : null,
+      'verifiedAt':
+          verifiedAt != null ? Timestamp.fromDate(verifiedAt!) : null,
+      'verifiedBy': verifiedBy,
       'fullName': fullName,
       'phoneNumber': phoneNumber,
       'email': email,

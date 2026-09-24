@@ -34,16 +34,22 @@ class SellerAccessController extends GetxController {
         // Document does not exist -> SellerIntroductionScreen
         Get.to(() => const SellerIntroductionScreen());
       } else {
-        if (seller.status == 'draft' || seller.status == 'Draft') {
-          Get.to(() => const SubscriptionPlansScreen());
-        } else if (seller.status == 'pending' ||
-            seller.status == 'Pending' ||
-            seller.status == 'pending_verification') {
+        // Routing based on strict architecture rules
+        if (seller.registrationStatus == 'pending_verification') {
           Get.to(() => const SellerVerificationScreen());
-        } else if (seller.status == 'active' || seller.status == 'Active') {
-          Get.to(() => const SellerDashboardScreen());
-        } else {
+        } else if (seller.registrationStatus == 'rejected') {
+          // You might want to create a dedicated Rejected screen in the future
           Get.to(() => const SellerIntroductionScreen());
+        } else if (seller.registrationStatus == 'approved') {
+          if (hasSellerAccess) {
+            Get.to(() => const SellerDashboardScreen());
+          } else {
+            // Approved, but subscription is expired or not active
+            Get.to(() => const SubscriptionPlansScreen());
+          }
+        } else {
+          // Catch-all for not_started, draft, or any unknown state
+          Get.to(() => const SubscriptionPlansScreen());
         }
       }
     } catch (e) {
@@ -63,15 +69,15 @@ class SellerAccessController extends GetxController {
   }
 
   bool get isRegistrationComplete =>
-      currentSeller.value?.registrationStatus == 'completed';
-
-  bool get isSellerActive => currentSeller.value?.status == 'active';
+      currentSeller.value?.registrationStatus == 'completed' ||
+      currentSeller.value?.registrationStatus == 'approved' ||
+      currentSeller.value?.registrationStatus == 'pending_verification';
 
   bool get hasActiveTrial {
     final seller = currentSeller.value;
     if (seller == null || seller.trialEndDate == null) return false;
     // Note: This relies on device time for quick UI checks,
-    // but actual validation should happen via Server timestamp in DB rules or cloud functions.
+    // actual validation should happen via Server timestamp in DB rules or cloud functions.
     return DateTime.now().isBefore(seller.trialEndDate!);
   }
 
@@ -81,8 +87,20 @@ class SellerAccessController extends GetxController {
     return DateTime.now().isBefore(seller.subscriptionEndDate!);
   }
 
-  bool get hasSellerAccess =>
-      isSellerActive && (hasActiveTrial || hasActiveSubscription);
+  bool get hasSellerAccess {
+    final seller = currentSeller.value;
+    if (seller == null) return false;
+
+    // Strict access validation
+    bool isApproved =
+        seller.adminVerified == true && seller.registrationStatus == 'approved';
+
+    bool isValidSubscription =
+        seller.subscriptionStatus == 'active' && hasActiveSubscription;
+
+    // Allow access if they are approved AND have either an active subscription or an active trial
+    return isApproved && (isValidSubscription || hasActiveTrial);
+  }
 
   int get remainingTrialDays {
     final seller = currentSeller.value;

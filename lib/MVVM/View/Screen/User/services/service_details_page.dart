@@ -671,15 +671,6 @@ class ServiceDetailsPage extends StatelessWidget {
                     onPressed: () {},
                   ),
                 ),
-                const SizedBox(width: 10),
-                CircleAvatar(
-                  backgroundColor: Colors.white.withOpacity(0.9),
-                  child: IconButton(
-                    icon: Icon(Icons.favorite_border,
-                        color: primaryColor, size: 20),
-                    onPressed: () {},
-                  ),
-                ),
               ],
             ),
           ),
@@ -716,7 +707,7 @@ class ServiceDetailsPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          "₹$discountPrice/hr",
+                          "₹$discountPrice",
                           style: TextStyle(
                             color: themeGreen,
                             fontWeight: FontWeight.bold,

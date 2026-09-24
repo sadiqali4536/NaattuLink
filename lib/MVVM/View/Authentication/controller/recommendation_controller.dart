@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:naattulink/MVVM/model/models/product_model.dart';
+import 'dart:math';
 
 class RecommendationController extends GetxController {
   static RecommendationController get to => Get.find();
@@ -395,94 +396,93 @@ class RecommendationController extends GetxController {
       });
 
       // ── Populate the 14 sections ──
+      final Set<String> alreadyDisplayedIds = {};
+
+      List<ProductModel> _getSection(Iterable<ProductModel> candidates, int count) {
+        var filtered = candidates.where((p) => !alreadyDisplayedIds.contains(p.productId)).toList();
+        if (filtered.length < 4) { // Allow reuse if pool is exhausted
+          filtered = candidates.toList();
+        }
+        filtered.shuffle(Random());
+        final selected = filtered.take(count).toList();
+        for (var p in selected) {
+          alreadyDisplayedIds.add(p.productId);
+        }
+        return selected;
+      }
 
       // 1. Recently Viewed
-      recentlyViewed.value = allProducts
-          .where((p) => viewedIds.contains(p.productId))
-          .take(15)
-          .toList();
+      recentlyViewed.value = _getSection(
+          allProducts.where((p) => viewedIds.contains(p.productId)), 15);
 
       // 2. Based on Your Searches
-      basedOnSearches.value = allProducts
-          .where((p) {
+      basedOnSearches.value = _getSection(
+          allProducts.where((p) {
             final cat = p.category.toLowerCase();
             return searchCategories.contains(cat) ||
                 relatedCategoriesFromSearch.contains(cat);
-          })
-          .take(15)
-          .toList();
+          }),
+          15);
 
       // 3. Continue Shopping (items in cart)
-      continueShopping.value = allProducts
-          .where((p) => cartIds.contains(p.productId))
-          .take(15)
-          .toList();
+      continueShopping.value = _getSection(
+          allProducts.where((p) => cartIds.contains(p.productId)), 15);
 
       // 4. Recommended for You (top ranked items, excluding cart items)
-      recommendedForYou.value = allProducts
-          .where((p) => !cartIds.contains(p.productId))
-          .take(20)
-          .toList();
+      recommendedForYou.value = _getSection(
+          allProducts.where((p) => !cartIds.contains(p.productId)), 20);
 
       // 5. Trending Near You
-      trendingNearYou.value =
-          allProducts.where((p) => p.isTrending).take(15).toList();
+      trendingNearYou.value = _getSection(
+          allProducts.where((p) => p.isTrending), 15);
 
       // 6. Homemade Cakes
-      homemadeCakes.value = allProducts
-          .where((p) => p.category.toLowerCase() == 'homemade cakes')
-          .take(15)
-          .toList();
+      homemadeCakes.value = _getSection(
+          allProducts.where((p) => p.category.toLowerCase() == 'homemade cakes'),
+          15);
 
       // 7. Fashion Picks (Fashion & Shoes)
-      fashionPicks.value = allProducts
-          .where((p) =>
+      fashionPicks.value = _getSection(
+          allProducts.where((p) =>
               p.category.toLowerCase() == 'men\'s, women\'s & kids fashion' ||
-              p.category.toLowerCase() == 'shoes & footwear')
-          .take(15)
-          .toList();
+              p.category.toLowerCase() == 'shoes & footwear'),
+          15);
 
       // 8. Watches
-      watches.value = allProducts
-          .where((p) => p.category.toLowerCase() == 'watches')
-          .take(15)
-          .toList();
+      watches.value = _getSection(
+          allProducts.where((p) => p.category.toLowerCase() == 'watches'),
+          15);
 
       // 9. Electronics
-      electronics.value = allProducts
-          .where((p) => p.category.toLowerCase() == 'electronics')
-          .take(15)
-          .toList();
+      electronics.value = _getSection(
+          allProducts.where((p) => p.category.toLowerCase() == 'electronics'),
+          15);
 
       // 10. Cars & Bikes
-      carsAndBikes.value = allProducts
-          .where((p) =>
+      carsAndBikes.value = _getSection(
+          allProducts.where((p) =>
               p.category.toLowerCase() == 'cars' ||
-              p.category.toLowerCase() == 'bikes')
-          .take(15)
-          .toList();
+              p.category.toLowerCase() == 'bikes'),
+          15);
 
       // 11. Local Businesses
-      localBusinesses.value = allProducts
-          .where(
-              (p) => p.category.toLowerCase() == 'local businesses & services')
-          .take(15)
-          .toList();
+      localBusinesses.value = _getSection(
+          allProducts.where(
+              (p) => p.category.toLowerCase() == 'local businesses & services'),
+          15);
 
       // 12. Best Sellers
-      bestSellers.value =
-          allProducts.where((p) => p.isBestSeller).take(15).toList();
+      bestSellers.value = _getSection(
+          allProducts.where((p) => p.isBestSeller), 15);
 
       // 13. Flash Sale (e.g. top items by rating/discount or random mix)
-      flashSale.value = allProducts
-          .where((p) => p.isBestSeller || p.isTrending)
-          .take(15)
-          .toList();
+      flashSale.value = _getSection(
+          allProducts.where((p) => p.isBestSeller || p.isTrending), 15);
 
       // 14. New Arrivals
       final sortedByDate = List<ProductModel>.from(allProducts);
       sortedByDate.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      newArrivals.value = sortedByDate.take(15).toList();
+      newArrivals.value = _getSection(sortedByDate, 15);
 
       // Cache locally for offline availability
       _cacheRecommendations();
@@ -517,43 +517,50 @@ class RecommendationController extends GetxController {
       recommendedForYou.clear();
 
       // Populate cold start sections
-      trendingNearYou.value = pool.where((p) => p.isTrending).take(15).toList();
-      bestSellers.value = pool.where((p) => p.isBestSeller).take(15).toList();
-      newArrivals.value = List<ProductModel>.from(pool)
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      newArrivals.value = newArrivals.take(15).toList();
+      final Set<String> alreadyDisplayedIds = {};
 
-      homemadeCakes.value = pool
-          .where((p) => p.category.toLowerCase() == 'homemade cakes')
-          .take(10)
-          .toList();
-      fashionPicks.value = pool
-          .where((p) =>
+      List<ProductModel> _getColdSection(Iterable<ProductModel> candidates, int count) {
+        var filtered = candidates.where((p) => !alreadyDisplayedIds.contains(p.productId)).toList();
+        if (filtered.length < 4) { // Allow reuse if pool is exhausted
+          filtered = candidates.toList();
+        }
+        filtered.shuffle(Random());
+        final selected = filtered.take(count).toList();
+        for (var p in selected) {
+          alreadyDisplayedIds.add(p.productId);
+        }
+        return selected;
+      }
+
+      trendingNearYou.value = _getColdSection(pool.where((p) => p.isTrending), 15);
+      bestSellers.value = _getColdSection(pool.where((p) => p.isBestSeller), 15);
+
+      final sortedByDate = List<ProductModel>.from(pool);
+      sortedByDate.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      newArrivals.value = _getColdSection(sortedByDate, 15);
+
+      homemadeCakes.value = _getColdSection(
+          pool.where((p) => p.category.toLowerCase() == 'homemade cakes'), 10);
+      fashionPicks.value = _getColdSection(
+          pool.where((p) =>
               p.category.toLowerCase() == 'men\'s, women\'s & kids fashion' ||
-              p.category.toLowerCase() == 'shoes & footwear')
-          .take(10)
-          .toList();
-      watches.value = pool
-          .where((p) => p.category.toLowerCase() == 'watches')
-          .take(10)
-          .toList();
-      electronics.value = pool
-          .where((p) => p.category.toLowerCase() == 'electronics')
-          .take(10)
-          .toList();
-      carsAndBikes.value = pool
-          .where((p) =>
+              p.category.toLowerCase() == 'shoes & footwear'),
+          10);
+      watches.value = _getColdSection(
+          pool.where((p) => p.category.toLowerCase() == 'watches'), 10);
+      electronics.value = _getColdSection(
+          pool.where((p) => p.category.toLowerCase() == 'electronics'), 10);
+      carsAndBikes.value = _getColdSection(
+          pool.where((p) =>
               p.category.toLowerCase() == 'cars' ||
-              p.category.toLowerCase() == 'bikes')
-          .take(10)
-          .toList();
-      localBusinesses.value = pool
-          .where(
-              (p) => p.category.toLowerCase() == 'local businesses & services')
-          .take(10)
-          .toList();
+              p.category.toLowerCase() == 'bikes'),
+          10);
+      localBusinesses.value = _getColdSection(
+          pool.where(
+              (p) => p.category.toLowerCase() == 'local businesses & services'),
+          10);
 
-      flashSale.value = pool.where((p) => p.isBestSeller).take(10).toList();
+      flashSale.value = _getColdSection(pool.where((p) => p.isBestSeller), 10);
     } catch (e) {
       print('Error fetching cold start recommendations: $e');
     }

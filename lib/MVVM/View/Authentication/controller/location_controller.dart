@@ -4,12 +4,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart';
 import 'package:naattulink/MVVM/model/services/app_location_service.dart';
+import 'package:get_storage/get_storage.dart';
 
 /// Global GetX controller that manages the user's current GPS location and generic distance calculations.
 class LocationController extends GetxController {
   static LocationController get to => Get.find();
-
   final AppLocationService _locationService = AppLocationService();
+
+  @override
+  void onInit() {
+    super.onInit();
+    final cachedAddr = GetStorage().read<String>('cached_current_location');
+    if (cachedAddr != null && cachedAddr.isNotEmpty) {
+      currentLocation.value = cachedAddr;
+    }
+  }
 
   // Current location model
   final currentLocationModel = Rxn<AppLocationModel>();
@@ -315,18 +324,19 @@ class LocationController extends GetxController {
     district.value = loc.district;
     locationName.value = loc.formattedAddress;
     currentLocation.value = loc.formattedAddress;
+    GetStorage().write('cached_current_location', loc.formattedAddress);
   }
 
   void _setFallbackLocation() {
     latitude.value = 11.2588;
     longitude.value = 75.7804;
-    locationName.value = 'Kallai, Kozhikode';
-    currentLocation.value = 'Kallai, Kozhikode';
+    locationName.value = '';
+    currentLocation.value = '';
     district.value = 'Unknown';
     currentLocationModel.value = AppLocationModel(
       latitude: 11.2588,
       longitude: 75.7804,
-      formattedAddress: 'Kallai, Kozhikode',
+      formattedAddress: '',
       district: 'Unknown',
     );
   }

@@ -8,10 +8,14 @@ import 'package:http/http.dart' as http;
 import 'package:naattulink/MVVM/utils/Constants/constants.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/View/Screen/location/address_form_bottom_sheet.dart';
+import 'package:naattulink/MVVM/utils/zone_detector.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 enum LocationPickerFlow {
   registration,
   addAddress,
+  serviceBooking,
 }
 
 class SelectLocationMapPage extends StatefulWidget {
@@ -222,8 +226,11 @@ class _SelectLocationMapPageState extends State<SelectLocationMapPage> {
             ),
             onMapCreated: (GoogleMapController controller) {
               mapController = controller;
-              if (widget.initialLat == 11.2588 &&
-                  widget.initialLng == 75.7804) {
+              if ((widget.initialLat == 11.2588 &&
+                      widget.initialLng == 75.7804) ||
+                  (widget.initialLat == 11.0168 &&
+                      widget.initialLng == 76.9558) ||
+                  widget.flow == LocationPickerFlow.serviceBooking) {
                 _fetchAndMoveToCurrentLocation();
               }
             },
@@ -403,7 +410,50 @@ class _SelectLocationMapPageState extends State<SelectLocationMapPage> {
                           ? null
                           : () async {
                               if (widget.flow ==
-                                  LocationPickerFlow.registration) {
+                                      LocationPickerFlow.registration ||
+                                  widget.flow ==
+                                      LocationPickerFlow.serviceBooking) {
+                                if (widget.flow ==
+                                        LocationPickerFlow.serviceBooking &&
+                                    widget.requireZone) {
+                                  setState(() => _isLoading = true);
+                                  try {
+                                    final district =
+                                        _currentLocationModel?.district ?? '';
+                                    final zones = await ZoneDetector
+                                        .getActiveZonesForDistrict(district);
+                                    final match = ZoneDetector.findMatchingZone(
+                                      _currentLocationModel!.latitude,
+                                      _currentLocationModel!.longitude,
+                                      zones,
+                                    );
+
+                                    if (match == null) {
+                                      if (mounted) {
+                                        CherryToast.error(
+                                          title: const Text(
+                                              'Outside Service Area'),
+                                          description: const Text(
+                                              'Sorry, we do not operate in your location yet.'),
+                                          toastPosition: Position.bottom,
+                                        ).show(context);
+                                      }
+                                      setState(() => _isLoading = false);
+                                      return; // Stop and let user pick again
+                                    } else {
+                                      _currentLocationModel =
+                                          _currentLocationModel?.copyWith(
+                                        zoneId: match.id,
+                                        zoneName: match.name,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    // Handle errors silently for now
+                                  } finally {
+                                    if (mounted)
+                                      setState(() => _isLoading = false);
+                                  }
+                                }
                                 Navigator.pop(context, _currentLocationModel);
                                 return;
                               }

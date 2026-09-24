@@ -36,18 +36,17 @@ class _BusWorkerhomepageState extends State<BusWorkerhomepage> {
     // Safely inject controller if not already present (e.g. on hot-reload)
     final controller = Get.put(BusDashboardController());
 
-    return Obx(() {
-      if (controller.isLoading.value && controller.userData.isEmpty) {
-        return const Scaffold(
-          backgroundColor: Color(0xFF0C1F41),
-          body: Center(child: CircularProgressIndicator(color: Colors.white)),
-        );
-      }
+    return Scaffold(
+      backgroundColor:
+          const Color(0xFF0C1F41), // Dark blue background for top section
+      body: Obx(() {
+        if (controller.isLoading.value && controller.userData.isEmpty) {
+          return const Center(
+              child: CircularProgressIndicator(color: Colors.white));
+        }
 
-      if (controller.hasError.value || controller.userData.isEmpty) {
-        return Scaffold(
-          backgroundColor: const Color(0xFF0C1F41),
-          body: Center(
+        if (controller.hasError.value || controller.userData.isEmpty) {
+          return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -69,26 +68,22 @@ class _BusWorkerhomepageState extends State<BusWorkerhomepage> {
                 ),
               ],
             ),
-          ),
-        );
-      }
+          );
+        }
 
-      final data = controller.userData;
-      final userName = data['username'] ?? 'User';
-      final busName = data['bus_name'] ?? 'N/A';
-      final regNumber = data['reg_number'] ?? 'N/A';
-      final firstStop = data['first_stop'] ?? 'N/A';
-      final destination = data['destination'] ?? 'N/A';
-      final mainStand = data['main_stand'] ?? 'N/A';
-      final arrivalTime = data['arrival_time'] ?? 'N/A';
-      final departureTime = data['departure_time'] ?? 'N/A';
-      final status = data['status']?.toString().toUpperCase() ?? 'ACTIVE';
-      final profileImg = data['profile_img']?.toString() ?? '';
+        final data = controller.userData;
+        final userName = data['username'] ?? 'User';
+        final busName = data['bus_name'] ?? 'N/A';
+        final regNumber = data['reg_number'] ?? 'N/A';
+        final firstStop = data['first_stop'] ?? 'N/A';
+        final destination = data['destination'] ?? 'N/A';
+        final mainStand = data['main_stand'] ?? 'N/A';
+        final arrivalTime = data['arrival_time'] ?? 'N/A';
+        final departureTime = data['departure_time'] ?? 'N/A';
+        final status = data['status']?.toString().toUpperCase() ?? 'ACTIVE';
+        final profileImg = data['profile_img']?.toString() ?? '';
 
-      return Scaffold(
-        backgroundColor:
-            const Color(0xFF0C1F41), // Dark blue background for top section
-        body: SafeArea(
+        return SafeArea(
           child: Column(
             children: [
               // Top Section
@@ -395,9 +390,9 @@ class _BusWorkerhomepageState extends State<BusWorkerhomepage> {
               ),
             ],
           ),
-        ),
-      );
-    });
+        );
+      }),
+    );
   }
 
   Widget _buildStatCard(

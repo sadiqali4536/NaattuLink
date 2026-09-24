@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
 import 'package:naattulink/core/imagekit/imagekit_config.dart';
-import 'package:naattulink/core/imagekit/image_storage_type.dart';
+
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 
@@ -65,11 +65,11 @@ class BusinessDashboardController extends GetxController {
     try {
       String? imageUrl;
       if (imageFile != null) {
-        final config = ImageKitConfigManager.getConfig(ImageStorageType.workers);
+        final config = await ImageKitConfigManager.getConfig(storageType: 'workers');
         final imageKitService = ImageKitBaseService(
           publicKey: config.publicKey,
           urlEndpoint: config.urlEndpoint,
-          storageType: ImageStorageType.workers,
+          storageType: config.storageType,
         );
 
         final originalName = imageFile.path.split('/').last;

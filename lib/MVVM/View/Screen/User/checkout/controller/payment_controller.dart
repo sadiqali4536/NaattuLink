@@ -1,8 +1,11 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:naattulink/MVVM/utils/upi_payment_launcher.dart';
+
+import 'package:naattulink/MVVM/utils/payment_upi_resolver.dart';
 import 'package:naattulink/MVVM/model/user/cart_item_model.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart';
 import 'package:naattulink/MVVM/View/Screen/User/checkout/order_success_page.dart';
@@ -12,9 +15,6 @@ enum PaymentMethod { upi, cashOnDelivery }
 enum UpiPaymentState { initial, paymentInitiated, transactionIdEntered }
 
 class PaymentController extends GetxController {
-  // Config
-  static const String merchantUpiId =
-      'merchant@upi'; // Replace with real UPI ID
   static const String merchantName = 'NaattuLink';
 
   // State
@@ -25,26 +25,53 @@ class PaymentController extends GetxController {
 
   void selectPaymentMethod(PaymentMethod method) {
     selectedPaymentMethod.value = method;
-    if (method == PaymentMethod.cashOnDelivery) {
+    if (method != PaymentMethod.upi) {
       upiPaymentState.value = UpiPaymentState.initial;
       transactionId.value = '';
     }
   }
 
-  Future<void> initiateUpiPayment(double amount) async {
-    final uri = Uri.parse(
-        'upi://pay?pa=$merchantUpiId&pn=$merchantName&am=${amount.toStringAsFixed(2)}&cu=INR');
-
+  Future<void> initiateUpiPayment(double amount,
+      {String sellerId = '', String productId = ''}) async {
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-        upiPaymentState.value = UpiPaymentState.paymentInitiated;
-      } else {
-        Get.snackbar('Error', 'No compatible UPI application found.',
+      final upiId = await PaymentUpiResolver.resolvePaymentUpiId(
+          sellerId: sellerId, productId: productId);
+
+      if (upiId == null || upiId.isEmpty) {
+        Get.snackbar('Error', 'UPI payment is currently unavailable.',
             backgroundColor: Colors.redAccent, colorText: Colors.white);
+        return;
+      }
+
+      final double paymentAmount = amount;
+      final String upiAmount = paymentAmount.toStringAsFixed(2);
+
+      final String transactionRef = 'NL${DateTime.now().millisecondsSinceEpoch}';
+
+      final response = await UpiPaymentLauncher.initiatePayment(
+        upiId: upiId,
+        amount: upiAmount,
+        transactionRef: transactionRef,
+        transactionNote: 'NaattuLink Order Payment',
+      );
+
+      if (response.status == UpiPaymentStatus.SUCCESS) {
+        upiPaymentState.value = UpiPaymentState.paymentInitiated;
+        Get.snackbar('Processing', 'Payment intent completed. Please verify and submit the transaction ID.',
+            backgroundColor: Colors.blueAccent, colorText: Colors.white);
+      } else if (response.status == UpiPaymentStatus.NO_UPI_APP) {
+        Get.snackbar('No UPI App', 'No compatible UPI application found on this device.',
+            backgroundColor: Colors.orange, colorText: Colors.white);
+      } else if (response.status == UpiPaymentStatus.CANCELLED) {
+        Get.snackbar('Cancelled', 'UPI payment was cancelled.',
+            backgroundColor: Colors.orange, colorText: Colors.white);
+      } else {
+        Get.snackbar('Payment Failed', 'Transaction failed. Please try again.',
+            backgroundColor: Colors.redAccent, colorText: Colors.white);
+        debugPrint('UPI Failed: ${response.responseCode} / ${response.rawResponse}');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Unable to open the selected payment app.',
+      Get.snackbar('Error', 'Unable to initiate the selected payment.',
           backgroundColor: Colors.redAccent, colorText: Colors.white);
     }
   }
@@ -58,6 +85,10 @@ class PaymentController extends GetxController {
         upiPaymentState.value == UpiPaymentState.transactionIdEntered) {
       upiPaymentState.value = UpiPaymentState.paymentInitiated;
     }
+  }
+
+  void showTransactionIdInput() {
+    upiPaymentState.value = UpiPaymentState.transactionIdEntered;
   }
 
   String _buildFullAddress(AppLocationModel loc) {
@@ -115,6 +146,8 @@ class PaymentController extends GetxController {
 
     try {
       String? generatedOrderId;
+      final String currentGroupId =
+          '${DateTime.now().millisecondsSinceEpoch.toString().substring(0, 10)}-${Random().nextInt(9000) + 1000}';
 
       for (var item in cartItems) {
         String? finalSellerId = item.sellerId;
@@ -135,6 +168,7 @@ class PaymentController extends GetxController {
         }
 
         final bookingData = {
+          'orderId': currentGroupId,
           'userId': user.uid,
           'productId': item.productId,
           'serviceTitle': item.productName,
@@ -178,7 +212,7 @@ class PaymentController extends GetxController {
             .collection('bookings')
             .add(bookingData);
         if (generatedOrderId == null) {
-          generatedOrderId = docRef.id;
+          generatedOrderId = currentGroupId;
         }
 
         if (finalSellerId != null && finalSellerId.isNotEmpty) {

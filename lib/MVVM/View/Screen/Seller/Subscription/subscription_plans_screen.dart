@@ -101,9 +101,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               ...controller.plans.map((plan) {
-                // Determine if a plan is popular just as an example (e.g. Premium Plan)
-                final isPopular = plan.name.toLowerCase().contains('premium') ||
-                    plan.sortOrder == 2;
+                final isPopular = plan.isPopular;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 20),
                   child: _buildPlanCard(

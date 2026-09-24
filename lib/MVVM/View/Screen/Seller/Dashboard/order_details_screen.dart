@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:naattulink/MVVM/utils/stock_manager.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
@@ -20,12 +22,31 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    String rawStatus = widget.orderData['status'] ?? 'Pending';
-    if (rawStatus.isNotEmpty) {
-      currentStatus =
-          rawStatus[0].toUpperCase() + rawStatus.substring(1).toLowerCase();
-    } else {
-      currentStatus = 'Pending';
+    String rawStatus = (widget.orderData['status'] ?? 'pending').toLowerCase();
+    switch (rawStatus) {
+      case 'pending_verification':
+        currentStatus = 'Pending Verification';
+        break;
+      case 'pending':
+        currentStatus = 'Pending';
+        break;
+      case 'processing':
+        currentStatus = 'Processing';
+        break;
+      case 'shipped':
+      case 'dispatched':
+        currentStatus = 'Dispatched';
+        break;
+      case 'cancelled':
+        currentStatus = 'Cancelled';
+        break;
+      case 'rejected':
+        currentStatus = 'Rejected';
+        break;
+      default:
+        currentStatus = rawStatus.isNotEmpty
+            ? rawStatus[0].toUpperCase() + rawStatus.substring(1)
+            : 'Pending';
     }
   }
 
@@ -117,10 +138,26 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
 
   Widget _buildStatusBanner() {
     final bool isDispatched = currentStatus == 'Dispatched';
-    final Color bgColor =
-        isDispatched ? const Color(0xFFDCFCE7) : const Color(0xFFEAF3FF);
-    final Color textColor =
-        isDispatched ? const Color(0xFF16A34A) : const Color(0xFF0857A0);
+    final bool isPending =
+        currentStatus == 'Pending' || currentStatus == 'Pending Verification';
+    final bool isCancelled = currentStatus == 'Cancelled';
+    final bool isRejected = currentStatus == 'Rejected';
+
+    final Color bgColor = isDispatched
+        ? const Color(0xFFDCFCE7)
+        : isPending
+            ? Colors.orange.withOpacity(0.15)
+            : (isCancelled || isRejected)
+                ? Colors.red.withOpacity(0.15)
+                : const Color(0xFFEAF3FF);
+
+    final Color textColor = isDispatched
+        ? const Color(0xFF16A34A)
+        : isPending
+            ? Colors.orange.shade800
+            : (isCancelled || isRejected)
+                ? Colors.red.shade800
+                : const Color(0xFF0857A0);
 
     return Container(
       width: double.infinity,
@@ -131,8 +168,14 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
       ),
       child: Row(
         children: [
-          Icon(isDispatched ? Icons.check_circle : Icons.circle,
-              size: isDispatched ? 18 : 10, color: textColor),
+          Icon(
+              (isCancelled || isRejected)
+                  ? Icons.cancel
+                  : isDispatched
+                      ? Icons.check_circle
+                      : Icons.circle,
+              size: (isDispatched || isCancelled || isRejected) ? 18 : 10,
+              color: textColor),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,7 +188,7 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
                   fontSize: 14,
                 ),
               ),
-              if (currentStatus == 'Pending') ...[
+              if (isPending) ...[
                 const SizedBox(height: 2),
                 Text(
                   "Action required",
@@ -155,6 +198,48 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+              ],
+              if (isCancelled || isRejected) ...[
+                const SizedBox(height: 6),
+                Text(
+                  isCancelled
+                      ? "User cancelled the order"
+                      : "Seller rejected the order",
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (widget.orderData['cancellationReason'] != null &&
+                    widget.orderData['cancellationReason']
+                        .toString()
+                        .isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Reason: ${widget.orderData['cancellationReason']}',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+                if (widget.orderData['cancellationComment'] != null &&
+                    widget.orderData['cancellationComment']
+                        .toString()
+                        .isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Comment: ${widget.orderData['cancellationComment']}',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 12,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ],
           ),
@@ -585,30 +670,51 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTimelineStep(
-                title: "Order Confirmed",
-                subtitle: "Order placed successfully",
-                isCompleted: true,
-                isLast: false,
-              ),
-              _buildTimelineStep(
-                title: "Processing",
-                subtitle: currentStatus == 'Processing' ||
-                        currentStatus == 'Dispatched'
-                    ? "Your order is being processed"
-                    : "Waiting for seller",
-                isCompleted: currentStatus == 'Processing' ||
-                    currentStatus == 'Dispatched',
-                isLast: false,
-              ),
-              _buildTimelineStep(
-                title: "Order Dispatched",
-                subtitle: currentStatus == 'Dispatched'
-                    ? "Your order has been dispatched"
-                    : "Waiting",
-                isCompleted: currentStatus == 'Dispatched',
-                isLast: true,
-              ),
+              if (currentStatus == 'Cancelled' ||
+                  currentStatus == 'Rejected') ...[
+                _buildTimelineStep(
+                  title: "Order Confirmed",
+                  subtitle: "Order placed successfully",
+                  isCompleted: true,
+                  isLast: false,
+                ),
+                _buildTimelineStep(
+                  title: currentStatus == 'Cancelled'
+                      ? "Order Cancelled"
+                      : "Order Rejected",
+                  subtitle: currentStatus == 'Cancelled'
+                      ? "The order was cancelled by the buyer"
+                      : "You rejected this order",
+                  isCompleted: false,
+                  isError: true,
+                  isLast: true,
+                ),
+              ] else ...[
+                _buildTimelineStep(
+                  title: "Order Confirmed",
+                  subtitle: "Order placed successfully",
+                  isCompleted: true,
+                  isLast: false,
+                ),
+                _buildTimelineStep(
+                  title: "Processing",
+                  subtitle: currentStatus == 'Processing' ||
+                          currentStatus == 'Dispatched'
+                      ? "Your order is being processed"
+                      : "Waiting for seller",
+                  isCompleted: currentStatus == 'Processing' ||
+                      currentStatus == 'Dispatched',
+                  isLast: false,
+                ),
+                _buildTimelineStep(
+                  title: "Order Dispatched",
+                  subtitle: currentStatus == 'Dispatched'
+                      ? "Your order has been dispatched"
+                      : "Waiting",
+                  isCompleted: currentStatus == 'Dispatched',
+                  isLast: true,
+                ),
+              ],
             ],
           ),
         ),
@@ -621,7 +727,13 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
     required String subtitle,
     required bool isCompleted,
     required bool isLast,
+    bool isError = false,
   }) {
+    Color activeColor = isError ? Colors.red : const Color(0xFF16A34A);
+    Color borderColor = isError
+        ? Colors.red
+        : (isCompleted ? const Color(0xFF16A34A) : const Color(0xFFCBD5E1));
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -633,24 +745,24 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
                 height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isCompleted ? const Color(0xFF16A34A) : Colors.white,
+                  color: (isCompleted || isError) ? activeColor : Colors.white,
                   border: Border.all(
-                    color: isCompleted
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFFCBD5E1),
+                    color: borderColor,
                     width: 2,
                   ),
                 ),
                 child: isCompleted
                     ? const Icon(Icons.check, color: Colors.white, size: 12)
-                    : null,
+                    : (isError
+                        ? const Icon(Icons.close, color: Colors.white, size: 12)
+                        : null),
               ),
               if (!isLast)
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: isCompleted
-                        ? const Color(0xFF16A34A)
+                    color: (isCompleted || isError)
+                        ? activeColor
                         : const Color(0xFFE2E8F0),
                   ),
                 ),
@@ -691,7 +803,9 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
   }
 
   Widget _buildBottomActions() {
-    if (currentStatus != 'Pending' && currentStatus != 'Processing') {
+    if (currentStatus != 'Pending' &&
+        currentStatus != 'Pending Verification' &&
+        currentStatus != 'Processing') {
       return const SizedBox.shrink();
     }
 
@@ -710,7 +824,8 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (currentStatus == 'Pending') ...[
+          if (currentStatus == 'Pending' ||
+              currentStatus == 'Pending Verification') ...[
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -1077,12 +1192,39 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
             .collection('bookings')
             .doc(orderId)
             .update(updateData);
+
+        if (dbStatus == 'cancelled') {
+          try {
+            final data = widget.orderData;
+            final productId = data['productId'];
+            final variantId = data['variantId'];
+            final quantity = data['quantity'] ?? 1;
+
+            if (productId != null) {
+              await StockManager.restoreStock(
+                bookingId: orderId,
+                productId: productId.toString(),
+                quantity: quantity,
+                variantId: variantId?.toString(),
+              );
+            }
+          } catch (e) {
+            debugPrint("Error restoring stock on seller rejection: $e");
+          }
+        }
       }
 
       if (status == 'Accepted') {
         toastSuccess("Order Accepted");
       } else if (status == 'Rejected') {
         toastError("Order Rejected");
+        // Go back to orders list after rejection so it refreshes
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) Get.back();
+      } else if (status == 'Dispatched') {
+        toastSuccess("Order Dispatched");
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) Get.back();
       } else {
         toastSuccess("Order status updated");
       }

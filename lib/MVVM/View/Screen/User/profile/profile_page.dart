@@ -250,51 +250,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         const SizedBox(height: 40),
 
-                        // Dark Mode toggle
-                        Material(
-                          elevation: 3,
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            height: 50,
-                            width: 350,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color.fromARGB(255, 232, 232, 232),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const SizedBox(width: 15),
-                                const Image(
-                                    image:
-                                        AssetImage("assets/icons/darkmod.png")),
-                                const SizedBox(width: 10),
-                                const Text("Dark Mode"),
-                                const Spacer(),
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 10),
-                                  child: BlocBuilder<ThemeBloc, ThemeState>(
-                                    builder: (context, state) {
-                                      return CupertinoSwitch(
-                                        value:
-                                            state.themeMode == ThemeMode.dark,
-                                        onChanged: (_) {
-                                          context
-                                              .read<ThemeBloc>()
-                                              .add(ToggleThemeEvent());
-                                        },
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
                         // Notification toggle
                         Material(
                           elevation: 3,

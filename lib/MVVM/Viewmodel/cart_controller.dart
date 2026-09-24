@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../model/user/cart_item_model.dart';
 import '../model/seller/store_product_model.dart';
 import '../model/seller/product_variant.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class CartController extends GetxController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -72,14 +74,18 @@ class CartController extends GetxController {
   }
 
   Future<void> addToCart(StoreProductModel product,
-      {ProductVariant? variant}) async {
+      {ProductVariant? variant, String? selectedVariantName}) async {
     final String? uid = _auth.currentUser?.uid ?? _currentUserId;
     if (uid == null) {
       // User is not logged in, should be handled by UI redirecting to login
-      Get.snackbar('Login Required', 'Please log in to add items to cart',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white);
+      if (Get.context != null) {
+        CherryToast.error(
+          title: const Text('Please log in to add items to cart',
+              style: TextStyle(color: Colors.black)),
+          animationType: AnimationType.fromTop,
+          toastPosition: Position.top,
+        ).show(Get.context!);
+      }
       return;
     }
 
@@ -131,9 +137,11 @@ class CartController extends GetxController {
             offerPrice: variant?.discountPrice ?? product.discountPrice,
             quantity: 1,
             variantId: variant?.id,
-            variantName:
-                variant != null ? variant.attributes.values.join(' - ') : null,
+            variantName: selectedVariantName ??
+                (variant != null ? variant.attributes.values.join(' - ') : null),
             sellerId: product.sellerId,
+            isCashOnDelivery: product.isCashOnDelivery,
+            isOnlinePayment: product.isOnlinePayment,
             addedAt: DateTime.now(),
             updatedAt: DateTime.now(),
           );
@@ -143,23 +151,24 @@ class CartController extends GetxController {
       });
 
       isLoading.value = false;
-      Get.snackbar(
-        'Success',
-        'Added to cart',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      if (Get.context != null) {
+        CherryToast.success(
+          title: const Text('Added to cart',
+              style: TextStyle(color: Colors.black)),
+          animationType: AnimationType.fromTop,
+          toastPosition: Position.top,
+        ).show(Get.context!);
+      }
     } catch (e) {
       isLoading.value = false;
       String errorMsg = e.toString().replaceAll('Exception: ', '');
-      Get.snackbar(
-        'Error',
-        errorMsg,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      if (Get.context != null) {
+        CherryToast.error(
+          title: Text(errorMsg, style: const TextStyle(color: Colors.black)),
+          animationType: AnimationType.fromTop,
+          toastPosition: Position.top,
+        ).show(Get.context!);
+      }
     }
   }
 

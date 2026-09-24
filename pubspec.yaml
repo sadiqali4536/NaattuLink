@@ -42,7 +42,7 @@ dependencies:
   toggle_switch: ^2.3.0
   carousel_slider: ^5.0.0
   cloud_firestore: ^5.6.5
-  get: ^4.7.2
+  get: ^4.7.3
   image_picker: ^1.1.2
   intl: ^0.20.2
   firebase_core: ^3.13.1
@@ -75,6 +75,11 @@ dependencies:
   fluttertoast: ^10.0.0
   flutter_image_compress: ^2.5.1
   intl_phone_field: ^3.2.0
+  cached_network_image: ^3.4.1
+  audioplayers: ^6.8.1
+  google_mlkit_text_recognition: ^0.17.1
+  qr_flutter: ^4.1.0
+  path_provider: ^2.1.6
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -104,6 +109,7 @@ flutter:
     - assets/bg/
     - assets/logo/
     - assets/lotties/
+    - assets/sounds/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
@@ -9,7 +10,7 @@ class BookingSuccessPage extends StatefulWidget {
   final String serviceName;
   final DateTime date;
   final String timeSlot;
-  final String providerName;
+  final String serviceType;
 
   const BookingSuccessPage({
     Key? key,
@@ -17,7 +18,7 @@ class BookingSuccessPage extends StatefulWidget {
     required this.serviceName,
     required this.date,
     required this.timeSlot,
-    required this.providerName,
+    required this.serviceType,
   }) : super(key: key);
 
   @override
@@ -27,16 +28,31 @@ class BookingSuccessPage extends StatefulWidget {
 class _BookingSuccessPageState extends State<BookingSuccessPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _lottieController;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _hasPlayedSound = false;
 
   @override
   void initState() {
     super.initState();
     _lottieController = AnimationController(vsync: this);
+    _playSound();
+  }
+
+  Future<void> _playSound() async {
+    if (_hasPlayedSound) return;
+    _hasPlayedSound = true;
+    try {
+      await _audioPlayer.setReleaseMode(ReleaseMode.stop);
+      await _audioPlayer.play(AssetSource('sounds/success.mp3'));
+    } catch (e) {
+      debugPrint("Error playing success sound: $e");
+    }
   }
 
   @override
   void dispose() {
     _lottieController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -100,7 +116,7 @@ class _BookingSuccessPageState extends State<BookingSuccessPage>
                     children: [
                       _buildRow("Service", widget.serviceName),
                       const Divider(height: 24),
-                      _buildRow("Provider", widget.providerName),
+                      _buildRow("Service Type", widget.serviceType),
                       const Divider(height: 24),
                       _buildRow("Date",
                           DateFormat('dd MMM yyyy').format(widget.date)),
@@ -115,7 +131,9 @@ class _BookingSuccessPageState extends State<BookingSuccessPage>
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
-                      Get.offAll(() => user_Dashboard());
+                      Future.delayed(Duration.zero, () {
+                        Get.offAll(() => user_Dashboard());
+                      });
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,

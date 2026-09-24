@@ -44,6 +44,7 @@ class StoreProductModel {
   final bool hasVariants;
   final List<String> variantAttributes;
   final List<ProductVariant> variants;
+  final Map<String, List<Map<String, dynamic>>> variantOptionsData;
 
   // Delivery Information
   final double? weight; // in kg
@@ -54,6 +55,10 @@ class StoreProductModel {
 
   // Rating & Review Aggregates
   final Map<String, dynamic> rating;
+
+  final bool isCashOnDelivery;
+  final bool isOnlinePayment;
+  final bool isFeatured;
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -85,6 +90,7 @@ class StoreProductModel {
     this.hasVariants = false,
     this.variantAttributes = const [],
     this.variants = const [],
+    this.variantOptionsData = const {},
     this.weight,
     this.dimensions,
     this.deliveryCharge,
@@ -96,6 +102,9 @@ class StoreProductModel {
       'totalReviews': 0,
       'breakdown': {}
     },
+    this.isCashOnDelivery = true,
+    this.isOnlinePayment = true,
+    this.isFeatured = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -143,7 +152,10 @@ class StoreProductModel {
           (map['discountPrice'] ?? map['discount_price'] ?? map['price'] ?? 0)
               .toDouble(),
       images: parsedImages,
-      imageMetadata: (map['imageMetadata'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
+      imageMetadata: (map['imageMetadata'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          [],
       coverImage: map['coverImage'] ??
           (parsedImages.isNotEmpty ? parsedImages.first : ''),
       sku: map['sku'] ?? '',
@@ -159,6 +171,7 @@ class StoreProductModel {
                   Map<String, dynamic>.from(v), v['id'] ?? ''))
               .toList() ??
           [],
+      variantOptionsData: _parseVariantOptionsData(map['variantOptionsData']),
       weight: map['weight'] != null ? (map['weight']).toDouble() : null,
       dimensions: map['dimensions'],
       deliveryCharge: map['deliveryCharge'] != null
@@ -173,6 +186,9 @@ class StoreProductModel {
             'totalReviews': map['totalReviews'] ?? 0,
             'breakdown': map['ratingBreakdown'] ?? {},
           }),
+      isCashOnDelivery: map['isCashOnDelivery'] ?? true,
+      isOnlinePayment: map['isOnlinePayment'] ?? true,
+      isFeatured: map['isFeatured'] ?? false,
       createdAt: _parseTimestamp(map['createdAt']),
       updatedAt: _parseTimestamp(map['updatedAt']),
     );
@@ -213,6 +229,7 @@ class StoreProductModel {
       'hasVariants': hasVariants,
       'variantAttributes': variantAttributes,
       'variants': variants.map((v) => v.toMap()).toList(),
+      'variantOptionsData': variantOptionsData,
 
       'delivery': {
         'weight': weight,
@@ -230,6 +247,9 @@ class StoreProductModel {
       'returnPolicy': returnPolicy,
 
       'rating': rating,
+      'isCashOnDelivery': isCashOnDelivery,
+      'isOnlinePayment': isOnlinePayment,
+      'isFeatured': isFeatured,
 
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
@@ -241,5 +261,18 @@ class StoreProductModel {
   static DateTime? _parseTimestamp(dynamic val) {
     if (val is Timestamp) return val.toDate();
     return null;
+  }
+
+  static Map<String, List<Map<String, dynamic>>> _parseVariantOptionsData(
+      dynamic data) {
+    if (data == null || data is! Map) return {};
+    final result = <String, List<Map<String, dynamic>>>{};
+    data.forEach((key, value) {
+      if (value is List) {
+        result[key.toString()] =
+            value.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+    });
+    return result;
   }
 }

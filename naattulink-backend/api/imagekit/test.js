@@ -1,5 +1,5 @@
 const ImageKitService = require('../../services/imagekit/imagekitService');
-const { authenticateAdmin } = require('./utils');
+const { authenticateAdmin } = require('./_utils');
 const cors = require('cors')({ origin: true });
 const admin = require('firebase-admin');
 

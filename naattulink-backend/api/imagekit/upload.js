@@ -1,5 +1,5 @@
 const ImageKitService = require('../../services/imagekit/imagekitService');
-const { authenticateUser } = require('./utils');
+const { authenticateUser } = require('./_utils');
 const multer = require('multer');
 
 // Configure multer to store file in memory
@@ -70,7 +70,7 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error("ImageKit Upload Error:", error);
-    
+
     // Check if it's our custom ALL_PROVIDERS_UNAVAILABLE error
     if (error.message === 'ALL_PROVIDERS_UNAVAILABLE') {
       return res.status(503).json({
@@ -83,7 +83,7 @@ module.exports = async (req, res) => {
     if (error.message.startsWith('UNAUTHORIZED')) {
       return res.status(401).json({ success: false, message: error.message });
     }
-    
+
     if (error.message.startsWith('CLIENT_ERROR')) {
       return res.status(400).json({ success: false, message: error.message });
     }

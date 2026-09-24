@@ -1,5 +1,5 @@
 const ImageKitService = require('../../services/imagekit/imagekitService');
-const { authenticateUser } = require('./utils');
+const { authenticateUser } = require('./_utils');
 const cors = require('cors')({ origin: true });
 
 const runMiddleware = (req, res, fn) => {
