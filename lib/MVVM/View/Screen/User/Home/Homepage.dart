@@ -41,6 +41,8 @@ import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_pa
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/food_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/internet_cafe_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/pickup_page.dart';
+import 'Widgets/spotlight_campaign_section.dart';
+import 'Widgets/spotlight_items_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/jcbs_page.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/recommendation_controller.dart';
@@ -181,12 +183,15 @@ class HomepageState extends State<Homepage> {
   late int selectedCategoryIndex;
   int _shuffleSeed = 0;
   int activeBannerIndex = 0;
+  // Stable per-session position for Brands Spotlight inside Online Shop (0..4)
+  int _spotlightPosition = 2;
   String searchQuery = "";
   double _minRating = 0;
   String _sortBy = 'None';
   late TextEditingController _searchController;
   Stream<QuerySnapshot>? _servicesStream;
   Stream<QuerySnapshot>? _advertisementsStream;
+  Stream<QuerySnapshot>? _productAdsStream;
   Stream<DocumentSnapshot>? _globalContactStream;
   Stream<QuerySnapshot>? _notificationsStream;
   Stream<List<Map<String, dynamic>>>? _busSchedulesStream;
@@ -210,8 +215,9 @@ class HomepageState extends State<Homepage> {
         }
         return;
       }
-      final getStorageSearches =
-          GetStorage().read<List<dynamic>>('recent_searches');
+      final getStorageSearches = GetStorage().read<List<dynamic>>(
+        'recent_searches',
+      );
       if (getStorageSearches != null && getStorageSearches.isNotEmpty) {
         if (mounted) {
           setState(() {
@@ -286,6 +292,10 @@ class HomepageState extends State<Homepage> {
         FirebaseFirestore.instance.collection('services').snapshots();
     _advertisementsStream = FirebaseFirestore.instance
         .collection('advertisements')
+        .where('isActive', isEqualTo: true)
+        .snapshots();
+    _productAdsStream = FirebaseFirestore.instance
+        .collection('store_product_ads')
         .where('isActive', isEqualTo: true)
         .snapshots();
     _globalContactStream = FirebaseFirestore.instance
@@ -389,7 +399,7 @@ class HomepageState extends State<Homepage> {
         'workers',
         'transports',
         'shops_businesses',
-        'users'
+        'users',
       ];
       Map<String, dynamic>? data;
 
@@ -468,7 +478,9 @@ class HomepageState extends State<Homepage> {
   /// Fetches a service by [serviceId] from Firestore and navigates to
   /// [ServiceDetailsPage]. Shows a snackbar if the service is missing or inactive.
   Future<void> _openServiceFromBanner(
-      BuildContext context, String? serviceId) async {
+    BuildContext context,
+    String? serviceId,
+  ) async {
     if (serviceId == null || serviceId.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -594,7 +606,9 @@ class HomepageState extends State<Homepage> {
   }
 
   Future<void> _openInAppPageFromBanner(
-      BuildContext context, String? inAppPageId) async {
+    BuildContext context,
+    String? inAppPageId,
+  ) async {
     if (inAppPageId == null || inAppPageId.trim().isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -633,21 +647,29 @@ class HomepageState extends State<Homepage> {
         break;
       case 'healthcare':
         Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => const HealthcareCategoriesPage()));
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HealthcareCategoriesPage(),
+          ),
+        );
         break;
       case 'taxi':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => const AutoTaxiPage()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AutoTaxiPage()),
+        );
         break;
       case 'truck_jcb':
         Navigator.push(
-            context, MaterialPageRoute(builder: (context) => const JcbsPage()));
+          context,
+          MaterialPageRoute(builder: (context) => const JcbsPage()),
+        );
         break;
       case 'notifications':
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => const NotificationsPage()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const NotificationsPage()),
+        );
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
@@ -662,7 +684,9 @@ class HomepageState extends State<Homepage> {
   /// Fetches a product by [productId] from Firestore and navigates to
   /// [ServiceDetailsPage] (as a fallback). Shows a snackbar if the product is missing or inactive.
   Future<void> _openProductFromBanner(
-      BuildContext context, String? productId) async {
+    BuildContext context,
+    String? productId,
+  ) async {
     if (productId == null || productId.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -804,7 +828,9 @@ class HomepageState extends State<Homepage> {
   }
 
   void _showGlobalContactSheet(
-      BuildContext context, Map<String, dynamic> data) {
+    BuildContext context,
+    Map<String, dynamic> data,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -882,16 +908,19 @@ class HomepageState extends State<Homepage> {
                                         .replaceAll(' ', '');
                                 final uri = Uri.parse('https://wa.me/$phone');
                                 if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri,
-                                      mode: LaunchMode.externalApplication);
+                                  await launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
                                 }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF25D366),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 18),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
@@ -899,8 +928,11 @@ class HomepageState extends State<Homepage> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const FaIcon(FontAwesomeIcons.whatsapp,
-                                      color: Colors.white, size: 22),
+                                  const FaIcon(
+                                    FontAwesomeIcons.whatsapp,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
                                   const SizedBox(width: 10),
                                   Text(
                                     "WhatsApp",
@@ -926,14 +958,18 @@ class HomepageState extends State<Homepage> {
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: () async {
-                                final uri =
-                                    Uri.parse('tel:${data['phoneNumber']}');
+                                final uri = Uri.parse(
+                                  'tel:${data['phoneNumber']}',
+                                );
                                 if (await canLaunchUrl(uri)) {
                                   await launchUrl(uri);
                                 }
                               },
-                              icon: const Icon(Icons.phone_rounded,
-                                  color: Colors.white, size: 22),
+                              icon: const Icon(
+                                Icons.phone_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
                               label: Text(
                                 "Call Now",
                                 style: GoogleFonts.plusJakartaSans(
@@ -946,8 +982,9 @@ class HomepageState extends State<Homepage> {
                                 backgroundColor: const Color(0xFF2563EB),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 18),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
@@ -1068,9 +1105,7 @@ class HomepageState extends State<Homepage> {
                                         key: ValueKey('header_loading'),
                                       )
                                     : Padding(
-                                        key: const ValueKey(
-                                          'header_loaded',
-                                        ),
+                                        key: const ValueKey('header_loaded'),
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 20,
                                         ),
@@ -1132,17 +1167,19 @@ class HomepageState extends State<Homepage> {
                                                           loc ==
                                                               'Selected Location') {
                                                         ScaffoldMessenger.of(
-                                                                context)
-                                                            .showSnackBar(
+                                                          context,
+                                                        ).showSnackBar(
                                                           const SnackBar(
-                                                              content: Text(
-                                                                  'Fetching location...')),
+                                                            content: Text(
+                                                              'Fetching location...',
+                                                            ),
+                                                          ),
                                                         );
                                                         await LocationController
                                                             .to
                                                             .fetchLocation(
-                                                                forceRefresh:
-                                                                    true);
+                                                          forceRefresh: true,
+                                                        );
                                                       } else {
                                                         Navigator.push(
                                                           context,
@@ -1198,7 +1235,8 @@ class HomepageState extends State<Homepage> {
                                                             size: 12,
                                                           ),
                                                           const SizedBox(
-                                                              width: 4),
+                                                            width: 4,
+                                                          ),
                                                           Flexible(
                                                             child: Text(
                                                               displayText,
@@ -1218,7 +1256,8 @@ class HomepageState extends State<Homepage> {
                                                             ),
                                                           ),
                                                           const SizedBox(
-                                                              width: 2),
+                                                            width: 2,
+                                                          ),
                                                           const Icon(
                                                             Icons
                                                                 .keyboard_arrow_down,
@@ -1355,8 +1394,9 @@ class HomepageState extends State<Homepage> {
                       ),
                     ),
                     bottom: PreferredSize(
-                      preferredSize:
-                          Size.fromHeight(selectedCategory == "Bus" ? 70 : 130),
+                      preferredSize: Size.fromHeight(
+                        selectedCategory == "Bus" ? 70 : 130,
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1373,9 +1413,7 @@ class HomepageState extends State<Homepage> {
                                   borderRadius: BorderRadius.circular(30),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(
-                                        0.08,
-                                      ),
+                                      color: Colors.black.withOpacity(0.08),
                                       blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
@@ -1407,67 +1445,6 @@ class HomepageState extends State<Homepage> {
                                         width: 18,
                                       ),
                                     ),
-                                    suffixIcon: AnimatedBuilder(
-                                      animation: _homeScrollController,
-                                      builder: (context, child) {
-                                        double opacity = 1.0;
-                                        if (_homeScrollController.hasClients) {
-                                          double offset =
-                                              _homeScrollController.offset;
-                                          opacity = (1.0 - (offset / 80.0))
-                                              .clamp(0.0, 1.0);
-                                        }
-                                        if (opacity == 0.0)
-                                          return const SizedBox.shrink();
-                                        return Opacity(
-                                          opacity: opacity,
-                                          child: child,
-                                        );
-                                      },
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            height: 20,
-                                            width: 1,
-                                            color: Colors.grey[300],
-                                          ),
-                                          const SizedBox(width: 8),
-                                          GestureDetector(
-                                            onTap: () => showModalBottomSheet(
-                                              context: context,
-                                              shape:
-                                                  const RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.vertical(
-                                                  top: Radius.circular(
-                                                    20,
-                                                  ),
-                                                ),
-                                              ),
-                                              builder: (context) =>
-                                                  buildFilterSheet(),
-                                            ),
-                                            child: const Icon(
-                                              Icons.qr_code_scanner,
-                                              color: Color(0xFF64748B),
-                                              size: 20,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Padding(
-                                            padding: EdgeInsets.only(
-                                              right: 14.0,
-                                            ),
-                                            child: Icon(
-                                              Icons.mic_none_outlined,
-                                              color: Color(0xFF64748B),
-                                              size: 20,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
                                     border: InputBorder.none,
                                     contentPadding: const EdgeInsets.symmetric(
                                       vertical: 14,
@@ -1488,9 +1465,7 @@ class HomepageState extends State<Homepage> {
                                       key: ValueKey('category_loading'),
                                     )
                                   : ScrollableHorizontalButtons(
-                                      key: const ValueKey(
-                                        'category_loaded',
-                                      ),
+                                      key: const ValueKey('category_loaded'),
                                       categories: currentCategoryList,
                                       selectedIndex: selectedCategoryIndex,
                                       onSelected: (index) {
@@ -1503,6 +1478,12 @@ class HomepageState extends State<Homepage> {
                                               "Bus") {
                                             _searchController.clear();
                                             searchQuery = "";
+                                          }
+                                          // Randomize Brands Spotlight position each time Online Shops is opened
+                                          if (currentCategoryList[index] ==
+                                              "Online Shops") {
+                                            _spotlightPosition =
+                                                Random().nextInt(4);
                                           }
                                         });
                                         if (index <
@@ -1530,294 +1511,465 @@ class HomepageState extends State<Homepage> {
                             stream: _globalContactStream,
                             builder: (context, globalContactSnap) {
                               return StreamBuilder<QuerySnapshot>(
-                                stream: _advertisementsStream,
-                                builder: (context, bannerSnap) {
-                                  // While loading banners show skeleton
-                                  if (bannerSnap.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const CarouselSkeleton(
-                                      key: ValueKey('carousel_loading'),
-                                    );
-                                  }
+                                stream: _productAdsStream,
+                                builder: (context, productAdsSnap) {
+                                  return StreamBuilder<QuerySnapshot>(
+                                    stream: _advertisementsStream,
+                                    builder: (context, bannerSnap) {
+                                      // While loading banners show skeleton
+                                      if (bannerSnap.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return const CarouselSkeleton(
+                                          key: ValueKey('carousel_loading'),
+                                        );
+                                      }
 
-                                  final bannerDocs =
-                                      bannerSnap.data?.docs ?? [];
+                                      final bannerDocs =
+                                          bannerSnap.data?.docs ?? [];
 
-                                  // In-memory filter and sort to avoid composite index requirements
-                                  final now = DateTime.now();
-                                  final filteredDocs = bannerDocs.where((doc) {
-                                    final data =
-                                        doc.data() as Map<String, dynamic>;
+                                      // In-memory filter and sort to avoid composite index requirements
+                                      final now = DateTime.now();
+                                      final filteredDocs = bannerDocs.where((
+                                        doc,
+                                      ) {
+                                        final data =
+                                            doc.data() as Map<String, dynamic>;
 
-                                    final position =
-                                        data['bannerPosition'] ?? '';
-                                    final showOnHome =
-                                        data['showInForYou'] ?? true;
+                                        final position =
+                                            data['bannerPosition'] ?? '';
+                                        final showOnHome =
+                                            data['showInForYou'] ?? true;
 
-                                    bool matchesCategory = (position ==
-                                        'Home -> $selectedCategory');
-                                    if (selectedCategory == "For You") {
-                                      matchesCategory =
-                                          matchesCategory || showOnHome;
-                                    }
-
-                                    if (!matchesCategory) {
-                                      return false;
-                                    }
-
-                                    // Filter by dates
-                                    final startTimestamp =
-                                        data['startDate'] as Timestamp?;
-                                    final endTimestamp =
-                                        data['endDate'] as Timestamp?;
-                                    if (startTimestamp != null &&
-                                        startTimestamp.toDate().isAfter(now)) {
-                                      return false;
-                                    }
-                                    if (endTimestamp != null &&
-                                        endTimestamp.toDate().isBefore(now)) {
-                                      return false;
-                                    }
-
-                                    return true;
-                                  }).toList();
-
-                                  // Sort in-memory: priority descending, then createdAt descending
-                                  filteredDocs.sort((a, b) {
-                                    final dataA =
-                                        a.data() as Map<String, dynamic>;
-                                    final dataB =
-                                        b.data() as Map<String, dynamic>;
-
-                                    final priorityA = dataA['priority'] ?? 0;
-                                    final priorityB = dataB['priority'] ?? 0;
-                                    if (priorityA != priorityB) {
-                                      return (priorityB as num)
-                                          .compareTo(priorityA as num);
-                                    }
-
-                                    final aTime =
-                                        dataA['createdAt'] as Timestamp?;
-                                    final bTime =
-                                        dataB['createdAt'] as Timestamp?;
-                                    if (aTime == null && bTime == null)
-                                      return 0;
-                                    if (aTime == null) return 1;
-                                    if (bTime == null) return -1;
-                                    return bTime.compareTo(aTime);
-                                  });
-
-                                  // Fallback: no banners from admin -> show placeholder
-                                  final List<Widget> bannerItems = [];
-
-                                  // Check for global contact banner
-                                  final Map<String, dynamic>?
-                                      globalContactData = globalContactSnap.data
-                                          ?.data() as Map<String, dynamic>?;
-
-                                  if (globalContactData != null &&
-                                      globalContactData['bannerImageUrl'] !=
-                                          null &&
-                                      globalContactData['bannerImageUrl']
-                                          .toString()
-                                          .isNotEmpty) {
-                                    bannerItems.add(buildPromoCard(
-                                        imageUrl:
-                                            globalContactData['bannerImageUrl'],
-                                        onTap: () {
-                                          _showGlobalContactSheet(
-                                              context, globalContactData);
-                                        }));
-                                  }
-
-                                  final adminBanners = filteredDocs.map((doc) {
-                                    final data =
-                                        doc.data() as Map<String, dynamic>;
-                                    return buildPromoCard(
-                                      imageUrl: data['imageUrl'] ?? '',
-                                      bannerImageUrl: data['bannerImageUrl'],
-                                      title: data['title'] ?? '',
-                                      buttonText: data['buttonText'],
-                                      buttonBackgroundColor:
-                                          data['buttonBackgroundColor'],
-                                      buttonTextColor: data['buttonTextColor'],
-                                      onTap: () async {
-                                        final action = data['bannerAction'] ??
-                                            data['buttonAction'] ??
-                                            '';
-                                        final value = data['actionValue'] ??
-                                            data['website'] ??
-                                            '';
-                                        if (action == 'Open Product') {
-                                          await _openProductFromBanner(
-                                            context,
-                                            data['productId']?.toString(),
-                                          );
-                                        } else if (action == 'Open Service') {
-                                          await _openServiceFromBanner(
-                                            context,
-                                            data['serviceId']?.toString(),
-                                          );
-                                        } else if (action ==
-                                            'Open In-App Page') {
-                                          await _openInAppPageFromBanner(
-                                            context,
-                                            data['inAppPageId']?.toString() ??
-                                                data['actionValue']?.toString(),
-                                          );
-                                        } else if (action == 'Open URL' &&
-                                            value.toString().isNotEmpty) {
-                                          final uri =
-                                              Uri.tryParse(value.toString());
-                                          if (uri != null) {
-                                            try {
-                                              await launchUrl(uri,
-                                                  mode: LaunchMode
-                                                      .externalApplication);
-                                            } catch (e) {
-                                              debugPrint(
-                                                  'Error launching URL: $e');
-                                            }
-                                          }
+                                        bool matchesCategory = (position ==
+                                            'Home -> $selectedCategory');
+                                        if (selectedCategory == "For You") {
+                                          matchesCategory =
+                                              matchesCategory || showOnHome;
                                         }
-                                      },
-                                      onButtonTap: () async {
-                                        final action = data['buttonAction'] ??
-                                            data['bannerAction'] ??
-                                            '';
-                                        final value = data['actionValue'] ??
-                                            data['website'] ??
-                                            '';
-                                        final valStr = value.toString().trim();
 
-                                        if (action == 'Open Product') {
-                                          await _openProductFromBanner(
-                                            context,
-                                            data['productId']?.toString(),
-                                          );
-                                        } else if (action == 'Open Service') {
-                                          await _openServiceFromBanner(
-                                            context,
-                                            data['serviceId']?.toString(),
-                                          );
-                                        } else if (action ==
-                                            'Open In-App Page') {
-                                          await _openInAppPageFromBanner(
-                                            context,
-                                            data['inAppPageId']?.toString() ??
-                                                data['actionValue']?.toString(),
-                                          );
-                                        } else if (action == 'Open URL') {
-                                          if (valStr.isEmpty) return;
-                                          final uri = Uri.tryParse(valStr);
-                                          if (uri != null) {
-                                            try {
-                                              await launchUrl(uri,
-                                                  mode: LaunchMode
-                                                      .externalApplication);
-                                            } catch (e) {
-                                              debugPrint(
-                                                  'Error launching URL: $e');
-                                            }
-                                          }
-                                        } else if (action == 'Open WhatsApp') {
-                                          if (valStr.isEmpty) return;
-                                          final phone = valStr.replaceAll(
-                                              RegExp(r'[^0-9]'), '');
-                                          final uri =
-                                              Uri.parse('https://wa.me/$phone');
-                                          if (await canLaunchUrl(uri)) {
-                                            await launchUrl(uri,
-                                                mode: LaunchMode
-                                                    .externalApplication);
-                                          }
-                                        } else if (action == 'Call') {
-                                          if (valStr.isEmpty) return;
-                                          final uri = Uri.parse('tel:$valStr');
-                                          if (await canLaunchUrl(uri)) {
-                                            await launchUrl(uri);
-                                          }
+                                        if (!matchesCategory) {
+                                          return false;
                                         }
-                                      },
-                                    );
-                                  }).toList();
 
-                                  bannerItems.addAll(adminBanners);
+                                        // Filter by dates
+                                        final startTimestamp =
+                                            data['startDate'] as Timestamp?;
+                                        final endTimestamp =
+                                            data['endDate'] as Timestamp?;
+                                        if (startTimestamp != null &&
+                                            startTimestamp.toDate().isAfter(
+                                                  now,
+                                                )) {
+                                          return false;
+                                        }
+                                        if (endTimestamp != null &&
+                                            endTimestamp.toDate().isBefore(
+                                                  now,
+                                                )) {
+                                          return false;
+                                        }
 
-                                  if (bannerItems.isEmpty) {
-                                    return const SizedBox.shrink();
-                                  }
+                                        return true;
+                                      }).toList();
 
-                                  final bannerCount = bannerItems.length;
+                                      // Sort in-memory: priority descending, then createdAt descending
+                                      filteredDocs.sort((a, b) {
+                                        final dataA =
+                                            a.data() as Map<String, dynamic>;
+                                        final dataB =
+                                            b.data() as Map<String, dynamic>;
 
-                                  int localActiveIndex = 0;
-                                  return AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 400),
-                                    child: StatefulBuilder(
-                                      key: const ValueKey('carousel_loaded'),
-                                      builder: (context, setLocalState) {
-                                        return Stack(
-                                          alignment: Alignment.bottomCenter,
-                                          children: [
-                                            CarouselSlider(
-                                              items: bannerItems,
-                                              options: CarouselOptions(
-                                                autoPlay: bannerCount > 1,
-                                                enlargeCenterPage: false,
-                                                aspectRatio: 1.8,
-                                                viewportFraction: 1,
-                                                onPageChanged: (index, reason) {
-                                                  setLocalState(() {
-                                                    localActiveIndex = index;
-                                                  });
+                                        final priorityA =
+                                            dataA['priority'] ?? 0;
+                                        final priorityB =
+                                            dataB['priority'] ?? 0;
+                                        if (priorityA != priorityB) {
+                                          return (priorityB as num).compareTo(
+                                            priorityA as num,
+                                          );
+                                        }
+
+                                        final aTime =
+                                            dataA['createdAt'] as Timestamp?;
+                                        final bTime =
+                                            dataB['createdAt'] as Timestamp?;
+                                        if (aTime == null && bTime == null)
+                                          return 0;
+                                        if (aTime == null) return 1;
+                                        if (bTime == null) return -1;
+                                        return bTime.compareTo(aTime);
+                                      });
+
+                                      // Fallback: no banners from admin -> show placeholder
+                                      final List<Widget> bannerItems = [];
+
+                                      // Check for global contact banner
+                                      final Map<String, dynamic>?
+                                          globalContactData =
+                                          globalContactSnap.data?.data()
+                                              as Map<String, dynamic>?;
+
+                                      if (globalContactData != null &&
+                                          globalContactData['bannerImageUrl'] !=
+                                              null &&
+                                          globalContactData['bannerImageUrl']
+                                              .toString()
+                                              .isNotEmpty) {
+                                        bannerItems.add(
+                                          buildPromoCard(
+                                            imageUrl: globalContactData[
+                                                'bannerImageUrl'],
+                                            onTap: () {
+                                              _showGlobalContactSheet(
+                                                context,
+                                                globalContactData,
+                                              );
+                                            },
+                                          ),
+                                        );
+                                      }
+
+                                      final adminBanners = filteredDocs.map((
+                                        doc,
+                                      ) {
+                                        final data =
+                                            doc.data() as Map<String, dynamic>;
+                                        return buildPromoCard(
+                                          imageUrl: data['imageUrl'] ?? '',
+                                          bannerImageUrl:
+                                              data['bannerImageUrl'],
+                                          title: data['title'] ?? '',
+                                          buttonText: data['buttonText'],
+                                          buttonBackgroundColor:
+                                              data['buttonBackgroundColor'],
+                                          buttonTextColor:
+                                              data['buttonTextColor'],
+                                          onTap: () async {
+                                            final action =
+                                                data['bannerAction'] ??
+                                                    data['buttonAction'] ??
+                                                    '';
+                                            final value = data['actionValue'] ??
+                                                data['website'] ??
+                                                '';
+                                            if (action == 'Open Product') {
+                                              await _openProductFromBanner(
+                                                context,
+                                                data['productId']?.toString(),
+                                              );
+                                            } else if (action ==
+                                                'Open Service') {
+                                              await _openServiceFromBanner(
+                                                context,
+                                                data['serviceId']?.toString(),
+                                              );
+                                            } else if (action ==
+                                                'Open In-App Page') {
+                                              await _openInAppPageFromBanner(
+                                                context,
+                                                data['inAppPageId']
+                                                        ?.toString() ??
+                                                    data['actionValue']
+                                                        ?.toString(),
+                                              );
+                                            } else if (action == 'Open URL' &&
+                                                value.toString().isNotEmpty) {
+                                              final uri = Uri.tryParse(
+                                                value.toString(),
+                                              );
+                                              if (uri != null) {
+                                                try {
+                                                  await launchUrl(
+                                                    uri,
+                                                    mode: LaunchMode
+                                                        .externalApplication,
+                                                  );
+                                                } catch (e) {
+                                                  debugPrint(
+                                                    'Error launching URL: $e',
+                                                  );
+                                                }
+                                              }
+                                            }
+                                          },
+                                          onButtonTap: () async {
+                                            final action =
+                                                data['buttonAction'] ??
+                                                    data['bannerAction'] ??
+                                                    '';
+                                            final value = data['actionValue'] ??
+                                                data['website'] ??
+                                                '';
+                                            final valStr =
+                                                value.toString().trim();
+
+                                            if (action == 'Open Product') {
+                                              await _openProductFromBanner(
+                                                context,
+                                                data['productId']?.toString(),
+                                              );
+                                            } else if (action ==
+                                                'Open Service') {
+                                              await _openServiceFromBanner(
+                                                context,
+                                                data['serviceId']?.toString(),
+                                              );
+                                            } else if (action ==
+                                                'Open In-App Page') {
+                                              await _openInAppPageFromBanner(
+                                                context,
+                                                data['inAppPageId']
+                                                        ?.toString() ??
+                                                    data['actionValue']
+                                                        ?.toString(),
+                                              );
+                                            } else if (action == 'Open URL') {
+                                              if (valStr.isEmpty) return;
+                                              final uri = Uri.tryParse(valStr);
+                                              if (uri != null) {
+                                                try {
+                                                  await launchUrl(
+                                                    uri,
+                                                    mode: LaunchMode
+                                                        .externalApplication,
+                                                  );
+                                                } catch (e) {
+                                                  debugPrint(
+                                                    'Error launching URL: $e',
+                                                  );
+                                                }
+                                              }
+                                            } else if (action ==
+                                                'Open WhatsApp') {
+                                              if (valStr.isEmpty) return;
+                                              final phone = valStr.replaceAll(
+                                                RegExp(r'[^0-9]'),
+                                                '',
+                                              );
+                                              final uri = Uri.parse(
+                                                'https://wa.me/$phone',
+                                              );
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(
+                                                  uri,
+                                                  mode: LaunchMode
+                                                      .externalApplication,
+                                                );
+                                              }
+                                            } else if (action == 'Call') {
+                                              if (valStr.isEmpty) return;
+                                              final uri = Uri.parse(
+                                                'tel:$valStr',
+                                              );
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(uri);
+                                              }
+                                            }
+                                          },
+                                        );
+                                      }).toList();
+
+                                      bannerItems.addAll(adminBanners);
+
+                                      if (selectedCategory == "Online Shops" &&
+                                          productAdsSnap.hasData) {
+                                        final nowTime = DateTime.now();
+                                        final productAdsDocs = productAdsSnap
+                                            .data!.docs
+                                            .where((doc) {
+                                          final data = doc.data()
+                                              as Map<String, dynamic>;
+                                          final startTimestamp =
+                                              data['startDate'] as Timestamp?;
+                                          final endTimestamp =
+                                              data['endDate'] as Timestamp?;
+                                          if (startTimestamp != null &&
+                                              startTimestamp
+                                                  .toDate()
+                                                  .isAfter(nowTime))
+                                            return false;
+                                          if (endTimestamp != null &&
+                                              endTimestamp
+                                                  .toDate()
+                                                  .isBefore(nowTime))
+                                            return false;
+                                          return true;
+                                        }).toList();
+
+                                        productAdsDocs.sort((a, b) {
+                                          final dataA =
+                                              a.data() as Map<String, dynamic>;
+                                          final dataB =
+                                              b.data() as Map<String, dynamic>;
+                                          final priorityA =
+                                              dataA['priority'] ?? 0;
+                                          final priorityB =
+                                              dataB['priority'] ?? 0;
+                                          if (priorityA != priorityB)
+                                            return (priorityB as num).compareTo(
+                                              priorityA as num,
+                                            );
+                                          final aTime =
+                                              dataA['createdAt'] as Timestamp?;
+                                          final bTime =
+                                              dataB['createdAt'] as Timestamp?;
+                                          if (aTime == null && bTime == null)
+                                            return 0;
+                                          if (aTime == null) return 1;
+                                          if (bTime == null) return -1;
+                                          return bTime.compareTo(aTime);
+                                        });
+
+                                        final productAdBanners =
+                                            productAdsDocs.map((
+                                          doc,
+                                        ) {
+                                          final data = doc.data()
+                                              as Map<String, dynamic>;
+                                          final productId =
+                                              data['productId'] ?? '';
+
+                                          return StreamBuilder<
+                                              DocumentSnapshot>(
+                                            stream: FirebaseFirestore.instance
+                                                .collection('store_products')
+                                                .doc(productId)
+                                                .snapshots(),
+                                            builder: (context, prodSnap) {
+                                              if (!prodSnap.hasData ||
+                                                  !prodSnap.data!.exists) {
+                                                return const SizedBox.shrink();
+                                              }
+                                              final prodData =
+                                                  prodSnap.data!.data()
+                                                      as Map<String, dynamic>;
+                                              final coverImage =
+                                                  prodData['coverImage'] ?? '';
+                                              final images =
+                                                  prodData['images'] ?? [];
+                                              final url = coverImage
+                                                      .toString()
+                                                      .isNotEmpty
+                                                  ? coverImage.toString()
+                                                  : (images.isNotEmpty
+                                                      ? images.first.toString()
+                                                      : '');
+
+                                              if (url.isEmpty)
+                                                return const SizedBox.shrink();
+
+                                              return buildPromoCard(
+                                                imageUrl: url,
+                                                title: data['title'] ?? '',
+                                                buttonText: data['subtitle'] ??
+                                                    'View Product',
+                                                onTap: () async {
+                                                  await _openProductFromBanner(
+                                                    context,
+                                                    productId,
+                                                  );
                                                 },
-                                              ),
-                                            ),
-                                            if (bannerCount > 1)
-                                              Positioned(
-                                                bottom: 24,
-                                                child: Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: List.generate(
-                                                    bannerCount,
-                                                    (index) {
-                                                      return AnimatedContainer(
-                                                        duration:
-                                                            const Duration(
-                                                          milliseconds: 250,
-                                                        ),
-                                                        width:
-                                                            localActiveIndex ==
-                                                                    index
-                                                                ? 24
-                                                                : 6,
-                                                        height: 6,
-                                                        margin: const EdgeInsets
-                                                            .symmetric(
-                                                          horizontal: 3,
-                                                        ),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(3),
-                                                          color: localActiveIndex ==
-                                                                  index
-                                                              ? Colors.white
-                                                              : Colors.white
-                                                                  .withOpacity(
-                                                                      0.5),
-                                                        ),
-                                                      );
+                                                onButtonTap: () async {
+                                                  await _openProductFromBanner(
+                                                    context,
+                                                    productId,
+                                                  );
+                                                },
+                                              );
+                                            },
+                                          );
+                                        }).toList();
+
+                                        bannerItems.addAll(productAdBanners);
+                                      }
+
+                                      if (bannerItems.isEmpty) {
+                                        return const SizedBox.shrink();
+                                      }
+
+                                      final bannerCount = bannerItems.length;
+
+                                      int localActiveIndex = 0;
+                                      return AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 400,
+                                        ),
+                                        child: StatefulBuilder(
+                                          key: const ValueKey(
+                                            'carousel_loaded',
+                                          ),
+                                          builder: (context, setLocalState) {
+                                            return Stack(
+                                              alignment: Alignment.bottomCenter,
+                                              children: [
+                                                CarouselSlider(
+                                                  items: bannerItems,
+                                                  options: CarouselOptions(
+                                                    autoPlay: bannerCount > 1,
+                                                    enlargeCenterPage: false,
+                                                    aspectRatio: 1.8,
+                                                    viewportFraction: 1,
+                                                    onPageChanged:
+                                                        (index, reason) {
+                                                      setLocalState(() {
+                                                        localActiveIndex =
+                                                            index;
+                                                      });
                                                     },
                                                   ),
                                                 ),
-                                              ),
-                                          ],
-                                        );
-                                      },
-                                    ),
+                                                if (bannerCount > 1)
+                                                  Positioned(
+                                                    bottom: 24,
+                                                    child: Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: List.generate(
+                                                          bannerCount, (
+                                                        index,
+                                                      ) {
+                                                        return AnimatedContainer(
+                                                          duration:
+                                                              const Duration(
+                                                            milliseconds: 250,
+                                                          ),
+                                                          width:
+                                                              localActiveIndex ==
+                                                                      index
+                                                                  ? 24
+                                                                  : 6,
+                                                          height: 6,
+                                                          margin:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                            horizontal: 3,
+                                                          ),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                              3,
+                                                            ),
+                                                            color: localActiveIndex ==
+                                                                    index
+                                                                ? Colors.white
+                                                                : Colors.white
+                                                                    .withOpacity(
+                                                                    0.5,
+                                                                  ),
+                                                          ),
+                                                        );
+                                                      }),
+                                                    ),
+                                                  ),
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
                                   );
                                 },
                               );
@@ -1855,9 +2007,7 @@ class HomepageState extends State<Homepage> {
                         else if (selectedCategory == "Workers" &&
                             _searchController.text.isEmpty)
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: snapshot.connectionState ==
                                     ConnectionState.waiting
                                 ? const ServiceCardListSkeleton()
@@ -1873,9 +2023,7 @@ class HomepageState extends State<Homepage> {
                           buildOnlineShopsTab()
                         else if (_searchController.text.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: snapshot.connectionState ==
                                     ConnectionState.waiting
                                 ? const ServiceCardListSkeleton()
@@ -1896,11 +2044,12 @@ class HomepageState extends State<Homepage> {
                           ),
 
                         SizedBox(
-                            height: selectedCategory == "For You" ||
-                                    selectedCategory == "Bus" ||
-                                    selectedCategory == "Local Ads"
-                                ? 100
-                                : 20), // bottom bar spacing
+                          height: selectedCategory == "For You" ||
+                                  selectedCategory == "Bus" ||
+                                  selectedCategory == "Local Ads"
+                              ? 100
+                              : 20,
+                        ), // bottom bar spacing
                       ],
                     ),
                   ),
@@ -1980,13 +2129,19 @@ class HomepageState extends State<Homepage> {
                               bannerImageUrl,
                               fit: BoxFit.fill,
                               errorBuilder: (_, __, ___) => const Center(
-                                child: Icon(Icons.broken_image,
-                                    color: Colors.grey, size: 40),
+                                child: Icon(
+                                  Icons.broken_image,
+                                  color: Colors.grey,
+                                  size: 40,
+                                ),
                               ),
                             )
                           : const Center(
-                              child: Icon(Icons.broken_image,
-                                  color: Colors.grey, size: 40),
+                              child: Icon(
+                                Icons.broken_image,
+                                color: Colors.grey,
+                                size: 40,
+                              ),
                             ),
                 )
               else
@@ -1995,8 +2150,11 @@ class HomepageState extends State<Homepage> {
                         bannerImageUrl,
                         fit: BoxFit.fill,
                         errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.broken_image,
-                              color: Colors.grey, size: 40),
+                          child: Icon(
+                            Icons.broken_image,
+                            color: Colors.grey,
+                            size: 40,
+                          ),
                         ),
                       )
                     : const SizedBox.shrink(),
@@ -2192,62 +2350,6 @@ class HomepageState extends State<Homepage> {
     );
   }
 
-  Widget buildFilterSheet() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Filter Services',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Minimum Rating'),
-              DropdownButton<double>(
-                value: _minRating,
-                items: [0, 1, 2, 3, 4, 5].map((e) {
-                  return DropdownMenuItem<double>(
-                    value: e.toDouble(),
-                    child: Text(e == 0 ? 'Any' : '$e+ Stars'),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _minRating = value);
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Sort By'),
-              DropdownButton<String>(
-                value: _sortBy,
-                items: ['None', 'A-Z', 'Rating'].map((e) {
-                  return DropdownMenuItem<String>(value: e, child: Text(e));
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _sortBy = value);
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Map<String, List<DocumentSnapshot>> _getSuggestedProducts(
     List<DocumentSnapshot> products,
     Set<String> alreadyDisplayedProductIds,
@@ -2337,7 +2439,7 @@ class HomepageState extends State<Homepage> {
         basedOnYourSearch = [
           ...exactMatches,
           ...relatedMatches,
-          ...otherMatches
+          ...otherMatches,
         ];
       } else {
         basedOnYourSearch = List.from(categoryProducts);
@@ -2345,7 +2447,8 @@ class HomepageState extends State<Homepage> {
 
       // Helper to filter and shuffle
       List<DocumentSnapshot> processCategoryList(
-          List<DocumentSnapshot> source) {
+        List<DocumentSnapshot> source,
+      ) {
         var filtered = source
             .where((doc) => !alreadyDisplayedProductIds.contains(doc.id))
             .toList();
@@ -2370,8 +2473,10 @@ class HomepageState extends State<Homepage> {
   }
 
   Widget buildForYouDashboard(
-      List<dynamic> services, List<DocumentSnapshot> feedProducts,
-      {Key? key}) {
+    List<dynamic> services,
+    List<DocumentSnapshot> feedProducts, {
+    Key? key,
+  }) {
     final recController = RecommendationController.to;
     final suggestedData = _getSuggestedProducts(feedProducts, {});
     List<DocumentSnapshot> basedOnYourSearch =
@@ -2879,7 +2984,9 @@ class HomepageState extends State<Homepage> {
                   itemBuilder: (context, index) {
                     final doc = basedOnYourSearch[index];
                     final p = StoreProductModel.fromMap(
-                        doc.data() as Map<String, dynamic>, doc.id);
+                      doc.data() as Map<String, dynamic>,
+                      doc.id,
+                    );
                     return Container(
                       width: 160,
                       margin: const EdgeInsets.only(right: 14),
@@ -2910,49 +3017,7 @@ class HomepageState extends State<Homepage> {
                 ),
               ),
             if (basedOnYourSearch.isNotEmpty) const SizedBox(height: 24),
-
-            if (feedProducts.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const Text(
-                  "Local Shop Spotlight",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F2E5A),
-                  ),
-                ),
-              ),
-            if (feedProducts.isNotEmpty) const SizedBox(height: 14),
-            if (feedProducts.isNotEmpty)
-              SizedBox(
-                height: 140,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: feedProducts.take(3).length,
-                  itemBuilder: (context, index) {
-                    final doc = feedProducts[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    final brand = (data['brand'] ?? '').toString();
-                    final shopName = brand.isNotEmpty ? brand : "Local Store";
-                    final colors = index % 2 == 0
-                        ? const [Color(0xFF0F2E5A), Color(0xFF1E3A8A)]
-                        : const [Color(0xFF0D9488), Color(0xFF0F766E)];
-
-                    return buildSpotlightCard(
-                      shopName: shopName,
-                      location: "Local Area",
-                      offer: "Top Deals Inside",
-                      gradient: LinearGradient(
-                        colors: colors,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    );
-                  },
-                ),
-              ),
+            const SpotlightCampaignSection(),
           ],
         ),
       );
@@ -3063,9 +3128,11 @@ class HomepageState extends State<Homepage> {
                               SizedBox(height: 4),
                               Text(
                                 "No Connection",
-                                style:
-                                    TextStyle(color: Colors.grey, fontSize: 10),
-                              )
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 10,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -3090,9 +3157,11 @@ class HomepageState extends State<Homepage> {
                               SizedBox(height: 4),
                               Text(
                                 "No Connection",
-                                style:
-                                    TextStyle(color: Colors.grey, fontSize: 10),
-                              )
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 10,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -3611,8 +3680,12 @@ class HomepageState extends State<Homepage> {
           });
 
         final allStoreProducts = products
-            .map((doc) => StoreProductModel.fromMap(
-                doc.data() as Map<String, dynamic>, doc.id))
+            .map(
+              (doc) => StoreProductModel.fromMap(
+                doc.data() as Map<String, dynamic>,
+                doc.id,
+              ),
+            )
             .toList();
         final storeTheme = DynamicThemeManager.generateTheme();
 
@@ -3620,8 +3693,10 @@ class HomepageState extends State<Homepage> {
 
         List<StoreProductModel> _getAndTrack(String section) {
           final result = DynamicContentService.getDynamicProducts(
-              allStoreProducts, section,
-              excludeIds: alreadyDisplayedProductIds);
+            allStoreProducts,
+            section,
+            excludeIds: alreadyDisplayedProductIds,
+          );
           for (var p in result.take(15)) {
             alreadyDisplayedProductIds.add(p.id);
           }
@@ -3629,12 +3704,13 @@ class HomepageState extends State<Homepage> {
         }
 
         final topValueDeals = _getAndTrack('Top Value Deals');
-        final topDealsOfDay = _getAndTrack('Top Deals');
-        final brandsSpotlight = _getAndTrack('Brands in Spotlight');
-        final flashDeals = _getAndTrack('Flash Deals');
-        final popularNearby = _getAndTrack('Popular Nearby');
-        final afternoonPicks = _getAndTrack('Afternoon Picks');
-        final suggestedForYou = _getAndTrack('Suggested For You');
+        // Pre-track other sections so their products are excluded from later sections
+        _getAndTrack('Top Deals');
+        _getAndTrack('Brands in Spotlight');
+        _getAndTrack('Flash Deals');
+        _getAndTrack('Popular Nearby');
+        _getAndTrack('Afternoon Picks');
+        _getAndTrack('Suggested For You');
 
         Map<String, dynamic> pData(int index, [List<DocumentSnapshot>? list]) {
           final l = list ?? products;
@@ -3648,8 +3724,10 @@ class HomepageState extends State<Homepage> {
           return l[index % l.length].id;
         }
 
-        final suggestedData =
-            _getSuggestedProducts(products, alreadyDisplayedProductIds);
+        final suggestedData = _getSuggestedProducts(
+          products,
+          alreadyDisplayedProductIds,
+        );
         List<DocumentSnapshot> basedOnYourSearch =
             suggestedData['basedOnYourSearch']!;
         List<DocumentSnapshot> youMayAlsoLike =
@@ -3668,127 +3746,130 @@ class HomepageState extends State<Homepage> {
         }).toList();
 
         Widget buildAdCard(
-            String image,
-            String badgeText,
-            Color badgeColor,
-            Color badgeTextColor,
-            String title,
-            String subtitle,
-            bool hasAdTag) {
-          return Container(
-            width: 110,
-            margin: const EdgeInsets.only(right: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          image: DecorationImage(
-                            image: AssetImage(image), // fallback
-                            fit: BoxFit.cover,
+          String image,
+          String badgeText,
+          Color badgeColor,
+          Color badgeTextColor,
+          String title,
+          String subtitle,
+          bool hasAdTag, {
+          VoidCallback? onTap,
+        }) {
+          return GestureDetector(
+              onTap: onTap,
+              child: Container(
+                width: 110,
+                margin: const EdgeInsets.only(right: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(16),
+                              image: image.isNotEmpty
+                                  ? DecorationImage(
+                                      image: image.startsWith('http')
+                                          ? NetworkImage(image) as ImageProvider
+                                          : AssetImage(image),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
                           ),
-                        ),
+                          if (badgeText.isNotEmpty)
+                            Positioned(
+                              top: 8,
+                              left: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: badgeColor,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  badgeText,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: badgeTextColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (hasAdTag)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 3,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                                child: const Text(
+                                  "AD",
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      if (badgeText.isNotEmpty)
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: badgeColor,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              badgeText,
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: badgeTextColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (hasAdTag)
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 3, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.25),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: const Text(
-                              "AD",
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style:
+                          const TextStyle(fontSize: 11, color: Colors.blueGrey),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.blueGrey,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          );
+              ));
         }
 
         Widget buildProductList(
-            String title, IconData icon, Color iconColor, bool isFlash,
-            [List<DocumentSnapshot>? customList]) {
+          String title,
+          IconData icon,
+          Color iconColor,
+          bool isFlash, [
+          List<DocumentSnapshot>? customList,
+        ]) {
           final listToUse = customList ?? products;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  if (isFlash)
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEA580C),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(icon, color: Colors.white, size: 12),
-                    )
-                  else
-                    Icon(icon, color: iconColor, size: 18),
-                  const SizedBox(width: 8),
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
@@ -3799,10 +3880,8 @@ class HomepageState extends State<Homepage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ViewAllPage(
-                            title: title,
-                            products: listToUse,
-                          ),
+                          builder: (context) =>
+                              ViewAllPage(title: title, products: listToUse),
                         ),
                       );
                     },
@@ -3821,7 +3900,7 @@ class HomepageState extends State<Homepage> {
                             fontSize: 12,
                           ),
                         ),
-                        Icon(Icons.arrow_forward, color: Colors.blue, size: 12)
+                        Icon(Icons.arrow_forward, color: Colors.blue, size: 12),
                       ],
                     ),
                   ),
@@ -3840,7 +3919,9 @@ class HomepageState extends State<Homepage> {
                         ? ((index + (isFlash ? 2 : 0)) % listToUse.length)
                         : index;
                     final product = StoreProductModel.fromMap(
-                        pData(i, listToUse), pId(i, listToUse));
+                      pData(i, listToUse),
+                      pId(i, listToUse),
+                    );
                     return GestureDetector(
                       onTap: () => listToUse.isNotEmpty
                           ? _openProductFromBanner(context, pId(i, listToUse))
@@ -3890,7 +3971,9 @@ class HomepageState extends State<Homepage> {
                     children: [
                       Text(
                         DynamicContentService.getPromotionalDialogue(
-                            'Still Looking For', allStoreProducts),
+                          'Still Looking For',
+                          allStoreProducts,
+                        ),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -3912,8 +3995,10 @@ class HomepageState extends State<Homepage> {
 
                             // Calculate discount if available
                             String actionText = "Shop Now";
-                            final product =
-                                StoreProductModel.fromMap(data, prodId);
+                            final product = StoreProductModel.fromMap(
+                              data,
+                              prodId,
+                            );
                             if (product.hasDiscount) {
                               actionText = "${product.discountPercentage}% Off";
                             }
@@ -3996,8 +4081,10 @@ class HomepageState extends State<Homepage> {
                           final prodId = doc.id;
 
                           String actionText = "Continue Search";
-                          final product =
-                              StoreProductModel.fromMap(data, prodId);
+                          final product = StoreProductModel.fromMap(
+                            data,
+                            prodId,
+                          );
                           if (product.hasDiscount) {
                             actionText = "Upgrade Now";
                           }
@@ -4032,19 +4119,26 @@ class HomepageState extends State<Homepage> {
                                               imageUrl,
                                               fit: BoxFit.cover,
                                               width: double.infinity,
-                                              errorBuilder: (context, error,
-                                                      stackTrace) =>
+                                              errorBuilder: (
+                                                context,
+                                                error,
+                                                stackTrace,
+                                              ) =>
                                                   const Icon(
-                                                      Icons.image_outlined,
-                                                      color: Colors.grey,
-                                                      size: 30),
+                                                Icons.image_outlined,
+                                                color: Colors.grey,
+                                                size: 30,
+                                              ),
                                             )
                                           : Image.asset(
                                               imageUrl,
                                               fit: BoxFit.cover,
                                               width: double.infinity,
-                                              errorBuilder: (context, error,
-                                                      stackTrace) =>
+                                              errorBuilder: (
+                                                context,
+                                                error,
+                                                stackTrace,
+                                              ) =>
                                                   const Icon(
                                                 Icons.image_outlined,
                                                 color: Colors.grey,
@@ -4089,69 +4183,249 @@ class HomepageState extends State<Homepage> {
               const SizedBox(height: 16),
               // 3. Redesigned Suggested For You Sections
               if (basedOnYourSearch.isNotEmpty) ...[
-                buildProductList("Suggested for You", Icons.search, Colors.blue,
-                    false, basedOnYourSearch),
+                buildProductList(
+                  "Suggested for You",
+                  Icons.search,
+                  Colors.blue,
+                  false,
+                  basedOnYourSearch,
+                ),
                 const SizedBox(height: 20),
               ],
 
               // 3.5 Product Ads
-              SizedBox(
-                height: 160,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    buildAdCard(
-                        "assets/image/temp_image1.png",
-                        "MIVI",
-                        Colors.green,
-                        Colors.white,
-                        "Flat 76% Off",
-                        "Biggest drop",
-                        true),
-                    buildAdCard(
-                        "assets/image/temp_image2.png",
-                        "",
-                        Colors.transparent,
-                        Colors.transparent,
-                        "Launch 19th",
-                        "Fitness tracker",
-                        false),
-                    buildAdCard(
-                        "assets/image/onboarding_3.png",
-                        "NOISE",
-                        Colors.white,
-                        Colors.black,
-                        "Flat 72% Off",
-                        "Smart bands",
-                        true),
-                    buildAdCard(
-                        "assets/image/onboarding_4a.png",
-                        "HOT",
-                        Colors.orange,
-                        Colors.black,
-                        "Min 60% Off",
-                        "Audio gear",
-                        false),
-                  ],
-                ),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('store_product_ads')
+                    .where('isActive', isEqualTo: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final now = DateTime.now();
+                  final ads = snapshot.data!.docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final startDate = data['startDate'] as Timestamp?;
+                    final endDate = data['endDate'] as Timestamp?;
+
+                    if (startDate != null) {
+                      final start = DateUtils.dateOnly(startDate.toDate());
+                      if (DateUtils.dateOnly(now).isBefore(start)) return false;
+                    }
+                    if (endDate != null) {
+                      final end = DateUtils.dateOnly(endDate.toDate());
+                      if (DateUtils.dateOnly(now).isAfter(end)) return false;
+                    }
+                    return true;
+                  }).toList();
+
+                  if (ads.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  ads.sort((a, b) {
+                    final dataA = a.data() as Map<String, dynamic>;
+                    final dataB = b.data() as Map<String, dynamic>;
+                    final priorityA = dataA['priority'] as int? ?? 999;
+                    final priorityB = dataB['priority'] as int? ?? 999;
+                    if (priorityA != priorityB) {
+                      return priorityA.compareTo(priorityB);
+                    }
+                    final createdAtA = dataA['createdAt'] as Timestamp?;
+                    final createdAtB = dataB['createdAt'] as Timestamp?;
+                    if (createdAtA != null && createdAtB != null) {
+                      return createdAtB.compareTo(createdAtA);
+                    }
+                    return 0;
+                  });
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          HSVColor.fromColor(storeTheme.sectionBackgroundColor)
+                              .withHue((HSVColor.fromColor(
+                                              storeTheme.sectionBackgroundColor)
+                                          .hue +
+                                      120) %
+                                  360)
+                              .toColor(),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Product Ads',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: storeTheme.textColor,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF8E1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: const Color(0xFFFFD54F), width: 0.5),
+                              ),
+                              child: const Text(
+                                'SPONSORED',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFF57F17),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Sponsored products from local sellers',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 160,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: ads.length,
+                            itemBuilder: (context, index) {
+                              final data =
+                                  ads[index].data() as Map<String, dynamic>;
+                              final brandLabel =
+                                  data['brandLabel']?.toString() ?? '';
+                              final title = data['title']?.toString() ?? '';
+                              final subtitle =
+                                  data['subtitle']?.toString() ?? '';
+                              List<String> productIds = [];
+                              if (data['productIds'] is List) {
+                                productIds = (data['productIds'] as List)
+                                    .map((e) => e.toString())
+                                    .toList();
+                              } else if (data['productId'] != null) {
+                                final pStr = data['productId'].toString();
+                                if (pStr.isNotEmpty) {
+                                  if (pStr.contains(',')) {
+                                    productIds = pStr
+                                        .split(',')
+                                        .map((e) => e.trim())
+                                        .where((e) => e.isNotEmpty)
+                                        .toList();
+                                  } else {
+                                    productIds.add(pStr);
+                                  }
+                                }
+                              }
+
+                              final String firstProductId =
+                                  productIds.isNotEmpty ? productIds.first : '';
+
+                              return FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance
+                                    .collection('store_products')
+                                    .doc(firstProductId)
+                                    .get(),
+                                builder: (context, productSnapshot) {
+                                  String imageUrl = '';
+                                  if (productSnapshot.hasData &&
+                                      productSnapshot.data!.exists) {
+                                    final productData = productSnapshot.data!
+                                        .data() as Map<String, dynamic>;
+                                    imageUrl =
+                                        productData['coverImage']?.toString() ??
+                                            '';
+                                    if (imageUrl.isEmpty) {
+                                      final images =
+                                          productData['images'] as List?;
+                                      if (images != null && images.isNotEmpty) {
+                                        imageUrl = images.first.toString();
+                                      }
+                                    }
+                                  }
+
+                                  return buildAdCard(
+                                    imageUrl,
+                                    brandLabel,
+                                    const Color(
+                                        0xFFFBBF24), // Default badge color
+                                    Colors.black, // Default badge text color
+                                    title,
+                                    subtitle,
+                                    true,
+                                    onTap: () {
+                                      if (productIds.length > 1) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                SpotlightItemsPage(
+                                              title: title,
+                                              items: productIds,
+                                            ),
+                                          ),
+                                        );
+                                      } else if (productIds.isNotEmpty) {
+                                        _openProductFromBanner(
+                                            context, productIds.first);
+                                      }
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 20),
               if (youMayAlsoLike.isNotEmpty) ...[
-                buildProductList("You May Also Like", Icons.thumb_up,
-                    Colors.purple, false, youMayAlsoLike),
+                buildProductList(
+                  "You May Also Like",
+                  Icons.thumb_up,
+                  Colors.purple,
+                  false,
+                  youMayAlsoLike,
+                ),
                 const SizedBox(height: 20),
               ],
 
               if (moreFromThisCategory.isNotEmpty) ...[
-                buildProductList("More From This Category", Icons.category,
-                    Colors.orange, false, moreFromThisCategory),
+                buildProductList(
+                  "More From This Category",
+                  Icons.category,
+                  Colors.orange,
+                  false,
+                  moreFromThisCategory,
+                ),
                 const SizedBox(height: 20),
               ],
 
               // 4. Top Value Deals
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
                 decoration: BoxDecoration(
                   color: storeTheme.sectionBackgroundColor,
                   borderRadius: BorderRadius.circular(16),
@@ -4164,7 +4438,9 @@ class HomepageState extends State<Homepage> {
                       children: [
                         Text(
                           DynamicContentService.getPromotionalDialogue(
-                              'Top Value Deals', allStoreProducts),
+                            'Top Value Deals',
+                            allStoreProducts,
+                          ),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -4173,7 +4449,9 @@ class HomepageState extends State<Homepage> {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 4),
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFDC2626),
                             borderRadius: BorderRadius.circular(8),
@@ -4183,9 +4461,10 @@ class HomepageState extends State<Homepage> {
                             "VALUE\n365",
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold),
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -4202,74 +4481,79 @@ class HomepageState extends State<Homepage> {
                               ? topValueDeals[index % topValueDeals.length]
                               : null;
                           return GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ProductListingScreen(
-                                      initialCategory: p?.categoryName,
-                                      highlightedProduct: p,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ProductListingScreen(
+                                    initialCategory: p?.categoryName,
+                                    highlightedProduct: p,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              width: 110,
+                              margin: const EdgeInsets.only(right: 12),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: AspectRatio(
+                                        aspectRatio: 1,
+                                        child:
+                                            p != null && p.coverImage.isNotEmpty
+                                                ? Image.network(
+                                                    p.coverImage,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) =>
+                                                        Container(
+                                                      color: Colors.grey[200],
+                                                    ),
+                                                  )
+                                                : Container(
+                                                    color: Colors.grey[200],
+                                                  ),
+                                      ),
                                     ),
                                   ),
-                                );
-                              },
-                              child: Container(
-                                width: 110,
-                                margin: const EdgeInsets.only(right: 12),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: AspectRatio(
-                                          aspectRatio: 1,
-                                          child: p != null &&
-                                                  p.coverImage.isNotEmpty
-                                              ? Image.network(
-                                                  p.coverImage,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error,
-                                                          stackTrace) =>
-                                                      Container(
-                                                          color:
-                                                              Colors.grey[200]),
-                                                )
-                                              : Container(
-                                                  color: Colors.grey[200]),
-                                        ),
-                                      ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    p?.productName ?? "Loading...",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF0F172A),
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      p?.productName ?? "Loading...",
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF0F172A),
-                                      ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    p != null
+                                        ? (p.hasDiscount
+                                            ? "${p.discountPercentage.round()}% Off"
+                                            : "\u20b9${p.sellingPrice.round()}")
+                                        : "",
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      p != null
-                                          ? (p.hasDiscount
-                                              ? "${p.discountPercentage.round()}% Off"
-                                              : "\u20b9${p.sellingPrice.round()}")
-                                          : "",
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ));
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -4322,8 +4606,11 @@ class HomepageState extends State<Homepage> {
                                 fontSize: 12,
                               ),
                             ),
-                            Icon(Icons.arrow_forward,
-                                color: Colors.blue, size: 12)
+                            Icon(
+                              Icons.arrow_forward,
+                              color: Colors.blue,
+                              size: 12,
+                            ),
                           ],
                         ),
                       ),
@@ -4340,154 +4627,171 @@ class HomepageState extends State<Homepage> {
                       itemBuilder: (context, index) {
                         final p = products.isNotEmpty
                             ? StoreProductModel.fromMap(
-                                pData(index, products), pId(index, products))
+                                pData(index, products),
+                                pId(index, products),
+                              )
                             : null;
 
                         return GestureDetector(
-                            onTap: () {
-                              if (p != null) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        ProductDetailsPage(product: p),
+                          onTap: () {
+                            if (p != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ProductDetailsPage(product: p),
+                                ),
+                              );
+                            }
+                          },
+                          child: Container(
+                            width: 155,
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    8,
+                                    8,
+                                    8,
+                                    0,
                                   ),
-                                );
-                              }
-                            },
-                            child: Container(
-                              width: 155,
-                              margin: const EdgeInsets.only(right: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 6, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFD1FAE5),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            "${p?.discountPercentage.round() ?? (index == 0 ? 72 : 68)}% OFF",
-                                            style: const TextStyle(
-                                              color: Color(0xFF059669),
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFD1FAE5),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Container(
-                                          width: double.infinity,
-                                          color: Colors.grey.shade100,
-                                          child: p != null &&
-                                                  p.coverImage.isNotEmpty
-                                              ? Image.network(
-                                                  p.coverImage,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error,
-                                                          stackTrace) =>
-                                                      Image.asset(
-                                                          "assets/image/car_clean.png",
-                                                          fit: BoxFit.cover),
-                                                )
-                                              : Image.asset(
-                                                  "assets/image/car_clean.png",
-                                                  fit: BoxFit.cover),
+                                        child: Text(
+                                          "${p?.discountPercentage.round() ?? (index == 0 ? 72 : 68)}% OFF",
+                                          style: const TextStyle(
+                                            color: Color(0xFF059669),
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        width: double.infinity,
+                                        color: Colors.grey.shade100,
+                                        child:
+                                            p != null && p.coverImage.isNotEmpty
+                                                ? Image.network(
+                                                    p.coverImage,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) =>
+                                                        Image.asset(
+                                                      "assets/image/car_clean.png",
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  )
+                                                : Image.asset(
+                                                    "assets/image/car_clean.png",
+                                                    fit: BoxFit.cover,
+                                                  ),
                                       ),
                                     ),
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          p?.productName ??
-                                              (index == 0
-                                                  ? "Mivi DuoPods F40"
-                                                  : "Noise ColorFit Pro 5"),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF0F172A),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          index == 0
-                                              ? "True Wireless Earbuds"
-                                              : "Bluetooth Calling",
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.blueGrey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
                                   ),
-                                  const SizedBox(height: 8),
-                                  const Divider(
-                                      height: 1,
-                                      thickness: 1,
-                                      color: Color(0xFFF1F5F9)),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Row(
-                                      children: [
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          "\u20b9${p?.sellingPrice.round() ?? (index == 0 ? 799 : 1799)}",
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF0F172A),
-                                          ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        p?.productName ??
+                                            (index == 0
+                                                ? "Mivi DuoPods F40"
+                                                : "Noise ColorFit Pro 5"),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F172A),
                                         ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          "\u20b9${p?.originalPrice.round() ?? (index == 0 ? 2999 : 5499)}",
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            decoration:
-                                                TextDecoration.lineThrough,
-                                            color: Colors.grey,
-                                          ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        index == 0
+                                            ? "True Wireless Earbuds"
+                                            : "Bluetooth Calling",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.blueGrey,
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ));
+                                ),
+                                const SizedBox(height: 8),
+                                const Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: Color(0xFFF1F5F9),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Row(
+                                    children: [
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "\u20b9${p?.sellingPrice.round() ?? (index == 0 ? 799 : 1799)}",
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "\u20b9${p?.originalPrice.round() ?? (index == 0 ? 2999 : 5499)}",
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          decoration:
+                                              TextDecoration.lineThrough,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -4495,175 +4799,23 @@ class HomepageState extends State<Homepage> {
               ),
               const SizedBox(height: 20),
 
-              // 6. Brands in Spotlight
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Brands in Spotlight",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2563EB), // Rich royal blue
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  const Text(
-                                    "boltt",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    height: 14,
-                                    width: 1,
-                                    color: Colors.white.withValues(alpha: 0.5),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFBBF24), // Yellow
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: const [
-                                        Text(
-                                          "Flipkart",
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        SizedBox(width: 2),
-                                        Icon(Icons.bolt,
-                                            size: 10, color: Colors.black54),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                "EVO | Sale is live",
-                                style: TextStyle(
-                                    fontSize: 15, color: Colors.white),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                "From \u20b99,999",
-                                style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const Text(
-                                    "6000",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 2),
-                                  const Text(
-                                    "mAh",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.3),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Text(
-                                      "AD",
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Container(
-                                height: 75,
-                                width: 100,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1D4ED8),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                padding: const EdgeInsets.all(4),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(2),
-                                  child: Image.asset(
-                                    "assets/image/car_clean.png", // Generic fallback
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
+              // Spotlight: position 0 = before Flash Deals
+              if (_spotlightPosition == 0) ...[
+                const SpotlightCampaignSection(isOnlineStore: true),
+                const SizedBox(height: 20)
+              ],
 
-              // 7. Flash Deals
+              // Section A: Flash Deals
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.local_fire_department_outlined,
-                          color: Colors.redAccent, size: 20),
+                      const Icon(
+                        Icons.local_fire_department_outlined,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       const Text(
                         "Flash Deals",
@@ -4701,8 +4853,11 @@ class HomepageState extends State<Homepage> {
                                 fontSize: 13,
                               ),
                             ),
-                            Icon(Icons.chevron_right,
-                                color: Colors.blue, size: 16)
+                            Icon(
+                              Icons.chevron_right,
+                              color: Colors.blue,
+                              size: 16,
+                            ),
                           ],
                         ),
                       ),
@@ -4719,109 +4874,119 @@ class HomepageState extends State<Homepage> {
                       itemBuilder: (context, index) {
                         final p = products.isNotEmpty
                             ? StoreProductModel.fromMap(
-                                pData(index), pId(index))
+                                pData(index),
+                                pId(index),
+                              )
                             : null;
 
                         return GestureDetector(
-                            onTap: () {
-                              if (p != null) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        ProductDetailsPage(product: p),
+                          onTap: () {
+                            if (p != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ProductDetailsPage(product: p),
+                                ),
+                              );
+                            }
+                          },
+                          child: Container(
+                            width: 100,
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 3,
                                   ),
-                                );
-                              }
-                            },
-                            child: Container(
-                              width: 100,
-                              margin: const EdgeInsets.only(right: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const SizedBox(height: 8),
-                                  Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFD1FAE5),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    "Upto ${index == 0 ? 60 : index == 1 ? 50 : index == 2 ? 45 : 70}% OFF",
+                                    style: const TextStyle(
+                                      color: Color(0xFF059669),
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Expanded(
+                                  child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFD1FAE5),
-                                      borderRadius: BorderRadius.circular(8),
+                                      horizontal: 8.0,
                                     ),
-                                    child: Text(
-                                      "Upto ${index == 0 ? 60 : index == 1 ? 50 : index == 2 ? 45 : 70}% OFF",
-                                      style: const TextStyle(
-                                        color: Color(0xFF059669),
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
+                                    child: Container(
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.all(2),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(6),
+                                        child:
+                                            p != null && p.coverImage.isNotEmpty
+                                                ? Image.network(
+                                                    p.coverImage,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) =>
+                                                        Image.asset(
+                                                      "assets/image/car_clean.png",
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  )
+                                                : Image.asset(
+                                                    "assets/image/car_clean.png",
+                                                    fit: BoxFit.cover,
+                                                  ),
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8.0),
-                                      child: Container(
-                                        width: double.infinity,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade100,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        padding: const EdgeInsets.all(2),
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          child: p != null &&
-                                                  p.coverImage.isNotEmpty
-                                              ? Image.network(
-                                                  p.coverImage,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error,
-                                                          stackTrace) =>
-                                                      Image.asset(
-                                                          "assets/image/car_clean.png",
-                                                          fit: BoxFit.cover),
-                                                )
-                                              : Image.asset(
-                                                  "assets/image/car_clean.png",
-                                                  fit: BoxFit.cover),
-                                        ),
-                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4.0,
+                                  ),
+                                  child: Text(
+                                    p?.productName ??
+                                        (index == 0
+                                            ? "Smart Watch"
+                                            : index == 1
+                                                ? "Wireless Earbud"
+                                                : index == 2
+                                                    ? "Home Appliance"
+                                                    : "Fashion"),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0F172A),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4.0),
-                                    child: Text(
-                                      p?.productName ??
-                                          (index == 0
-                                              ? "Smart Watch"
-                                              : index == 1
-                                                  ? "Wireless Earbud"
-                                                  : index == 2
-                                                      ? "Home Appliance"
-                                                      : "Fashion"),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                ],
-                              ),
-                            ));
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+                            ),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -4829,93 +4994,110 @@ class HomepageState extends State<Homepage> {
               ),
               const SizedBox(height: 20),
 
+              // Spotlight: position 1 = after Flash Deals, before Popular Near You
+              if (_spotlightPosition == 1) ...[
+                const SpotlightCampaignSection(isOnlineStore: true),
+                const SizedBox(height: 20)
+              ],
+
               // 8. Popular nearby (Category Discovery)
-              Builder(builder: (context) {
-                final Map<String, String> uniqueCategoriesMap = {};
-                for (var p in allStoreProducts) {
-                  final String cat = p.categoryName.trim();
-                  if (cat.isNotEmpty &&
-                      !uniqueCategoriesMap.keys
-                          .any((k) => k.toLowerCase() == cat.toLowerCase())) {
-                    uniqueCategoriesMap[cat] = p.coverImage;
+              Builder(
+                builder: (context) {
+                  final Map<String, String> uniqueCategoriesMap = {};
+                  for (var p in allStoreProducts) {
+                    final String cat = p.categoryName.trim();
+                    if (cat.isNotEmpty &&
+                        !uniqueCategoriesMap.keys.any(
+                          (k) => k.toLowerCase() == cat.toLowerCase(),
+                        )) {
+                      uniqueCategoriesMap[cat] = p.coverImage;
+                    }
                   }
-                }
 
-                final categoryEntries = uniqueCategoriesMap.entries.toList();
-                if (categoryEntries.isEmpty) return const SizedBox.shrink();
+                  final categoryEntries = uniqueCategoriesMap.entries.toList();
+                  if (categoryEntries.isEmpty) return const SizedBox.shrink();
 
-                final List<Widget> sections = [];
-                final List<String> sectionTitles = [
-                  "Popular Near You",
-                  "Explore More Categories",
-                  "More Categories",
-                  "Discover More",
-                  "Top Categories",
-                  "Trending Categories",
-                  "More For You",
-                ];
+                  final List<Widget> sections = [];
+                  final List<String> sectionTitles = [
+                    "Popular Near You",
+                    "Explore More Categories",
+                    "More Categories",
+                    "Discover More",
+                    "Top Categories",
+                    "Trending Categories",
+                    "More For You",
+                  ];
 
-                for (int i = 0; i < categoryEntries.length; i += 4) {
-                  int end = (i + 4 < categoryEntries.length)
-                      ? i + 4
-                      : categoryEntries.length;
-                  final chunk = categoryEntries.sublist(i, end);
+                  for (int i = 0; i < categoryEntries.length; i += 4) {
+                    int end = (i + 4 < categoryEntries.length)
+                        ? i + 4
+                        : categoryEntries.length;
+                    final chunk = categoryEntries.sublist(i, end);
 
-                  final titleIndex = i ~/ 4;
-                  final title = titleIndex < sectionTitles.length
-                      ? sectionTitles[titleIndex]
-                      : "Categories Part ${titleIndex + 1}";
+                    final titleIndex = i ~/ 4;
+                    final title = titleIndex < sectionTitles.length
+                        ? sectionTitles[titleIndex]
+                        : "Categories Part ${titleIndex + 1}";
 
-                  sections.add(Container(
-                    width: double.infinity,
-                    margin: EdgeInsets.only(top: i == 0 ? 0 : 20),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 20),
-                    decoration: BoxDecoration(
-                      color: storeTheme.backgroundColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
+                    sections.add(
+                      Container(
+                        width: double.infinity,
+                        margin: EdgeInsets.only(top: i == 0 ? 0 : 20),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 20,
                         ),
-                        const SizedBox(height: 16),
-                        GridView.builder(
-                          padding: EdgeInsets.zero,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 0.85,
-                          ),
-                          itemCount: chunk.length,
-                          itemBuilder: (context, index) {
-                            return CategoryCard(
-                              categoryName: chunk[index].key,
-                              imageUrl: chunk[index].value,
-                            );
-                          },
+                        decoration: BoxDecoration(
+                          color: storeTheme.backgroundColor,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      ],
-                    ),
-                  ));
-                }
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            GridView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 0.85,
+                              ),
+                              itemCount: chunk.length,
+                              itemBuilder: (context, index) {
+                                return CategoryCard(
+                                  categoryName: chunk[index].key,
+                                  imageUrl: chunk[index].value,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
 
-                return Column(
-                  children: sections,
-                );
-              }),
+                  return Column(children: sections);
+                },
+              ),
               const SizedBox(height: 20),
+
+              // Spotlight: position 2 = after Popular Near You, before Suggested For You
+              if (_spotlightPosition == 2) ...[
+                const SpotlightCampaignSection(isOnlineStore: true),
+                const SizedBox(height: 20)
+              ],
 
               // 9. Suggested For You (Grid)
               Column(
@@ -4965,8 +5147,11 @@ class HomepageState extends State<Homepage> {
                                 fontSize: 12,
                               ),
                             ),
-                            Icon(Icons.arrow_forward,
-                                color: Colors.blue, size: 12)
+                            Icon(
+                              Icons.arrow_forward,
+                              color: Colors.blue,
+                              size: 12,
+                            ),
                           ],
                         ),
                       ),
@@ -4975,6 +5160,7 @@ class HomepageState extends State<Homepage> {
                   const SizedBox(height: 12),
                   GridView.builder(
                     shrinkWrap: true,
+                    padding: EdgeInsets.zero,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: products.isEmpty ? 4 : products.length,
                     gridDelegate:
@@ -4982,11 +5168,13 @@ class HomepageState extends State<Homepage> {
                       crossAxisCount: 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 0.82,
+                      childAspectRatio: 0.95,
                     ),
                     itemBuilder: (context, index) {
-                      final product =
-                          StoreProductModel.fromMap(pData(index), pId(index));
+                      final product = StoreProductModel.fromMap(
+                        pData(index),
+                        pId(index),
+                      );
                       return GestureDetector(
                         onTap: () => products.isNotEmpty
                             ? _openProductFromBanner(context, pId(index))
@@ -5007,6 +5195,11 @@ class HomepageState extends State<Homepage> {
                   ),
                 ],
               ),
+              // Spotlight: position 3 = after Suggested For You (last slot)
+              if (_spotlightPosition == 3) ...[
+                const SizedBox(height: 20),
+                const SpotlightCampaignSection(isOnlineStore: true)
+              ],
               const SizedBox(height: 20),
             ],
           ),
@@ -5047,9 +5240,10 @@ class HomepageState extends State<Homepage> {
                       imageAsset,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => const Icon(
-                          Icons.shopping_bag_outlined,
-                          color: Colors.grey,
-                          size: 30),
+                        Icons.shopping_bag_outlined,
+                        color: Colors.grey,
+                        size: 30,
+                      ),
                     )
                   : Image.asset(
                       imageAsset,
@@ -5143,8 +5337,11 @@ class HomepageState extends State<Homepage> {
                               imageAsset,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.shopping_bag_outlined,
-                                      color: Colors.grey, size: 30),
+                                  const Icon(
+                                Icons.shopping_bag_outlined,
+                                color: Colors.grey,
+                                size: 30,
+                              ),
                             )
                           : Image.asset(
                               imageAsset,
@@ -5251,8 +5448,11 @@ class HomepageState extends State<Homepage> {
                         imageAsset,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.shopping_bag_outlined,
-                                color: Colors.grey, size: 30),
+                            const Icon(
+                          Icons.shopping_bag_outlined,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
                       )
                     : Image.asset(
                         imageAsset,
@@ -5267,7 +5467,7 @@ class HomepageState extends State<Homepage> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           Text(
             title,
             maxLines: 1,
@@ -5278,7 +5478,7 @@ class HomepageState extends State<Homepage> {
               color: Colors.black,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Row(
             children: [
               Text(
@@ -5348,8 +5548,11 @@ class HomepageState extends State<Homepage> {
                           imageAsset,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.shopping_bag_outlined,
-                                  color: Colors.grey, size: 30),
+                              const Icon(
+                            Icons.shopping_bag_outlined,
+                            color: Colors.grey,
+                            size: 30,
+                          ),
                         )
                       : Image.asset(
                           imageAsset,

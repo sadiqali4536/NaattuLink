@@ -63,6 +63,115 @@ class _EditProfileState extends State<EditProfile> {
     toastSuccess("Profile updated successfully");
   }
 
+  void _handleDeleteAccount(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete_forever_rounded,
+                      color: Colors.red, size: 36),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  "Delete Account",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "Are you sure you want to completely delete your account? This action cannot be undone and you will lose all your data.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF64748B),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        child: const Text("Cancel",
+                            style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(context); // Close dialog
+                          // TODO: Implement actual account deletion logic here
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Account deletion requested.')),
+                          );
+                        },
+                        child: const Text("Delete",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     email.text = widget.email;
@@ -84,195 +193,181 @@ class _EditProfileState extends State<EditProfile> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5), // Light grey background
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Top Header
-            Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.bottomCenter,
-              children: [
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(top: 50, left: 16, right: 16),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0F2E5A),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(40),
-                      bottomRight: Radius.circular(40),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back,
-                                color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Edit Profile',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+      body: Column(
+        children: [
+          // Top Header
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
+            children: [
+              Container(
+                height: 200,
+                width: double.infinity,
+                padding: const EdgeInsets.only(top: 50, left: 16, right: 16),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0F2E5A),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(40),
+                    bottomRight: Radius.circular(40),
                   ),
                 ),
-                Positioned(
-                  bottom: -40,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.8), width: 4),
-                    ),
-                    child: CircleAvatar(
-                      radius: 45,
-                      backgroundColor: Colors.white,
-                      backgroundImage: AssetImage(_selectedAvatar!),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 60),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Choose Avatar Section
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        const Text(
-                          'Choose Avatar',
-                          style: TextStyle(
-                            color: Color(0xFF0F2E5A),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                        IconButton(
+                          icon:
+                              const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            _buildAvatarOption(
-                              label: 'Male',
-                              assetPath: 'assets/icons/male_avathar.png',
-                              isSelected: _selectedAvatar ==
-                                  'assets/icons/male_avathar.png',
-                            ),
-                            const SizedBox(width: 20),
-                            _buildAvatarOption(
-                              label: 'Female',
-                              assetPath: 'assets/icons/female_avathar.png',
-                              isSelected: _selectedAvatar ==
-                                  'assets/icons/female_avathar.png',
-                            ),
-                          ],
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Edit Profile',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
+                  ],
+                ),
+              ),
+              Positioned(
+                bottom: -40,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: Colors.white.withOpacity(0.8), width: 4),
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Text Fields
-                  _buildInputLabel('FULL NAME'),
-                  _buildTextField(
-                    controller: username,
-                    icon: Icons.person_outline,
-                    hintText: 'Full Name',
+                  child: CircleAvatar(
+                    radius: 45,
+                    backgroundColor: Colors.white,
+                    backgroundImage: AssetImage(_selectedAvatar!),
                   ),
+                ),
+              ),
+            ],
+          ),
 
-                  const SizedBox(height: 16),
+          const SizedBox(height: 60),
 
-                  _buildInputLabel('MOBILE NUMBER'),
-                  _buildTextField(
-                    controller: phone,
-                    icon: Icons.phone_outlined,
-                    hintText: 'Mobile Number',
-                    prefixText: '+91 ',
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  _buildInputLabel('EMAIL ADDRESS'),
-                  _buildTextField(
-                    controller: email,
-                    icon: Icons.mail_outline,
-                    hintText: 'Email Address',
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Action Cards
-                  _buildActionCard(
-                    icon: Icons.lock_outline,
-                    title: 'Change Password',
-                    onTap: () {},
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  _buildActionCard(
-                    icon: Icons.delete_outline,
-                    title: 'Delete Account',
-                    titleColor: Colors.red,
-                    iconColor: Colors.red,
-                    onTap: () {},
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Save Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _updateProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F2E5A),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Choose Avatar Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'Save Changes',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Choose Avatar',
+                            style: TextStyle(
+                              color: Color(0xFF0F2E5A),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              _buildAvatarOption(
+                                label: 'Male',
+                                assetPath: 'assets/icons/male_avathar.png',
+                                isSelected: _selectedAvatar ==
+                                    'assets/icons/male_avathar.png',
+                              ),
+                              const SizedBox(width: 20),
+                              _buildAvatarOption(
+                                label: 'Female',
+                                assetPath: 'assets/icons/female_avathar.png',
+                                isSelected: _selectedAvatar ==
+                                    'assets/icons/female_avathar.png',
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Text Fields
+                    _buildInputLabel('FULL NAME'),
+                    _buildTextField(
+                      controller: username,
+                      icon: Icons.person_outline,
+                      hintText: 'Full Name',
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    _buildInputLabel('MOBILE NUMBER'),
+                    _buildTextField(
+                      controller: phone,
+                      icon: Icons.phone_outlined,
+                      hintText: 'Mobile Number',
+                      prefixText: '+91 ',
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    _buildInputLabel('EMAIL ADDRESS'),
+                    _buildTextField(
+                      controller: email,
+                      icon: Icons.mail_outline,
+                      hintText: 'Email Address',
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    const SizedBox(height: 40),
+
+                    // Save Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _updateProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F2E5A),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                        ),
+                        child: const Text(
+                          'Save Changes',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 40),
-                ],
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

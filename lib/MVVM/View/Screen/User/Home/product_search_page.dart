@@ -6,6 +6,7 @@ import '../../../../controller/user/product_listing_controller.dart';
 import '../product/product_details_page.dart';
 import 'package:naattulink/MVVM/model/seller/store_product_model.dart';
 import 'Widgets/featured_product_banner_carousel.dart';
+import 'Widgets/spotlight_campaign_section.dart';
 import 'package:naattulink/MVVM/viewmodel/cart_controller.dart';
 import 'package:naattulink/MVVM/View/Screen/User/cart/Cartpage.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
@@ -20,6 +21,7 @@ class ProductSearchPage extends StatefulWidget {
 class _ProductSearchPageState extends State<ProductSearchPage> {
   final TextEditingController _searchController = TextEditingController();
   late final ProductSearchController controller;
+  final _randomSeed = DateTime.now().millisecondsSinceEpoch;
 
   static const _primary = Color(0xFF0F2E5A);
 
@@ -208,8 +210,11 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
           if (Get.find<ProductListingController>()
               .featuredItems
               .isNotEmpty) ...[
-            _buildSponsoredCard(
-                Get.find<ProductListingController>().featuredItems.first),
+            Builder(builder: (context) {
+              final items = Get.find<ProductListingController>().featuredItems;
+              final randomSponsoredProduct = items[_randomSeed % items.length];
+              return _buildSponsoredCard(randomSponsoredProduct);
+            }),
             const SizedBox(height: 16),
           ],
           Padding(
@@ -312,11 +317,13 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
   }
 
   Widget _buildFeaturedBanner() {
-    final listingController = Get.find<ProductListingController>();
-    return Obx(() => FeaturedProductBannerCarousel(
-          products: listingController.featuredItems,
-          isLoading: listingController.isFeaturedLoading.value,
-        ));
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8),
+      child: SpotlightCampaignSection(
+        isOnlineStore: true,
+        showTitle: false,
+      ),
+    );
   }
 
   Widget _buildSellingFastSection() {

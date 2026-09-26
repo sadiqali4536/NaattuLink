@@ -15,6 +15,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  bool _hasError = false;
+
   @override
   void initState() {
     super.initState();
@@ -22,27 +24,39 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _goToLocationPage() async {
+    setState(() {
+      _hasError = false;
+    });
+
     // Wait for the animation to play slightly, then initialize
     await Future.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      if (!CommonController.to.onboardingCompleted.value) {
-        CommonController.to.onboardingCompleted.value = true;
-        GetStorage().write('onboarding', 'true');
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (!CommonController.to.onboardingCompleted.value) {
+          CommonController.to.onboardingCompleted.value = true;
+          GetStorage().write('onboarding', 'true');
+        }
+        await AuthController.to.routeAuthenticatedUser(user);
+        return;
       }
-      await AuthController.to.routeAuthenticatedUser(user);
-      return;
-    }
 
-    final isCompleted = CommonController.to.onboardingCompleted.value;
-    if (!isCompleted) {
-      Get.offAll(() => const OnboardingScreen());
-      return;
-    }
+      final isCompleted = CommonController.to.onboardingCompleted.value;
+      if (!isCompleted) {
+        Get.offAll(() => const OnboardingScreen());
+        return;
+      }
 
-    Get.offAll(() => const LoginAndSigning());
+      Get.offAll(() => const LoginAndSigning());
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+        });
+      }
+    }
   }
 
   @override
@@ -80,6 +94,43 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
           ),
+          if (_hasError)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.7),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.wifi_off_outlined,
+                          color: Colors.white, size: 60),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No internet connection',
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _goToLocationPage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF0C1F41),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                        ),
+                        child: const Text(
+                          'Retry',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

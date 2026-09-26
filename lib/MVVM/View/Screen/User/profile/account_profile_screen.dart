@@ -10,6 +10,9 @@ import 'package:naattulink/MVVM/View/Screen/User/profile/edit_profile.dart';
 import 'package:naattulink/MVVM/controller/seller/seller_access_controller.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:naattulink/MVVM/utils/Constants/constants.dart';
 
 class AccountProfileScreen extends StatefulWidget {
   const AccountProfileScreen({Key? key}) : super(key: key);
@@ -20,14 +23,459 @@ class AccountProfileScreen extends StatefulWidget {
 
 class _AccountProfileScreenState extends State<AccountProfileScreen> {
   bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
 
-  void _handleLogout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => LoginAndSigning()),
-      (route) => false,
+  void _handleLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.logout_rounded,
+                      color: Colors.red, size: 36),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  "Logout",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "Are you sure you want to log out of your account?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF64748B),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        child: const Text("Cancel",
+                            style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(context); // Close dialog
+                          await FirebaseAuth.instance.signOut();
+                          if (context.mounted) {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => LoginAndSigning()),
+                              (route) => false,
+                            );
+                          }
+                        },
+                        child: const Text("Logout",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _handleDeleteAccount(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete_forever_rounded,
+                      color: Colors.red, size: 36),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  "Delete Account",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "Are you sure you want to completely delete your account? This action cannot be undone and you will lose all your data.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF64748B),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        child: const Text("Cancel",
+                            style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(context); // Close dialog
+                          // TODO: Implement actual account deletion logic here
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Account deletion requested.')),
+                          );
+                        },
+                        child: const Text("Delete",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSupportBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        const supportPhone = "";
+        const supportEmail = "";
+        const supportChat = "";
+        const supportHoursTimezone = '';
+        const supportHours = 'Mon–Sun • 10:00 AM – 8:00 PM';
+
+        return Container(
+          padding: const EdgeInsets.all(24.0),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Contact Support',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F2E5A),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'How would you like to reach us?',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildSupportOption(
+                context,
+                icon: Icons.chat_bubble_outline,
+                title: 'Chat with Support',
+                subtitle: 'Usually replies instantly',
+                onTap: () async {
+                  Navigator.pop(context);
+                  final uri = Uri.parse('https://wa.me/91$supportChat');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not open WhatsApp.')),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildSupportOption(
+                context,
+                icon: Icons.call_outlined,
+                title: 'Call Support',
+                subtitle: 'Available during support hours',
+                onTap: () async {
+                  Navigator.pop(context);
+                  if (supportPhone.isNotEmpty) {
+                    final uri = Uri.parse('tel:$supportPhone');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content:
+                                Text('Support phone number is not available.')),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content:
+                              Text('Support phone number is not available.')),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildSupportOption(
+                context,
+                icon: Icons.email_outlined,
+                title: 'Email Support',
+                subtitle: 'Get a response within 24 hours',
+                onTap: () async {
+                  Navigator.pop(context);
+                  if (supportEmail.isNotEmpty) {
+                    final uri = Uri.parse('mailto:$supportEmail');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Support email is not available.')),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Support email is not available.')),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.access_time,
+                          color: Color(0xFF0284C7)),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Support Hours',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            supportHoursTimezone.isNotEmpty
+                                ? '$supportHours ($supportHoursTimezone)'
+                                : supportHours,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSupportOption(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: const Color(0xFF0F2E5A)),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
+      ),
     );
   }
 
@@ -57,50 +505,51 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light, // Light icons for dark background
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
-        body: FutureBuilder<Map<String, String>?>(
-          future: _resolveUserIdentity(),
-          builder: (context, futureSnapshot) {
-            if (futureSnapshot.connectionState == ConnectionState.waiting) {
-              return const AccountProfileSkeleton();
-            }
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: FutureBuilder<Map<String, String>?>(
+        future: _resolveUserIdentity(),
+        builder: (context, futureSnapshot) {
+          if (futureSnapshot.connectionState == ConnectionState.waiting) {
+            return const AccountProfileSkeleton();
+          }
 
-            if (!futureSnapshot.hasData || futureSnapshot.data == null) {
-              return const Center(child: Text('User not found'));
-            }
+          if (!futureSnapshot.hasData || futureSnapshot.data == null) {
+            return const Center(child: Text('User not found'));
+          }
 
-            final identity = futureSnapshot.data!;
-            return StreamBuilder<DocumentSnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection(identity['collection']!)
-                  .doc(identity['id'])
-                  .snapshots(),
-              builder: (context, userSnapshot) {
-                if (userSnapshot.connectionState == ConnectionState.waiting) {
-                  return const AccountProfileSkeleton();
+          final identity = futureSnapshot.data!;
+          return StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection(identity['collection']!)
+                .doc(identity['id'])
+                .snapshots(),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const AccountProfileSkeleton();
+              }
+
+              if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                final data = userSnapshot.data!.data() as Map<String, dynamic>?;
+                if (data != null) {
+                  return _buildProfileContent(context, data);
                 }
+              }
 
-                if (userSnapshot.hasData && userSnapshot.data!.exists) {
-                  final data =
-                      userSnapshot.data!.data() as Map<String, dynamic>?;
-                  if (data != null) {
-                    return _buildProfileContent(context, data);
-                  }
-                }
-
-                return const Center(child: Text('Something went wrong'));
-              },
-            );
-          },
-        ),
+              return const Center(child: Text('Something went wrong'));
+            },
+          );
+        },
       ),
     );
   }
 
   Widget _buildProfileContent(BuildContext context, Map<String, dynamic> data) {
+    final String appVersion =
+        Theme.of(context).platform == TargetPlatform.android
+            ? androidVersion
+            : iosVersion;
+
     String username = data['username'] ?? 'No Name';
     String email = data['email'] ?? '';
     String phone = data['phone'] ?? '';
@@ -465,14 +914,6 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildSellerStockWarning(),
-                _buildSectionTitle('My Activity'),
-                _buildSectionContainer([
-                  _buildListItem(
-                    icon: Icons.rate_review_outlined,
-                    title: 'My Reviews',
-                    onTap: () {},
-                  ),
-                ]),
 
                 const SizedBox(height: 20),
                 _buildSectionTitle('Earn With NaattuLink'),
@@ -497,13 +938,6 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                     trailingText: 'English',
                     onTap: () {},
                   ),
-                  _buildDivider(),
-                  _buildListTileWithSwitch(
-                    icon: Icons.dark_mode_outlined,
-                    title: 'Dark Mode',
-                    value: _darkModeEnabled,
-                    onChanged: (val) => setState(() => _darkModeEnabled = val),
-                  ),
                 ]),
 
                 const SizedBox(height: 20),
@@ -512,7 +946,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                   _buildListItem(
                     icon: Icons.help_outline,
                     title: 'Help Center',
-                    onTap: () {},
+                    onTap: () => _showSupportBottomSheet(context),
                   ),
                   _buildDivider(),
                   _buildListItem(
@@ -520,7 +954,13 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                     title: 'Terms & Conditions',
                     onTap: () {},
                   ),
-                  _buildDivider(),
+                ]),
+
+                const SizedBox(height: 20),
+                _buildFollowUsSection(),
+
+                const SizedBox(height: 20),
+                _buildSectionContainer([
                   _buildListItem(
                     icon: Icons.logout_outlined,
                     title: 'Logout',
@@ -536,15 +976,15 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                     titleColor: Colors.red,
                     iconColor: Colors.red,
                     showArrow: false,
-                    onTap: () {},
+                    onTap: () => _handleDeleteAccount(context),
                   ),
                 ]),
 
                 const SizedBox(height: 40),
-                const Center(
+                Center(
                   child: Text(
-                    'NaattuLink App v1.0.1',
-                    style: TextStyle(
+                    'NaattuLink App v$appVersion',
+                    style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 12,
                     ),
@@ -1403,6 +1843,112 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
         ),
         contentPadding:
             const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      ),
+    );
+  }
+
+  Future<void> _launchSocialMedia(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint('Could not launch $url');
+    }
+  }
+
+  Widget _buildFollowUsSection() {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('platform_settings')
+          .doc('general')
+          .snapshots(),
+      builder: (context, snapshot) {
+        String instagramUrl =
+            'https://www.instagram.com/___saadiq____?stkn=MXVtOXVlaG55cWg1dw==';
+        String youtubeUrl =
+            'https://youtube.com/@sadiqali46221?si=mHaCE1cdsq3K-pxr';
+        String linkedinUrl =
+            'https://www.linkedin.com/in/sadiqali-nm-86aa68315?utm_source=share_via&utm_content=profile&utm_medium=member_android';
+
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data() as Map<String, dynamic>?;
+          if (data != null) {
+            instagramUrl = data['instagram'] ?? instagramUrl;
+            youtubeUrl = data['youtube'] ?? youtubeUrl;
+            linkedinUrl = data['linkedin'] ?? linkedinUrl;
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle('Follow Us On'),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSocialButton(
+                  iconWidget: const FaIcon(FontAwesomeIcons.instagram,
+                      size: 20, color: Color(0xFF334155)),
+                  label: 'Instagram',
+                  onTap: () => _launchSocialMedia(instagramUrl),
+                ),
+                const SizedBox(width: 12),
+                _buildSocialButton(
+                  iconWidget: const FaIcon(FontAwesomeIcons.youtube,
+                      size: 20, color: Color(0xFF334155)),
+                  label: 'YouTube',
+                  onTap: () => _launchSocialMedia(youtubeUrl),
+                ),
+                const SizedBox(width: 12),
+                _buildSocialButton(
+                  iconWidget: const FaIcon(FontAwesomeIcons.linkedinIn,
+                      size: 20, color: Color(0xFF334155)),
+                  label: 'LinkedIn',
+                  onTap: () => _launchSocialMedia(linkedinUrl),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSocialButton({
+    required Widget iconWidget,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9), // Light gray background
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              iconWidget,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF334155),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
