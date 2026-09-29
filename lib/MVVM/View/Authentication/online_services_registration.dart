@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:naattulink/MVVM/utils/public_id_generator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
@@ -142,7 +143,10 @@ class _OnlineServicesRegistrationPageState
         }
       }
 
-      await FirebaseFirestore.instance.collection("businesses").doc(uid).set({
+      final publicId = await PublicIdGenerator.generateBusinessId();
+      await FirebaseFirestore.instance.collection("businesses").doc(publicId).set({
+        "businessPublicId": publicId,
+        "authUid": uid,
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
         "email": email,

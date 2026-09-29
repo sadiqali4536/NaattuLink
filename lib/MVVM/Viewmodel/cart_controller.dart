@@ -138,10 +138,13 @@ class CartController extends GetxController {
             quantity: 1,
             variantId: variant?.id,
             variantName: selectedVariantName ??
-                (variant != null ? variant.attributes.values.join(' - ') : null),
+                (variant != null
+                    ? variant.attributes.values.join(' - ')
+                    : null),
             sellerId: product.sellerId,
             isCashOnDelivery: product.isCashOnDelivery,
             isOnlinePayment: product.isOnlinePayment,
+            paymentOptions: product.paymentOptions,
             addedAt: DateTime.now(),
             updatedAt: DateTime.now(),
           );

@@ -9,6 +9,7 @@ import 'package:naattulink/MVVM/utils/payment_upi_resolver.dart';
 import 'package:naattulink/MVVM/model/user/cart_item_model.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart';
 import 'package:naattulink/MVVM/View/Screen/User/checkout/order_success_page.dart';
+import 'package:naattulink/MVVM/utils/stock_manager.dart';
 
 enum PaymentMethod { upi, cashOnDelivery }
 
@@ -46,7 +47,8 @@ class PaymentController extends GetxController {
       final double paymentAmount = amount;
       final String upiAmount = paymentAmount.toStringAsFixed(2);
 
-      final String transactionRef = 'NL${DateTime.now().millisecondsSinceEpoch}';
+      final String transactionRef =
+          'NL${DateTime.now().millisecondsSinceEpoch}';
 
       final response = await UpiPaymentLauncher.initiatePayment(
         upiId: upiId,
@@ -57,10 +59,12 @@ class PaymentController extends GetxController {
 
       if (response.status == UpiPaymentStatus.SUCCESS) {
         upiPaymentState.value = UpiPaymentState.paymentInitiated;
-        Get.snackbar('Processing', 'Payment intent completed. Please verify and submit the transaction ID.',
+        Get.snackbar('Processing',
+            'Payment intent completed. Please verify and submit the transaction ID.',
             backgroundColor: Colors.blueAccent, colorText: Colors.white);
       } else if (response.status == UpiPaymentStatus.NO_UPI_APP) {
-        Get.snackbar('No UPI App', 'No compatible UPI application found on this device.',
+        Get.snackbar(
+            'No UPI App', 'No compatible UPI application found on this device.',
             backgroundColor: Colors.orange, colorText: Colors.white);
       } else if (response.status == UpiPaymentStatus.CANCELLED) {
         Get.snackbar('Cancelled', 'UPI payment was cancelled.',
@@ -68,7 +72,8 @@ class PaymentController extends GetxController {
       } else {
         Get.snackbar('Payment Failed', 'Transaction failed. Please try again.',
             backgroundColor: Colors.redAccent, colorText: Colors.white);
-        debugPrint('UPI Failed: ${response.responseCode} / ${response.rawResponse}');
+        debugPrint(
+            'UPI Failed: ${response.responseCode} / ${response.rawResponse}');
       }
     } catch (e) {
       Get.snackbar('Error', 'Unable to initiate the selected payment.',
@@ -124,6 +129,7 @@ class PaymentController extends GetxController {
     required double totalAmount,
     required AppLocationModel address,
     required bool isFromCart,
+    String? formattedReceipt,
   }) async {
     if (isPlacingOrder.value) return;
 
@@ -147,7 +153,7 @@ class PaymentController extends GetxController {
     try {
       String? generatedOrderId;
       final String currentGroupId =
-          '${DateTime.now().millisecondsSinceEpoch.toString().substring(0, 10)}-${Random().nextInt(9000) + 1000}';
+          'ORD-${DateTime.now().millisecondsSinceEpoch}';
 
       for (var item in cartItems) {
         String? finalSellerId = item.sellerId;
@@ -170,6 +176,7 @@ class PaymentController extends GetxController {
         final bookingData = {
           'orderId': currentGroupId,
           'userId': user.uid,
+          'customerName': address.receiverName ?? user.displayName ?? '',
           'productId': item.productId,
           'serviceTitle': item.productName,
           'image': item.productImage,
@@ -180,9 +187,7 @@ class PaymentController extends GetxController {
           'category': '',
           'serviceType': '',
           'bookingType': 'Product Order',
-          'status': selectedPaymentMethod.value == PaymentMethod.upi
-              ? 'pending_verification'
-              : 'pending',
+          'status': 'pending',
           'paymentMethod': selectedPaymentMethod.value == PaymentMethod.upi
               ? 'upi'
               : 'cash_on_delivery',
@@ -206,6 +211,9 @@ class PaymentController extends GetxController {
           },
           'totalAmount': item.offerPrice * item.quantity,
           'createdAt': FieldValue.serverTimestamp(),
+          if (formattedReceipt != null) 'formattedReceipt': formattedReceipt,
+          if (selectedPaymentMethod.value == PaymentMethod.upi)
+            'paymentStatus': 'completed',
         };
 
         final docRef = await FirebaseFirestore.instance
@@ -213,6 +221,36 @@ class PaymentController extends GetxController {
             .add(bookingData);
         if (generatedOrderId == null) {
           generatedOrderId = currentGroupId;
+        }
+
+        if (selectedPaymentMethod.value == PaymentMethod.upi) {
+          final now = DateTime.now();
+          final formattedDateTime =
+              "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
+          await FirebaseFirestore.instance.collection('payments').add({
+            'amount':
+                '₹${(item.offerPrice * item.quantity).toStringAsFixed(0)}',
+            'bookingId': docRef.id,
+            'createdAt': FieldValue.serverTimestamp(),
+            'dateTime': formattedDateTime,
+            'itemName': item.productName,
+            'paymentMode': 'UPI',
+            'status': 'Paid',
+            'transactionId': transactionId.value.trim(),
+          });
+        }
+
+        // Deduct stock for the ordered item
+        try {
+          await StockManager.deductStock(
+            bookingId: docRef.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            variantId: item.variantId,
+          );
+        } catch (e) {
+          debugPrint("Failed to deduct stock: $e");
         }
 
         if (finalSellerId != null && finalSellerId.isNotEmpty) {

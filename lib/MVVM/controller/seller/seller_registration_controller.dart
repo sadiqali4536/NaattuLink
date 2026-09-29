@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:naattulink/MVVM/utils/public_id_generator.dart';
 import 'package:naattulink/MVVM/View/Screen/location/select_location_map_page.dart'
     as naattulink_map;
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
@@ -9,6 +10,7 @@ import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/payment_options_
 import 'package:naattulink/MVVM/model/seller/subscription_plan_model.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:naattulink/MVVM/utils/service_functions/auth_lookup_service.dart';
 
 class SellerRegistrationController extends GetxController {
   static SellerRegistrationController get to => Get.find();
@@ -110,17 +112,19 @@ class SellerRegistrationController extends GetxController {
 
     isLoading.value = true;
     final uid = user.uid;
-    final sellerRef = FirebaseFirestore.instance.collection('sellers').doc(uid);
 
     try {
-      final sellerSnapshot = await sellerRef.get();
+      final sellerDoc = await AuthLookupService.getSellerByAuthUid(uid);
 
       final categoryToSave = selectedCategory.value == 'Other'
           ? otherCategoryController.text.trim()
           : selectedCategory.value;
 
-      if (sellerSnapshot.exists) {
-        await sellerRef.update({
+      if (sellerDoc != null) {
+        await FirebaseFirestore.instance
+            .collection('sellers')
+            .doc(sellerDoc.id)
+            .update({
           'sellerName': sellerNameController.text.trim(),
           'location': locationController.text.trim(),
           'phone': fullPhoneNumber.value,
@@ -132,8 +136,24 @@ class SellerRegistrationController extends GetxController {
           'updatedAt': FieldValue.serverTimestamp(),
         });
       } else {
-        await sellerRef.set({
-          'uid': uid,
+        final sellerPublicId = await PublicIdGenerator.generateSellerId();
+
+        String? userPublicId;
+        try {
+          final userDoc = await AuthLookupService.getUserByAuthUid(uid);
+          if (userDoc != null) {
+            final data = userDoc.data() as Map<String, dynamic>?;
+            userPublicId = data?['userPublicId'] as String?;
+          }
+        } catch (_) {}
+
+        await FirebaseFirestore.instance
+            .collection('sellers')
+            .doc(sellerPublicId)
+            .set({
+          'uid':
+              uid, // Keeping uid for backward compatibility where requested, but ideally we only need authUid
+          'authUid': uid,
           'sellerName': sellerNameController.text.trim(),
           'location': locationController.text.trim(),
           'phone': fullPhoneNumber.value,
@@ -145,6 +165,8 @@ class SellerRegistrationController extends GetxController {
           'storeOpenedAt': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
+          'sellerPublicId': sellerPublicId,
+          if (userPublicId != null) 'userPublicId': userPublicId,
         });
       }
 

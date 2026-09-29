@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:cherry_toast/resources/arrays.dart';
+import 'package:naattulink/MVVM/utils/stock_manager.dart';
 import 'cancellation_confirmed_screen.dart';
 
 class OrderCancellationScreen extends StatefulWidget {
@@ -113,6 +114,24 @@ class _OrderCancellationScreenState extends State<OrderCancellationScreen> {
         'cancelledAt': FieldValue.serverTimestamp(),
         'refundStatus': isOnline ? 'Pending' : 'Not Applicable',
       });
+
+      try {
+        final productId = data['productId'];
+        if (productId != null) {
+          final variantId = data['variantId'];
+          final quantityStr = data['quantity']?.toString() ?? '1';
+          final quantity = int.tryParse(quantityStr) ?? 1;
+
+          await StockManager.restoreStock(
+            bookingId: docRef.id,
+            productId: productId.toString(),
+            quantity: quantity,
+            variantId: variantId?.toString(),
+          );
+        }
+      } catch (e) {
+        debugPrint("Error restoring stock on user cancellation: $e");
+      }
 
       final productName = data['serviceTitle'] ?? 'Product';
       final orderIdStr = data['orderId']?.toString() ?? widget.bookingId;

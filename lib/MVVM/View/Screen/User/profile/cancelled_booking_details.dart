@@ -102,7 +102,7 @@ class CancelledBookingDetails extends StatelessWidget {
                       const Text('ORDER NO',
                           style:
                               TextStyle(fontSize: 11, color: Colors.black54)),
-                      Text(bookingId.substring(0, 10).toUpperCase(),
+                      Text(bookingId.toUpperCase(),
                           style: const TextStyle(
                               fontSize: 13,
                               color: Colors.black87,

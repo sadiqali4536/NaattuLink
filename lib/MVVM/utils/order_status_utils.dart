@@ -1,6 +1,8 @@
 class OrderStatusUtils {
   static String getOrderStatusTitle(String status) {
     switch (status.toLowerCase()) {
+      case 'pending_verification':
+        return 'Order Confirmed';
       case 'pending':
       case 'confirmed':
         return 'Order Confirmed';
@@ -20,6 +22,8 @@ class OrderStatusUtils {
 
   static String getOrderStatusMessage(String status) {
     switch (status.toLowerCase()) {
+      case 'pending_verification':
+        return 'Your order has been confirmed successfully.';
       case 'pending':
       case 'confirmed':
         return 'Your order has been confirmed successfully.';

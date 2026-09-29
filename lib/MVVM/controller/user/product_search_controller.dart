@@ -63,6 +63,7 @@ class ProductSearchController extends GetxController {
       final brand = (data['brand'] ?? '').toString().toLowerCase();
       final tags = (data['tags'] ?? []).toString().toLowerCase();
       final description = (data['description'] ?? '').toString().toLowerCase();
+      final publicId = (data['productPublicId'] ?? '').toString().toLowerCase();
 
       return title.contains(sq) ||
           type.contains(sq) ||
@@ -70,7 +71,8 @@ class ProductSearchController extends GetxController {
           subcategory.contains(sq) ||
           brand.contains(sq) ||
           tags.contains(sq) ||
-          description.contains(sq);
+          description.contains(sq) ||
+          publicId.contains(sq);
     }).toList();
   }
 

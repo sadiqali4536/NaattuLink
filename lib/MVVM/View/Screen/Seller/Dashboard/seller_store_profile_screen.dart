@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/controller/seller/seller_dashboard_controller.dart';
 import 'package:intl/intl.dart';
@@ -108,6 +109,47 @@ class SellerStoreProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (seller.sellerPublicId != null &&
+                        seller.sellerPublicId!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () {
+                          Clipboard.setData(
+                              ClipboardData(text: seller.sellerPublicId!));
+                          Get.snackbar(
+                            'Success',
+                            'Seller ID copied',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "ID: ${seller.sellerPublicId}",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.copy,
+                                  color: Colors.white, size: 12),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -149,6 +191,12 @@ class SellerStoreProfileScreen extends StatelessWidget {
                             const Divider(),
                             _buildInfoRow(Icons.chat_outlined, "WhatsApp",
                                 seller.whatsappNumber!),
+                          ],
+                          if (seller.upiId != null &&
+                              seller.upiId!.isNotEmpty) ...[
+                            const Divider(),
+                            _buildInfoRow(Icons.qr_code_2_outlined, "UPI ID",
+                                seller.upiId!),
                           ],
                         ],
                       ),

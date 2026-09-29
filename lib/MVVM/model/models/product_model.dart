@@ -39,7 +39,7 @@ class ProductModel {
       subCategory: data['subCategory'] ?? '',
       price: (data['price'] ?? 0.0).toDouble(),
       image: data['image'] ?? '',
-      sellerId: data['sellerId'] ?? '',
+      sellerId: data['sellerId'] ?? data['ownerId'] ?? data['storeId'] ?? '',
       rating: (data['rating'] ?? 0.0).toDouble(),
       isTrending: data['isTrending'] ?? false,
       isBestSeller: data['isBestSeller'] ?? false,

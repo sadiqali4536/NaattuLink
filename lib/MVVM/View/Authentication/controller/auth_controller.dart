@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:naattulink/MVVM/utils/public_id_generator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/current_loaction_fetch.dart';
@@ -17,6 +18,7 @@ import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:naattulink/MVVM/model/services/notification_service.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/View/Authentication/Registrationpage.dart';
+import 'package:naattulink/MVVM/utils/service_functions/auth_lookup_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthController extends GetxController {
@@ -37,7 +39,18 @@ class AuthController extends GetxController {
     NotificationService.instance.syncCurrentToken();
 
     Future<DocumentSnapshot?> findInCollection(String collection) async {
-      // 1. By UID
+      // 1. By UID (New Architecture: check authUid first)
+      final authUidQuery = await FirebaseFirestore.instance
+          .collection(collection)
+          .where('authUid', isEqualTo: userId)
+          .limit(1)
+          .get();
+      if (authUidQuery.docs.isNotEmpty) {
+        debugPrint("Found in \$collection by authUid");
+        return authUidQuery.docs.first;
+      }
+
+      // Fallback: Check doc ID for old records
       final doc = await FirebaseFirestore.instance
           .collection(collection)
           .doc(userId)
@@ -432,23 +445,27 @@ class AuthController extends GetxController {
       final user =
           await _authServices.createUser(context, email, password, 'user');
       if (user != null) {
-        // Update user profile with fields
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({
-          "username": username,
-          "phone": phone,
-          "updated_at": FieldValue.serverTimestamp(),
-          "status": "active",
-          "password": password,
-          "loyalty_points": 0,
-          if (district != null) "district": district,
-          if (latitude != null) "latitude": latitude,
-          if (longitude != null) "longitude": longitude,
-        });
-        toastSuccess("User registered successfully");
-        Get.offAll(() => const FindingLocationPage());
+        // Fetch the user document using the AuthLookupService to get the correct document ID
+        final userDoc = await AuthLookupService.getUserByAuthUid(user.uid);
+        if (userDoc != null) {
+          // Update user profile with fields using the correct Firestore document ID
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userDoc.id)
+              .update({
+            "username": username,
+            "phone": phone,
+            "updated_at": FieldValue.serverTimestamp(),
+            "status": "active",
+            "password": password,
+            "loyalty_points": 0,
+            if (district != null) "district": district,
+            if (latitude != null) "latitude": latitude,
+            if (longitude != null) "longitude": longitude,
+          });
+          toastSuccess("User registered successfully");
+          Get.offAll(() => const FindingLocationPage());
+        }
       }
     } catch (e) {
       final message = FirebaseErrorHandler.getReadableErrorMessage(e);
@@ -483,6 +500,7 @@ class AuthController extends GetxController {
             .collection("workers")
             .doc(user.uid)
             .set({
+          "workerPublicId": await PublicIdGenerator.generateWorkerId(),
           // Key fields at top
           "created_at": FieldValue.serverTimestamp(),
           "location": location,

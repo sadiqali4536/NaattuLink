@@ -97,8 +97,11 @@ class TransactionIdController extends GetxController {
       final String formattedTime =
           "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
 
+      final orderId = 'SUB-${DateTime.now().millisecondsSinceEpoch}';
+
       // 1. Save Subscription Transaction Details
       batch.set(subscriptionRef, {
+        'orderId': orderId,
         'planId': plan.planId,
         'transactionId': transactionId,
         'paymentMethod': paymentMethod,

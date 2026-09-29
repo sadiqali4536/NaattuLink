@@ -80,6 +80,7 @@ dependencies:
   google_mlkit_text_recognition: ^0.17.1
   qr_flutter: ^4.1.0
   path_provider: ^2.1.6
+  flutter_markdown: ^0.7.7+1
 dev_dependencies:
   flutter_test:
     sdk: flutter

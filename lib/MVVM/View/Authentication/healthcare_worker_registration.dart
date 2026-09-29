@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:naattulink/MVVM/utils/public_id_generator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
@@ -44,8 +45,10 @@ class _HealthcareWorkerRegistrationPageState
   Future<void> _pickLocationOnMap() async {
     double initialLat = _selectedLat ?? 11.2588;
     double initialLng = _selectedLng ?? 75.7804;
-    final result = await Get.to(() =>
-        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng, flow: LocationPickerFlow.registration));
+    final result = await Get.to(() => SelectLocationMapPage(
+        initialLat: initialLat,
+        initialLng: initialLng,
+        flow: LocationPickerFlow.registration));
     if (result != null) {
       setState(() {
         _addressCtrl.text = result.formattedAddress ?? "";
@@ -183,7 +186,10 @@ class _HealthcareWorkerRegistrationPageState
         }
       }
 
-      await FirebaseFirestore.instance.collection("healthcare").doc(uid).set({
+      final publicId = await PublicIdGenerator.generateHealthcareId();
+      await FirebaseFirestore.instance.collection("healthcare").doc(publicId).set({
+        "healthcarePublicId": publicId,
+        "authUid": uid,
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
         "email": email,

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 
@@ -191,183 +192,190 @@ class _EditProfileState extends State<EditProfile> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5), // Light grey background
-      body: Column(
-        children: [
-          // Top Header
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.bottomCenter,
-            children: [
-              Container(
-                height: 200,
-                width: double.infinity,
-                padding: const EdgeInsets.only(top: 50, left: 16, right: 16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0F2E5A),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(40),
-                    bottomRight: Radius.circular(40),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          icon:
-                              const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5), // Light grey background
+        body: Stack(
+          children: [
+            // Scrollable Content
+            Positioned.fill(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(
+                    top: 230), // Adjusted for smaller app bar
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Choose Avatar Section
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Edit Profile',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Choose Avatar',
+                              style: TextStyle(
+                                color: Color(0xFF0F2E5A),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                _buildAvatarOption(
+                                  label: 'Male',
+                                  assetPath: 'assets/icons/male_avathar.png',
+                                  isSelected: _selectedAvatar ==
+                                      'assets/icons/male_avathar.png',
+                                ),
+                                const SizedBox(width: 20),
+                                _buildAvatarOption(
+                                  label: 'Female',
+                                  assetPath: 'assets/icons/female_avathar.png',
+                                  isSelected: _selectedAvatar ==
+                                      'assets/icons/female_avathar.png',
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                bottom: -40,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: Colors.white.withOpacity(0.8), width: 4),
-                  ),
-                  child: CircleAvatar(
-                    radius: 45,
-                    backgroundColor: Colors.white,
-                    backgroundImage: AssetImage(_selectedAvatar!),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 60),
-
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Choose Avatar Section
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Choose Avatar',
-                            style: TextStyle(
-                              color: Color(0xFF0F2E5A),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+
+                      const SizedBox(height: 24),
+
+                      // Text Fields
+                      _buildInputLabel('FULL NAME'),
+                      _buildTextField(
+                        controller: username,
+                        icon: Icons.person_outline,
+                        hintText: 'Full Name',
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      _buildInputLabel('MOBILE NUMBER'),
+                      _buildTextField(
+                        controller: phone,
+                        icon: Icons.phone_outlined,
+                        hintText: 'Mobile Number',
+                        prefixText: '+91 ',
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      _buildInputLabel('EMAIL ADDRESS'),
+                      _buildTextField(
+                        controller: email,
+                        icon: Icons.mail_outline,
+                        hintText: 'Email Address',
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Save Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _updateProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F2E5A),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              _buildAvatarOption(
-                                label: 'Male',
-                                assetPath: 'assets/icons/male_avathar.png',
-                                isSelected: _selectedAvatar ==
-                                    'assets/icons/male_avathar.png',
-                              ),
-                              const SizedBox(width: 20),
-                              _buildAvatarOption(
-                                label: 'Female',
-                                assetPath: 'assets/icons/female_avathar.png',
-                                isSelected: _selectedAvatar ==
-                                    'assets/icons/female_avathar.png',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Text Fields
-                    _buildInputLabel('FULL NAME'),
-                    _buildTextField(
-                      controller: username,
-                      icon: Icons.person_outline,
-                      hintText: 'Full Name',
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    _buildInputLabel('MOBILE NUMBER'),
-                    _buildTextField(
-                      controller: phone,
-                      icon: Icons.phone_outlined,
-                      hintText: 'Mobile Number',
-                      prefixText: '+91 ',
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    _buildInputLabel('EMAIL ADDRESS'),
-                    _buildTextField(
-                      controller: email,
-                      icon: Icons.mail_outline,
-                      hintText: 'Email Address',
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    const SizedBox(height: 40),
-
-                    // Save Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _updateProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0F2E5A),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                        ),
-                        child: const Text(
-                          'Save Changes',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                          child: const Text(
+                            'Save Changes',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 40),
-                  ],
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+
+            // Fixed Top Header
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
+                children: [
+                  Container(
+                    height: 180, // Reduced height from 200
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.only(top: 50, left: 16, right: 16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0F2E5A),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(40),
+                        bottomRight: Radius.circular(40),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back,
+                                  color: Colors.white),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Edit Profile',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -40,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.8), width: 4),
+                      ),
+                      child: CircleAvatar(
+                        radius: 45,
+                        backgroundColor: Colors.white,
+                        backgroundImage: AssetImage(_selectedAvatar!),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

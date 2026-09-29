@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:naattulink/MVVM/utils/public_id_generator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
@@ -134,7 +135,13 @@ class _BusinessWorkerRegistrationPageState
         }
       }
 
-      await FirebaseFirestore.instance.collection("businesses").doc(uid).set({
+      final publicId = await PublicIdGenerator.generateBusinessId();
+      await FirebaseFirestore.instance
+          .collection("businesses")
+          .doc(publicId)
+          .set({
+        "businessPublicId": publicId,
+        "authUid": uid,
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
         "email": email,
@@ -144,7 +151,8 @@ class _BusinessWorkerRegistrationPageState
         "address": _addressCtrl.text.trim(),
         "facility_name": _businessNameCtrl.text.trim(),
         "contact_number": "+91${_contactNumberCtrl.text.trim()}",
-        "available_time": "${_openTime.format(context)} - ${_closeTime.format(context)}",
+        "available_time":
+            "${_openTime.format(context)} - ${_closeTime.format(context)}",
         "profile_img": "",
         "created_at": FieldValue.serverTimestamp(),
         "updated_at": FieldValue.serverTimestamp(),
@@ -720,7 +728,8 @@ class _BusinessWorkerRegistrationPageState
               child: GestureDetector(
                 onTap: () => _selectTime(context, true),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -728,12 +737,14 @@ class _BusinessWorkerRegistrationPageState
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.access_time, color: Colors.grey[400], size: 20),
+                      Icon(Icons.access_time,
+                          color: Colors.grey[400], size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           "Open: ${_openTime.format(context)}",
-                          style: const TextStyle(color: Colors.black87, fontSize: 13),
+                          style: const TextStyle(
+                              color: Colors.black87, fontSize: 13),
                         ),
                       ),
                     ],
@@ -746,7 +757,8 @@ class _BusinessWorkerRegistrationPageState
               child: GestureDetector(
                 onTap: () => _selectTime(context, false),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -754,12 +766,14 @@ class _BusinessWorkerRegistrationPageState
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.access_time_filled, color: Colors.grey[400], size: 20),
+                      Icon(Icons.access_time_filled,
+                          color: Colors.grey[400], size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           "Close: ${_closeTime.format(context)}",
-                          style: const TextStyle(color: Colors.black87, fontSize: 13),
+                          style: const TextStyle(
+                              color: Colors.black87, fontSize: 13),
                         ),
                       ),
                     ],

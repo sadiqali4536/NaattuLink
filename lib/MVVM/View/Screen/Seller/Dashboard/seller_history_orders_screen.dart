@@ -450,11 +450,13 @@ class _SellerHistoryOrdersScreenState extends State<SellerHistoryOrdersScreen> {
         ? numPrice.toInt().toString()
         : numPrice.toString();
 
-    final orderId =
-        data['orderId']?.toString() ?? doc.id.substring(0, 8).toUpperCase();
-    final customerName = data['deliveryAddress']?['receiverName'] ??
-        data['userId'] ??
-        'Customer';
+    final orderId = data['orderId']?.toString() ?? doc.id.toUpperCase();
+    final customerName = data['customerName']?.toString().isNotEmpty == true
+        ? data['customerName'].toString()
+        : (data['deliveryAddress']?['receiverName']?.toString().isNotEmpty ==
+                true
+            ? data['deliveryAddress']['receiverName'].toString()
+            : 'Customer');
 
     // Quantity
     final itemsCount = data['quantity'] ?? 1;
@@ -573,13 +575,87 @@ class _SellerHistoryOrdersScreenState extends State<SellerHistoryOrdersScreen> {
                         color: Colors.grey,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEAF3FF),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFB9D5FF)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                data['paymentMethod']
+                                            ?.toString()
+                                            .toLowerCase() ==
+                                        'upi'
+                                    ? Icons.currency_rupee
+                                    : Icons.money,
+                                size: 10,
+                                color: const Color(0xFF0857A0),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                data['paymentMethod']
+                                            ?.toString()
+                                            .toLowerCase() ==
+                                        'upi'
+                                    ? 'UPI'
+                                    : 'Cash on Delivery',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0857A0),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (data['paymentMethod']?.toString().toLowerCase() ==
+                                'upi' &&
+                            (data['paymentStatus']?.toString().toLowerCase() ==
+                                    'completed' ||
+                                data['paymentStatus']
+                                        ?.toString()
+                                        .toLowerCase() ==
+                                    'paid' ||
+                                data['paymentStatus']
+                                        ?.toString()
+                                        .toLowerCase() ==
+                                    'success')) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Text(
+                              'PAID',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
                           final mappedData = {
-                            'orderId': doc.id,
+                            'orderId': data['orderId']?.toString() ?? doc.id,
                             'customerName': customerName,
                             'customerLocation': data['deliveryAddress']
                                     ?['formattedAddress'] ??

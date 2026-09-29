@@ -12,6 +12,7 @@ import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/model/services/notification_service.dart';
 
+import 'package:naattulink/MVVM/utils/public_id_generator.dart';
 class FirebaseAuthServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore db = FirebaseFirestore.instance;
@@ -87,6 +88,8 @@ class FirebaseAuthServices {
       final user = credential.user;
 
       if (user != null) {
+        final publicId = await PublicIdGenerator.generateUserId();
+
         UserModel userData = UserModel(
           createAt: FieldValue.serverTimestamp(),
           email: user.email,
@@ -94,11 +97,14 @@ class FirebaseAuthServices {
           phone: "",
           address: "",
           profileUrl: "",
-          uid: user.uid,
+          uid: publicId, // Set uid to the readable ID
           username: "",
+          userPublicId: publicId,
+          authUid: user.uid,
         );
 
-        await db.collection('users').doc(user.uid).set(userData.toMap());
+        // Save using the generated readable ID instead of user.uid
+        await db.collection('users').doc(publicId).set(userData.toMap());
       }
 
       return user;

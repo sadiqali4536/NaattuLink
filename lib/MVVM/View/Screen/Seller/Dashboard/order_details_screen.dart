@@ -279,7 +279,7 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.orderData['customerName'] ?? "Rahul Sharma",
+                widget.orderData['customerName'] ?? "",
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -600,7 +600,90 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerLeft,
-            child: Container(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF3FF),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFB9D5FF)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        widget.orderData['paymentMethod']
+                                    ?.toString()
+                                    .toLowerCase() ==
+                                'upi'
+                            ? Icons.currency_rupee
+                            : Icons.money,
+                        size: 12,
+                        color: const Color(0xFF0857A0),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.orderData['paymentMethod']
+                                    ?.toString()
+                                    .toLowerCase() ==
+                                'upi'
+                            ? 'UPI'
+                            : (widget.orderData['paymentMethod'] ??
+                                'Cash on Delivery'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0857A0),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (widget.orderData['paymentMethod']
+                            ?.toString()
+                            .toLowerCase() ==
+                        'upi' &&
+                    (widget.orderData['paymentStatus']
+                                ?.toString()
+                                .toLowerCase() ==
+                            'completed' ||
+                        widget.orderData['paymentStatus']
+                                ?.toString()
+                                .toLowerCase() ==
+                            'paid' ||
+                        widget.orderData['paymentStatus']
+                                ?.toString()
+                                .toLowerCase() ==
+                            'success')) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Text(
+                      'PAID',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (widget.orderData['transactionId'] != null &&
+              widget.orderData['transactionId'].toString().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
@@ -610,32 +693,28 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text("💵 ", style: TextStyle(fontSize: 12)),
-                  Text(
-                    widget.orderData['paymentMethod'] ?? "Cash on Delivery",
-                    style: const TextStyle(
+                  const Text("🆔 ", style: TextStyle(fontSize: 12)),
+                  const Text(
+                    "Trxn ID: ",
+                    style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF172033)),
+                        color: Color(0xFF667085)),
                   ),
-                  if (widget.orderData['paymentStatus'] != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                            color: Color(0xFF94A3B8), shape: BoxShape.circle)),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.orderData['paymentStatus'],
+                  Flexible(
+                    child: Text(
+                      '${widget.orderData['transactionId']}',
                       style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF667085)),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF172033)),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1166,14 +1245,23 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
       dbStatus = 'dispatched';
     }
 
-    // Show loading or immediate update
+    // Show loading dialog
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0F2E5A)),
+      ),
+      barrierDismissible: false,
+    );
+
+    // Show immediate update
     setState(() {
       currentStatus = uiStatus;
     });
 
     try {
       final orderId = widget.orderData['orderId'];
-      if (orderId != null) {
+      final docId = widget.orderData['docId'] ?? orderId;
+      if (docId != null) {
         final Map<String, dynamic> updateData = {
           'status': dbStatus,
           'updatedAt': FieldValue.serverTimestamp(),
@@ -1190,7 +1278,7 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
 
         await FirebaseFirestore.instance
             .collection('bookings')
-            .doc(orderId)
+            .doc(docId)
             .update(updateData);
 
         if (dbStatus == 'cancelled') {
@@ -1198,7 +1286,8 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
             final data = widget.orderData;
             final productId = data['productId'];
             final variantId = data['variantId'];
-            final quantity = data['quantity'] ?? 1;
+            final quantityStr = data['quantity']?.toString() ?? '1';
+            final quantity = int.tryParse(quantityStr) ?? 1;
 
             if (productId != null) {
               await StockManager.restoreStock(
@@ -1213,23 +1302,27 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
           }
         }
       }
-
-      if (status == 'Accepted') {
-        toastSuccess("Order Accepted");
-      } else if (status == 'Rejected') {
-        toastError("Order Rejected");
-        // Go back to orders list after rejection so it refreshes
-        await Future.delayed(const Duration(milliseconds: 600));
-        if (mounted) Get.back();
-      } else if (status == 'Dispatched') {
-        toastSuccess("Order Dispatched");
-        await Future.delayed(const Duration(milliseconds: 600));
-        if (mounted) Get.back();
-      } else {
-        toastSuccess("Order status updated");
-      }
     } catch (e) {
       debugPrint("Error updating order: $e");
+    } finally {
+      if (Get.isDialogOpen ?? false) {
+        Get.back(); // Close the loading dialog
+      }
+    }
+
+    if (status == 'Accepted') {
+      toastSuccess("Order Accepted");
+    } else if (status == 'Rejected') {
+      toastError("Order Rejected");
+      // Go back to orders list after rejection so it refreshes
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) Get.back();
+    } else if (status == 'Dispatched') {
+      toastSuccess("Order Dispatched");
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) Get.back();
+    } else {
+      toastSuccess("Order status updated");
     }
   }
 }

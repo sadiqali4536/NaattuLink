@@ -12,6 +12,8 @@ import 'package:naattulink/MVVM/View/Screen/User/profile/confirmed_booking_detai
 import 'package:naattulink/MVVM/View/Screen/User/profile/order_details_page.dart';
 import 'package:naattulink/MVVM/utils/order_status_utils.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
+import 'package:naattulink/MVVM/View/Screen/User/services/service_payment_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/cancellation_confirmation_page.dart';
 
 class MyBookings extends StatefulWidget {
   const MyBookings({super.key});
@@ -121,7 +123,77 @@ class _MyBookingsState extends State<MyBookings> {
     return list;
   }
 
+  DateTime? _getCancellationDeadline(Map<String, dynamic> data) {
+    if (data['urgentBooking'] == true) {
+      final createdAt = data['createdAt'];
+      if (createdAt is Timestamp) {
+        return createdAt.toDate().add(const Duration(hours: 2));
+      } else if (createdAt is String) {
+        return DateTime.tryParse(createdAt)?.add(const Duration(hours: 2));
+      }
+    }
+    if (data['bookingType'] == 'scheduled') {
+      final st = data['scheduledServiceTime'];
+      if (st is Timestamp)
+        return st.toDate().subtract(const Duration(hours: 4));
+      if (st is String) {
+        final d = DateTime.tryParse(st);
+        if (d != null) return d.subtract(const Duration(hours: 4));
+      }
+      final dateStr = data['selectedDate'] as String?;
+      final timeStr = data['selectedTimeSlot'] as String?;
+      if (dateStr != null) {
+        DateTime date = DateTime.parse(dateStr);
+        if (timeStr != null &&
+            timeStr.isNotEmpty &&
+            timeStr.toLowerCase() != 'null') {
+          try {
+            final RegExp timeRegex = RegExp(
+                r'([0-9]{1,2}):([0-9]{2})\s*([AP]M)',
+                caseSensitive: false);
+            final match = timeRegex.firstMatch(timeStr);
+            if (match != null) {
+              int h = int.parse(match.group(1)!);
+              int m = int.parse(match.group(2)!);
+              String ampm = match.group(3)!.toUpperCase();
+              if (ampm == 'PM' && h < 12) h += 12;
+              if (ampm == 'AM' && h == 12) h = 0;
+              date = DateTime(date.year, date.month, date.day, h, m);
+            }
+          } catch (_) {}
+        }
+        return date.subtract(const Duration(hours: 4));
+      }
+    }
+    final d = data['cancellationDeadline'];
+    if (d is Timestamp) return d.toDate();
+    if (d is String) return DateTime.tryParse(d);
+    return null;
+  }
+
   Future<void> _showCancelSheet(String bookingId) async {
+    final bool isProductOrder =
+        selectedSection.value == MyBookingSection.orders;
+
+    // Fetch document first
+    final collection = isProductOrder ? 'bookings' : 'service_bookings';
+    final docSnapshot = await FirebaseFirestore.instance
+        .collection(collection)
+        .doc(bookingId)
+        .get();
+    if (!docSnapshot.exists) return;
+
+    final data = docSnapshot.data() as Map<String, dynamic>;
+
+    bool showFee = false;
+    if (!isProductOrder) {
+      final cancellationDeadline = _getCancellationDeadline(data);
+      if (cancellationDeadline != null &&
+          DateTime.now().isAfter(cancellationDeadline)) {
+        showFee = true;
+      }
+    }
+
     String? selectedReason;
     final commentController = TextEditingController();
     final reasons = [
@@ -167,33 +239,64 @@ class _MyBookingsState extends State<MyBookings> {
                     style:
                         TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Icon(Icons.warning_amber_rounded,
-                          color: Color(0xFFDC2626), size: 18),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Cancellations made within 2 hours of the scheduled time may incur a convenience fee of ₹150 as per our service policy.',
-                          style: TextStyle(
-                              color: Color(0xFFDC2626),
-                              fontSize: 12,
-                              height: 1.4,
-                              fontWeight: FontWeight.w500),
+                if (showFee) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Icon(Icons.warning_amber_rounded,
+                            color: Color(0xFFDC2626), size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Your free cancellation time is over.\nAs per our service policy, a ₹150 convenience fee will be charged for cancelling this service after the cancellation period.',
+                            style: TextStyle(
+                                color: Color(0xFFDC2626),
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w500),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
+                ],
+                if (!showFee && !isProductOrder) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Icon(Icons.warning_amber_rounded,
+                            color: Color(0xFFDC2626), size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Cancellations made within 2 hours of the scheduled time may incur a convenience fee of ₹150 as per our service policy.',
+                            style: TextStyle(
+                                color: Color(0xFFDC2626),
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
                 const Text('Please select a reason for cancelling:',
                     style: TextStyle(fontSize: 13, color: Colors.black54)),
                 const SizedBox(height: 10),
@@ -290,20 +393,29 @@ class _MyBookingsState extends State<MyBookings> {
                         : () async {
                             final comment = commentController.text.trim();
                             Navigator.pop(ctx);
-                            try {
-                              // Fetch order details first to check if it's a product order
-                              final bookingDoc = await FirebaseFirestore
-                                  .instance
-                                  .collection(selectedSection.value ==
-                                          MyBookingSection.orders
-                                      ? 'bookings'
-                                      : 'service_bookings')
-                                  .doc(bookingId)
-                                  .get();
 
-                              if (bookingDoc.exists) {
-                                final data = bookingDoc.data()!;
-                                if (data['bookingType'] == 'Product Order') {
+                            if (showFee) {
+                              final result =
+                                  await Get.to(() => ServicePaymentPage(
+                                        bookingId: bookingId,
+                                        totalAmount: 150.0,
+                                        customerName: data['userName'] ??
+                                            data['customerName'],
+                                        isCancellationFee: true,
+                                        cancellationReason: selectedReason,
+                                      ));
+                              if (result != null &&
+                                  result['paymentId'] != null) {
+                                Get.to(() => CancellationConfirmationPage(
+                                      bookingData: data,
+                                      bookingId: bookingId,
+                                      selectedReason: selectedReason!,
+                                      transactionId: result['paymentId'],
+                                    ));
+                              }
+                            } else {
+                              try {
+                                if (isProductOrder) {
                                   final productId = data['productId'];
                                   final variantId = data['variantId'];
                                   final quantity = data['quantity'] ?? 1;
@@ -317,22 +429,19 @@ class _MyBookingsState extends State<MyBookings> {
                                     );
                                   }
                                 }
-                              }
 
-                              await FirebaseFirestore.instance
-                                  .collection(selectedSection.value ==
-                                          MyBookingSection.orders
-                                      ? 'bookings'
-                                      : 'service_bookings')
-                                  .doc(bookingId)
-                                  .update({
-                                'status': 'cancelled',
-                                'cancellationReason': selectedReason,
-                                'cancellationComment': comment,
-                                'cancelledAt': FieldValue.serverTimestamp(),
-                              });
-                            } catch (e) {
-                              debugPrint("Error cancelling order: $e");
+                                await FirebaseFirestore.instance
+                                    .collection(collection)
+                                    .doc(bookingId)
+                                    .update({
+                                  'status': 'cancelled',
+                                  'cancellationReason': selectedReason,
+                                  'cancellationComment': comment,
+                                  'cancelledAt': FieldValue.serverTimestamp(),
+                                });
+                              } catch (e) {
+                                debugPrint("Error cancelling order: $e");
+                              }
                             }
                           },
                     icon:
@@ -782,15 +891,14 @@ class _BookingCard extends StatelessWidget {
     switch (_status) {
       case 'confirmed':
       case 'dispatched':
+      case 'pending':
+      case 'pending_verification':
         return const Color(0xFFD1FAE5);
       case 'cancelled':
       case 'rejected':
         return const Color(0xFFFEE2E2);
       case 'completed':
         return const Color(0xFFDBEAFE);
-      case 'pending':
-        return const Color(0xFFE0F2FE);
-      case 'pending_verification':
       case 'processing':
         return const Color(0xFFFEF3C7);
       default:
@@ -802,15 +910,14 @@ class _BookingCard extends StatelessWidget {
     switch (_status) {
       case 'confirmed':
       case 'dispatched':
+      case 'pending':
+      case 'pending_verification':
         return const Color(0xFF059669);
       case 'cancelled':
       case 'rejected':
         return const Color(0xFFDC2626);
       case 'completed':
         return const Color(0xFF2563EB);
-      case 'pending':
-        return const Color(0xFF0284C7);
-      case 'pending_verification':
       case 'processing':
         return const Color(0xFFD97706);
       default:
@@ -910,7 +1017,7 @@ class _BookingCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   // Order ID
                   Text(
-                    'Order ID: #${bookingId.length > 6 ? bookingId.substring(0, 6).toUpperCase() : bookingId.toUpperCase()}',
+                    'Order ID: #${(data['orderId']?.toString() ?? bookingId).toUpperCase()}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.black54,
@@ -941,8 +1048,16 @@ class _BookingCard extends StatelessWidget {
                   // Badge + Button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      _statusBadge(),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _statusBadge(),
+                          const SizedBox(height: 6),
+                          _paymentBadge(),
+                        ],
+                      ),
                       SizedBox(
                         height: 32,
                         child: OutlinedButton(
@@ -1013,7 +1128,14 @@ class _BookingCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _statusBadge(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _statusBadge(),
+                    const SizedBox(height: 6),
+                    _paymentBadge(),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -1251,7 +1373,14 @@ class _BookingCard extends StatelessWidget {
                     }
                   }),
                   const SizedBox(height: 6),
-                  _statusBadge(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _statusBadge(),
+                      const SizedBox(height: 6),
+                      _paymentBadge(),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -1320,6 +1449,70 @@ class _BookingCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _paymentBadge() {
+    final method = data['paymentMethod']?.toString().toLowerCase() ?? 'unknown';
+    final pStatus =
+        data['paymentStatus']?.toString().toLowerCase() ?? 'pending';
+
+    if (method == 'unknown') return const SizedBox.shrink();
+
+    final isUpi = method == 'upi';
+    final isPaid = isUpi &&
+        (pStatus == 'completed' || pStatus == 'paid' || pStatus == 'success');
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF3FF),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: const Color(0xFFB9D5FF)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isUpi ? Icons.currency_rupee : Icons.money,
+                size: 10,
+                color: const Color(0xFF0857A0),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isUpi ? 'UPI' : 'Cash on Delivery',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0857A0),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (isPaid) ...[
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Text(
+              'PAID',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.green.shade700,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 

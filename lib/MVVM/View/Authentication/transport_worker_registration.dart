@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:naattulink/MVVM/utils/public_id_generator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/controller/bus_dashboard_controller.dart';
@@ -214,8 +215,10 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
   Future<void> _pickLocationOnMap() async {
     double initialLat = _selectedLat ?? 11.2588;
     double initialLng = _selectedLng ?? 75.7804;
-    final result = await Get.to(() =>
-        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng, flow: LocationPickerFlow.registration));
+    final result = await Get.to(() => SelectLocationMapPage(
+        initialLat: initialLat,
+        initialLng: initialLng,
+        flow: LocationPickerFlow.registration));
     if (result != null) {
       setState(() {
         _mainStandCtrl.text = result.formattedAddress ?? "";
@@ -383,7 +386,13 @@ class _BusRegistrationPageState extends State<BusRegistrationPage> {
         }
       }
 
-      await FirebaseFirestore.instance.collection("transports").doc(uid).set({
+      final publicId = await PublicIdGenerator.generateTransportId();
+      await FirebaseFirestore.instance
+          .collection("transports")
+          .doc(publicId)
+          .set({
+        "transportPublicId": publicId,
+        "authUid": uid,
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
         "email": _emailCtrl.text.trim(),
@@ -616,8 +625,10 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
   Future<void> _pickLocationOnMap() async {
     double initialLat = _selectedLat ?? 11.2588;
     double initialLng = _selectedLng ?? 75.7804;
-    final result = await Get.to(() =>
-        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng, flow: LocationPickerFlow.registration));
+    final result = await Get.to(() => SelectLocationMapPage(
+        initialLat: initialLat,
+        initialLng: initialLng,
+        flow: LocationPickerFlow.registration));
     if (result != null) {
       setState(() {
         _mainStandCtrl.text = result.formattedAddress ?? "";
@@ -674,7 +685,13 @@ class _TaxiRegistrationPageState extends State<TaxiRegistrationPage> {
         }
       }
 
-      await FirebaseFirestore.instance.collection("transports").doc(uid).set({
+      final publicId = await PublicIdGenerator.generateTransportId();
+      await FirebaseFirestore.instance
+          .collection("transports")
+          .doc(publicId)
+          .set({
+        "transportPublicId": publicId,
+        "authUid": uid,
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
         "email": _emailCtrl.text.trim(),
@@ -1359,8 +1376,10 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
   Future<void> _pickLocationOnMap() async {
     double initialLat = _selectedLat ?? 11.2588;
     double initialLng = _selectedLng ?? 75.7804;
-    final result = await Get.to(() =>
-        SelectLocationMapPage(initialLat: initialLat, initialLng: initialLng, flow: LocationPickerFlow.registration));
+    final result = await Get.to(() => SelectLocationMapPage(
+        initialLat: initialLat,
+        initialLng: initialLng,
+        flow: LocationPickerFlow.registration));
     if (result != null) {
       setState(() {
         _mainStandCtrl.text = result.formattedAddress ?? "";
@@ -1416,7 +1435,13 @@ class _TruckRegistrationPageState extends State<TruckRegistrationPage> {
         }
       }
 
-      await FirebaseFirestore.instance.collection("transports").doc(uid).set({
+      final publicId = await PublicIdGenerator.generateTransportId();
+      await FirebaseFirestore.instance
+          .collection("transports")
+          .doc(publicId)
+          .set({
+        "transportPublicId": publicId,
+        "authUid": uid,
         "username": _nameCtrl.text.trim(),
         "phone": "+91${_mobileCtrl.text.trim()}",
         "email": _emailCtrl.text.trim(),

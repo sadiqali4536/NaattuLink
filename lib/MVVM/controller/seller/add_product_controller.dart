@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:naattulink/MVVM/utils/public_id_generator.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
@@ -678,6 +679,18 @@ class AddProductController extends GetxController {
       return;
     }
 
+    if (!isFreeShipping.value && deliveryChargeController.text.trim().isEmpty) {
+      toastError("Delivery charge is required when using Paid Delivery.");
+      return;
+    }
+
+    if (isReturnsAvailable.value &&
+        returnPolicyController.text.trim().isEmpty) {
+      toastError(
+          "Return validity days is required when Returns are available.");
+      return;
+    }
+
     if (hasVariants.value && expectedVariantCount.value > 0) {
       generateVariants();
     }
@@ -750,12 +763,18 @@ class AddProductController extends GetxController {
       final docId = productToEdit?.id ??
           FirebaseFirestore.instance.collection('store_products').doc().id;
 
+      String? productPublicId = productToEdit?.productPublicId;
+      if (productPublicId == null || productPublicId.isEmpty) {
+        productPublicId = await PublicIdGenerator.generateProductId();
+      }
+
       final cat = categories.firstWhere((c) => c.id == selectedCategoryId.value,
           orElse: () =>
               CategoryDefinition(id: '', name: 'Unknown', subcategories: []));
 
       final product = StoreProductModel(
         id: docId,
+        productPublicId: productPublicId,
         sellerId: user.uid,
         ownerId: user.uid,
         productName: productNameController.text.trim(),
@@ -800,6 +819,10 @@ class AddProductController extends GetxController {
         isCashOnDelivery: isCashOnDelivery.value,
         isOnlinePayment: isOnlinePayment.value,
         isFeatured: isFeatured.value,
+        paymentOptions: [
+          if (isOnlinePayment.value) "Online Payment",
+          if (isCashOnDelivery.value) "Cash on Delivery",
+        ],
       );
 
       await FirebaseFirestore.instance
@@ -855,7 +878,12 @@ class AddProductController extends GetxController {
         return CategoryDefinition(id: doc.id, name: name, subcategories: []);
       }).toList();
 
-      categories.assignAll(fetchedCategories);
+      final allCategories = [
+        ...DynamicSpecificationsConfig.categories,
+        ...fetchedCategories,
+      ];
+
+      categories.assignAll(allCategories);
 
       if (fetchedCategories.isEmpty) {
         Get.snackbar('Debug', 'Collection exists but has 0 documents',

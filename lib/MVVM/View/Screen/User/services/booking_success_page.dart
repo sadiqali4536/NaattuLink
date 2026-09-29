@@ -25,16 +25,13 @@ class BookingSuccessPage extends StatefulWidget {
   State<BookingSuccessPage> createState() => _BookingSuccessPageState();
 }
 
-class _BookingSuccessPageState extends State<BookingSuccessPage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _lottieController;
+class _BookingSuccessPageState extends State<BookingSuccessPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _hasPlayedSound = false;
 
   @override
   void initState() {
     super.initState();
-    _lottieController = AnimationController(vsync: this);
     _playSound();
   }
 
@@ -51,7 +48,6 @@ class _BookingSuccessPageState extends State<BookingSuccessPage>
 
   @override
   void dispose() {
-    _lottieController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -75,16 +71,10 @@ class _BookingSuccessPageState extends State<BookingSuccessPage>
                   scale: 1.8, // visually larger
                   child: Lottie.asset(
                     'assets/lotties/success_animation.json',
-                    controller: _lottieController,
-                    width:
-                        250, // smaller layout footprint to remove top/bottom empty space
+                    width: 250,
                     height: 250,
-                    onLoaded: (composition) {
-                      _lottieController
-                        ..duration = composition.duration *
-                            1.5 // play slower (1.5x longer)
-                        ..forward(); // plays once and stops at last frame
-                    },
+                    repeat: false,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const Text(

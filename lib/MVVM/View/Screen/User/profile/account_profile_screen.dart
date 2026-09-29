@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/my_bookings.dart';
@@ -560,6 +561,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
     String facilityName = data['facility_name'] ?? '';
     String contactNumber = data['contact_number'] ?? data['phone'] ?? '';
     String availableTime = data['available_time'] ?? '';
+    String userPublicId = data['userPublicId'] ?? '';
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -657,6 +659,41 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                     ),
                   ],
                 ),
+                if (userPublicId.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: userPublicId));
+                      toastSuccess("ID copied");
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            userPublicId,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.copy, color: Colors.white, size: 12),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 if (profession == "Emergency Services") ...[
                   const SizedBox(height: 12),
                   Container(

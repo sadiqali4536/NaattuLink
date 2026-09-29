@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 class PaymentUpiResolver {
   static Future<String?> resolvePaymentUpiId(
       {String sellerId = '', String productId = ''}) async {
+    String? platformFeeStatus;
+    String? platformUpi;
+
     try {
       final settingsDoc = await FirebaseFirestore.instance
           .collection('platform_settings')
@@ -13,15 +16,8 @@ class PaymentUpiResolver {
       if (settingsDoc.exists) {
         final data = settingsDoc.data() as Map<String, dynamic>?;
         if (data != null) {
-          final status =
-              data['PlatformFeeStatus']?.toString().trim().toLowerCase();
-          final platformUpi = data['platform_upi']?.toString().trim();
-
-          if (status == 'active' &&
-              platformUpi != null &&
-              platformUpi.isNotEmpty) {
-            return platformUpi;
-          }
+          platformFeeStatus = data['PlatformFeeStatus']?.toString();
+          platformUpi = data['platform_upi']?.toString().trim();
         }
       }
     } catch (e) {
@@ -29,6 +25,7 @@ class PaymentUpiResolver {
           "Error reading platform_settings (possibly missing or permission denied): $e");
     }
 
+    String? sellerUpi;
     try {
       String resolvedSellerId = sellerId;
       if (resolvedSellerId.isEmpty && productId.isNotEmpty) {
@@ -49,7 +46,6 @@ class PaymentUpiResolver {
         }
       }
 
-      // Fallback to seller UPI
       if (resolvedSellerId.isNotEmpty) {
         final sellerDoc = await FirebaseFirestore.instance
             .collection('sellers')
@@ -59,10 +55,7 @@ class PaymentUpiResolver {
         if (sellerDoc.exists) {
           final data = sellerDoc.data() as Map<String, dynamic>?;
           if (data != null) {
-            final sellerUpi = data['upiId']?.toString().trim();
-            if (sellerUpi != null && sellerUpi.isNotEmpty) {
-              return sellerUpi;
-            }
+            sellerUpi = data['upiId']?.toString().trim();
           }
         }
       }
@@ -70,6 +63,13 @@ class PaymentUpiResolver {
       debugPrint("Error fetching seller UPI: $e");
     }
 
-    return null;
+    final isPlatformFeeActive =
+        platformFeeStatus?.trim().toLowerCase() == 'active';
+
+    final paymentUpiId = isPlatformFeeActive ? platformUpi : sellerUpi;
+
+    return (paymentUpiId != null && paymentUpiId.isNotEmpty)
+        ? paymentUpiId
+        : null;
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
@@ -249,6 +250,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   height: 1.2,
                                 ),
                               ),
+                            const SizedBox(height: 8),
                             if (widget.product.brand.isNotEmpty)
                               Text(
                                 widget.product.brand,
@@ -482,141 +484,148 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           border:
                               Border.all(color: Colors.blue.withOpacity(0.1)),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Address
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.home_outlined,
-                                      size: 20, color: Color(0xFF2956D3)),
-                                  const SizedBox(width: 8),
-                                  const Text("HOME ",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: Color(0xFF1E293B))),
-                                  Expanded(
-                                    child: Obx(() {
-                                      final loc = LocationController
-                                          .to.currentLocationModel.value;
-                                      final addr = loc?.formattedAddress ??
-                                          "No saved address found.";
-                                      return Text(addr,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                              fontSize: 13,
-                                              color: Color(0xFF64748B)));
-                                    }),
-                                  ),
-                                  const Icon(Icons.chevron_right,
-                                      size: 20, color: Color(0xFF64748B)),
-                                ],
-                              ),
-                            ),
-                            const Divider(height: 1, color: Colors.white),
-                            // Delivery status
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(Icons.local_shipping_outlined,
-                                      size: 20,
-                                      color: displayStock > 0
-                                          ? Colors.green
-                                          : const Color(0xFF1E293B)),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          displayStock > 0
-                                              ? "Deliverable at your location"
-                                              : "Not deliverable at your location",
-                                          style: const TextStyle(
+                        child: Obx(() {
+                          final loc =
+                              LocationController.to.currentLocationModel.value;
+                          final hasAddress = loc != null &&
+                              loc.formattedAddress.trim().isNotEmpty &&
+                              loc.receiverName?.trim().isNotEmpty == true;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (hasAddress) ...[
+                                // Address
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.home_outlined,
+                                          size: 20, color: Color(0xFF2956D3)),
+                                      const SizedBox(width: 8),
+                                      const Text("HOME ",
+                                          style: TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                              color: Color(0xFF1E293B)),
-                                        ),
-                                        if (widget.product.estimatedDeliveryTime
-                                                ?.isNotEmpty ==
-                                            true) ...[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "Delivery by ${widget.product.estimatedDeliveryTime}",
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF64748B)),
-                                          ),
-                                        ],
-                                        if (widget.product.deliveryCharge !=
-                                                null &&
-                                            widget.product.deliveryCharge! >
-                                                0) ...[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "Delivery Charge: ₹${widget.product.deliveryCharge!.toInt()}",
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                                color: Colors.black87),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Divider(height: 1, color: Colors.white),
-                            // Seller info
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.storefront_outlined,
-                                      size: 20, color: Color(0xFF64748B)),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Fulfilled by ${widget.product.brand.isNotEmpty ? widget.product.brand : 'Seller'}",
-                                          style: const TextStyle(
                                               fontSize: 13,
-                                              color: Color(0xFF1E293B)),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text("Verified Seller",
-                                            style: TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.grey[600])),
-                                        const SizedBox(height: 4),
-                                        const Text("See other sellers",
-                                            style: TextStyle(
+                                              color: Color(0xFF1E293B))),
+                                      Expanded(
+                                        child: Text(loc.formattedAddress,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
                                                 fontSize: 13,
-                                                color: Color(0xFF2956D3),
-                                                fontWeight: FontWeight.w500)),
-                                      ],
-                                    ),
+                                                color: Color(0xFF64748B))),
+                                      ),
+                                      const Icon(Icons.chevron_right,
+                                          size: 20, color: Color(0xFF64748B)),
+                                    ],
                                   ),
-                                ],
+                                ),
+                                const Divider(height: 1, color: Colors.white),
+                                // Delivery status
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(Icons.local_shipping_outlined,
+                                          size: 20,
+                                          color: displayStock > 0
+                                              ? Colors.green
+                                              : const Color(0xFF1E293B)),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              displayStock > 0
+                                                  ? "Deliverable at your location"
+                                                  : "Not deliverable at your location",
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: Color(0xFF1E293B)),
+                                            ),
+                                            if (widget
+                                                    .product
+                                                    .estimatedDeliveryTime
+                                                    ?.isNotEmpty ==
+                                                true) ...[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                "Delivery by ${widget.product.estimatedDeliveryTime}",
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF64748B)),
+                                              ),
+                                            ],
+                                            if (widget.product.deliveryCharge !=
+                                                    null &&
+                                                widget.product.deliveryCharge! >
+                                                    0) ...[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                "Delivery Charge: ₹${widget.product.deliveryCharge!.toInt()}",
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Colors.black87),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Divider(height: 1, color: Colors.white),
+                              ],
+                              // Seller info
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(Icons.storefront_outlined,
+                                        size: 20, color: Color(0xFF64748B)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Fulfilled by ${widget.product.brand.isNotEmpty ? widget.product.brand : 'Seller'}",
+                                            style: const TextStyle(
+                                                fontSize: 13,
+                                                color: Color(0xFF1E293B)),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text("Verified Seller",
+                                              style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[600])),
+                                          const SizedBox(height: 4),
+                                          const Text("See other sellers",
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Color(0xFF2956D3),
+                                                  fontWeight: FontWeight.w500)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          );
+                        }),
                       ),
                       const SizedBox(height: 24),
 
@@ -638,12 +647,16 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 "Cash on\nDelivery"),
                           _buildFeatureIcon(
                               Icons.support_agent_outlined, "24/7\nSupport"),
-                          // if (widget.product.isOnlinePayment ?? true)
-                          //   _buildFeatureIcon(
-                          //       Icons.verified_user_outlined,
-                          //       "Secure\nPayment"),
+                          if (widget.product.paymentOptions
+                                  .contains('Online Payment') ||
+                              widget.product.paymentOptions.contains('UPI') ||
+                              widget.product.paymentOptions.contains('Card') ||
+                              widget.product.isOnlinePayment)
+                            _buildFeatureIcon(Icons.verified_user_outlined,
+                                "Secure\nPayment"),
                         ],
                       ),
+
                       const SizedBox(height: 24),
                       Divider(color: Colors.grey[200], thickness: 1),
                       const SizedBox(height: 16),

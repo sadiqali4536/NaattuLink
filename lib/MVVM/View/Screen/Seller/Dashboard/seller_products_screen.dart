@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Products/add_product_screen.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -586,6 +587,28 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                 Text("Brand: ${product.brand}",
                     style: const TextStyle(
                         color: Colors.grey, fontWeight: FontWeight.w600)),
+              if (product.productPublicId != null && product.productPublicId!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text("Product ID: ${product.productPublicId}",
+                        style: const TextStyle(
+                            color: Color(0xFF0EA5E9), fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: product.productPublicId!));
+                        Get.snackbar(
+                          'Copied',
+                          'Product ID copied to clipboard',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                      },
+                      child: const Icon(Icons.copy, size: 16, color: Color(0xFF0EA5E9)),
+                    ),
+                  ],
+                ),
+              ],
               const Divider(height: 32),
               if (product.description.isNotEmpty) ...[
                 const Text("Description",
@@ -1128,6 +1151,17 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (product.productPublicId != null && product.productPublicId!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      "ID: ${product.productPublicId}",
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF0EA5E9),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 6),
                   Row(
                     children: [

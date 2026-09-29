@@ -13,6 +13,7 @@ class CartItemModel {
   final String? sellerId;
   final bool? isCashOnDelivery;
   final bool? isOnlinePayment;
+  final List<String> paymentOptions;
   final DateTime addedAt;
   final DateTime updatedAt;
 
@@ -29,6 +30,7 @@ class CartItemModel {
     this.sellerId,
     this.isCashOnDelivery = true,
     this.isOnlinePayment = true,
+    this.paymentOptions = const [],
     required this.addedAt,
     required this.updatedAt,
   });
@@ -45,8 +47,15 @@ class CartItemModel {
       variantId: map['variantId'],
       variantName: map['variantName'],
       sellerId: map['sellerId'],
-      isCashOnDelivery: map['isCashOnDelivery'] ?? true,
-      isOnlinePayment: map['isOnlinePayment'] ?? true,
+      isCashOnDelivery: map['paymentOptions'] != null
+          ? (map['paymentOptions'] as List).contains('Cash on Delivery')
+          : (map['isCashOnDelivery'] ?? true),
+      isOnlinePayment: map['paymentOptions'] != null
+          ? (map['paymentOptions'] as List).contains('Online Payment')
+          : (map['isOnlinePayment'] ?? true),
+      paymentOptions: map['paymentOptions'] != null
+          ? List<String>.from(map['paymentOptions'])
+          : [],
       addedAt: map['addedAt'] != null
           ? (map['addedAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -69,6 +78,7 @@ class CartItemModel {
       'sellerId': sellerId,
       'isCashOnDelivery': isCashOnDelivery,
       'isOnlinePayment': isOnlinePayment,
+      'paymentOptions': paymentOptions,
       'addedAt': Timestamp.fromDate(addedAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -86,6 +96,7 @@ class CartItemModel {
     String? variantName,
     bool? isCashOnDelivery,
     bool? isOnlinePayment,
+    List<String>? paymentOptions,
     DateTime? addedAt,
     DateTime? updatedAt,
   }) {
@@ -101,6 +112,7 @@ class CartItemModel {
       variantName: variantName ?? this.variantName,
       isCashOnDelivery: isCashOnDelivery ?? this.isCashOnDelivery,
       isOnlinePayment: isOnlinePayment ?? this.isOnlinePayment,
+      paymentOptions: paymentOptions ?? this.paymentOptions,
       addedAt: addedAt ?? this.addedAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

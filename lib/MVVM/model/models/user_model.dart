@@ -9,6 +9,8 @@ class UserModel {
   final FieldValue? createAt;
   final String? profileUrl;
   final String? email;
+  final String? userPublicId;
+  final String? authUid;
 
   UserModel( {
     this.role,
@@ -19,6 +21,8 @@ class UserModel {
     this.createAt,
     this.profileUrl,
     this.email,
+    this.userPublicId,
+    this.authUid,
   });
 
   // Factory constructor to create a UserModel from Map
@@ -32,6 +36,8 @@ class UserModel {
       createAt: Map['createAt'],
       profileUrl: Map['profileUrl'] as String?,
       email: Map['email'] as String?,
+      userPublicId: Map['userPublicId'] as String?,
+      authUid: Map['authUid'] as String?,
     );
   }
 
@@ -46,6 +52,8 @@ class UserModel {
       'createAt': createAt,
       'profileUrl': profileUrl,
       'email': email,
+      'userPublicId': userPublicId,
+      'authUid': authUid,
     };
   }
 }

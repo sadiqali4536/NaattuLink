@@ -556,6 +556,15 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
     final altPhoneCtrl = TextEditingController();
     final user = FirebaseAuth.instance.currentUser;
     String userName = user?.displayName ?? 'User';
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (userDoc.exists) {
+        userName = userDoc.data()?['username'] ?? userName;
+      }
+    }
 
     return showDialog<Map<String, String>>(
       context: context,
@@ -1452,10 +1461,13 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                               String currentBookingId = _bookingId ?? '';
 
                               if (currentBookingId.isEmpty) {
-                                final bookingRef = await FirebaseFirestore
-                                    .instance
+                                currentBookingId =
+                                    'SVC-${DateTime.now().millisecondsSinceEpoch}';
+                                final bookingRef = FirebaseFirestore.instance
                                     .collection('service_bookings')
-                                    .add({
+                                    .doc(currentBookingId);
+
+                                await bookingRef.set({
                                   'userId': user?.uid,
                                   'userEmail': user?.email,
                                   'userName': _receiverName,
@@ -1492,6 +1504,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                       ? 'Pending'
                                       : 'No Payment Required',
                                   'paymentId': null,
+                                  'bookingId': currentBookingId,
                                   'createdAt': FieldValue.serverTimestamp(),
                                 });
                                 currentBookingId = bookingRef.id;
@@ -1526,25 +1539,6 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                               }
 
                               if (hasUpfrontFees && _paymentId != null) {
-                                final paymentRef = FirebaseFirestore.instance
-                                    .collection('payments')
-                                    .doc(_paymentId);
-                                final existingPayment = await paymentRef.get();
-
-                                if (!existingPayment.exists) {
-                                  await paymentRef.set({
-                                    'amount': '₹${total.toStringAsFixed(0)}',
-                                    'bookingId': currentBookingId,
-                                    'createdAt': FieldValue.serverTimestamp(),
-                                    'dateTime': DateFormat('yyyy-MM-dd HH:mm')
-                                        .format(DateTime.now()),
-                                    'itemName': 'Service',
-                                    'paymentMode': 'UPI',
-                                    'status': 'Submitted',
-                                    'transactionId': _paymentId,
-                                  });
-                                }
-
                                 await FirebaseFirestore.instance
                                     .collection('service_bookings')
                                     .doc(currentBookingId)
@@ -1559,9 +1553,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                               if (!mounted) return;
                               Get.off(
                                 () => BookingSuccessPage(
-                                  bookingId: currentBookingId
-                                      .substring(0, 8)
-                                      .toUpperCase(),
+                                  bookingId: currentBookingId,
                                   serviceName: widget.serviceName,
                                   date: widget.selectedDate,
                                   timeSlot: widget.selectedTimeSlot,

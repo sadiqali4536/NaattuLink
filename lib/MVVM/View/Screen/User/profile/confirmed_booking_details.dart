@@ -75,162 +75,207 @@ class ConfirmedBookingDetails extends StatelessWidget {
                   color: Colors.black87),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "We've assigned a top-rated professional for your service.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black54, fontSize: 13),
-            ),
-            const SizedBox(height: 24),
-
-            // Provider Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2))
-                  ]),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade200),
+            if (data['providerId'] != null &&
+                data['providerId'].toString().trim().isNotEmpty &&
+                data['providerId'].toString().trim().toLowerCase() !=
+                    'null') ...[
+              const Text(
+                "We've assigned a top-rated professional for your service.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54, fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              // Provider Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2))
+                    ]),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: ClipOval(
+                            child: data['image'] != null &&
+                                    data['image'].toString().isNotEmpty
+                                ? Image.network(data['image'],
+                                    fit: BoxFit.cover)
+                                : Icon(Icons.person,
+                                    color: Colors.grey.shade400, size: 30),
+                          ),
                         ),
-                        child: ClipOval(
-                          child: data['image'] != null &&
-                                  data['image'].toString().isNotEmpty
-                              ? Image.network(data['image'], fit: BoxFit.cover)
-                              : Icon(Icons.person,
-                                  color: Colors.grey.shade400, size: 30),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    data['providerName'] ?? 'Provider Name',
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      data['providerName'] ?? 'Provider Name',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF059669),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text('Top Rated',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold)),
+                                  )
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                data['serviceCategory'] != null
+                                    ? '${_capitalize(data['serviceCategory'])} Service'
+                                    : 'Professional',
+                                style: const TextStyle(
+                                    color: Colors.black54, fontSize: 12),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star,
+                                      color: Color(0xFF059669), size: 14),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${data['rating'] ?? '4.9'}',
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 16),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                        fontSize: 12),
                                   ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF059669),
-                                    borderRadius: BorderRadius.circular(12),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    '(120+ reviews)',
+                                    style: TextStyle(
+                                        color: Colors.black45, fontSize: 11),
                                   ),
-                                  child: const Text('Top Rated',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold)),
-                                )
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              data['serviceCategory'] != null
-                                  ? '${_capitalize(data['serviceCategory'])} Service'
-                                  : 'Professional',
+                                ],
+                              )
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(Icons.call,
+                                size: 16, color: Colors.white),
+                            label: Text(
+                              data['providerPhone']?.toString().isNotEmpty ==
+                                      true
+                                  ? data['providerPhone']
+                                  : 'Call Now',
                               style: const TextStyle(
-                                  color: Colors.black54, fontSize: 12),
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold),
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.star,
-                                    color: Color(0xFF059669), size: 14),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${data['rating'] ?? '4.9'}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12),
-                                ),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  '(120+ reviews)',
-                                  style: TextStyle(
-                                      color: Colors.black45, fontSize: 11),
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.call,
-                              size: 16, color: Colors.white),
-                          label: Text(
-                            data['providerPhone']?.toString().isNotEmpty == true
-                                ? data['providerPhone']
-                                : 'Call Now',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold),
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12)),
                           ),
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF059669),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12)),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.chat_bubble_outline,
-                              size: 16, color: Color(0xFF0F2E5A)),
-                          label: const Text(
-                            'Message',
-                            style: TextStyle(
-                                color: Color(0xFF0F2E5A),
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(Icons.chat_bubble_outline,
+                                size: 16, color: Color(0xFF0F2E5A)),
+                            label: const Text(
+                              'Message',
+                              style: TextStyle(
+                                  color: Color(0xFF0F2E5A),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                                side:
+                                    const BorderSide(color: Color(0xFF0F2E5A)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12)),
                           ),
-                          style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFF0F2E5A)),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12)),
                         ),
-                      ),
-                    ],
-                  )
-                ],
+                      ],
+                    )
+                  ],
+                ),
+              )
+            ],
+            if (data['providerId'] == null ||
+                data['providerId'].toString().trim().isEmpty ||
+                data['providerId'].toString().trim().toLowerCase() ==
+                    'null') ...[
+              const Text(
+                "Your booking is confirmed. We are assigning a top-rated professional for your service soon.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54, fontSize: 13),
               ),
-            ),
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2))
+                    ]),
+                child: const Column(
+                  children: [
+                    Icon(Icons.hourglass_empty, color: Colors.orange, size: 40),
+                    SizedBox(height: 12),
+                    Text(
+                      'Waiting for Worker',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Banner
@@ -284,7 +329,7 @@ class ConfirmedBookingDetails extends StatelessWidget {
                       const Text('Order Details',
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('ID: ${bookingId.substring(0, 10).toUpperCase()}',
+                      Text('ID: ${bookingId.toUpperCase()}',
                           style: const TextStyle(
                               fontSize: 10, color: Colors.black45)),
                     ],
@@ -298,10 +343,39 @@ class ConfirmedBookingDetails extends StatelessWidget {
                   _buildDetailRow(
                       Icons.calendar_today_outlined,
                       'Scheduled For',
-                      '$_formattedDate${data['selectedTimeSlot'] != null ? ', ${data['selectedTimeSlot']}' : ''}'),
+                      '$_formattedDate${(data['selectedTimeSlot'] != null && data['selectedTimeSlot'].toString().trim().isNotEmpty && data['selectedTimeSlot'].toString().trim().toLowerCase() != 'null') ? ', ${data['selectedTimeSlot']}' : ''}'),
                   const SizedBox(height: 16),
-                  _buildDetailRow(Icons.location_on_outlined, 'Address',
-                      data['addressTitle'] ?? 'Address'),
+                  _buildDetailRow(
+                      Icons.location_on_outlined,
+                      'Address',
+                      [
+                        if (data['houseBuildingNumber'] != null &&
+                            data['houseBuildingNumber']
+                                .toString()
+                                .trim()
+                                .isNotEmpty)
+                          data['houseBuildingNumber'],
+                        if (data['addressSubtitle'] != null &&
+                            data['addressSubtitle']
+                                .toString()
+                                .trim()
+                                .isNotEmpty &&
+                            data['addressSubtitle']
+                                    .toString()
+                                    .trim()
+                                    .toLowerCase() !=
+                                'null')
+                          data['addressSubtitle']
+                        else if (data['addressTitle'] != null &&
+                            data['addressTitle']
+                                    .toString()
+                                    .trim()
+                                    .toLowerCase() !=
+                                'null')
+                          data['addressTitle']
+                        else
+                          'Address'
+                      ].join(', ')),
                 ],
               ),
             ),

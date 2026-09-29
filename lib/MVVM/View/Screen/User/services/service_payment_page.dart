@@ -20,12 +20,16 @@ class ServicePaymentPage extends StatefulWidget {
   final String bookingId;
   final double totalAmount;
   final String? customerName;
+  final bool isCancellationFee;
+  final String? cancellationReason;
 
   const ServicePaymentPage({
     Key? key,
     required this.bookingId,
     required this.totalAmount,
     this.customerName,
+    this.isCancellationFee = false,
+    this.cancellationReason,
   }) : super(key: key);
 
   @override
@@ -84,6 +88,17 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       final now = DateTime.now();
       final expiresAt = now.add(const Duration(minutes: 5));
 
+      String paidUserName = user?.displayName ?? "NaattuLink User";
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (userDoc.exists) {
+          paidUserName = userDoc.data()?['username'] ?? paidUserName;
+        }
+      }
+
       await FirebaseFirestore.instance
           .collection('payment_attempts')
           .doc(newAttemptId)
@@ -92,7 +107,7 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
         "bookingId": widget.bookingId,
         "paymentType": "service",
         "userId": user?.uid,
-        "userName": user?.displayName ?? "NaattuLink User",
+        "userName": paidUserName,
         "phoneNumber": user?.phoneNumber,
         "amount": widget.totalAmount,
         "qrGeneratedAt": FieldValue.serverTimestamp(),
@@ -171,32 +186,90 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      final paidUserName = user?.displayName ?? "NaattuLink User";
+      String paidUserName = user?.displayName ?? "NaattuLink User";
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (userDoc.exists) {
+          paidUserName = userDoc.data()?['username'] ?? paidUserName;
+        }
+      }
       final now = DateTime.now();
       final formattedNow = DateFormat('dd MMM, h:mm a').format(now);
+      final dateTimeStr = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
-      await FirebaseFirestore.instance
+      final batch = FirebaseFirestore.instance.batch();
+
+      final serviceBookingRef = FirebaseFirestore.instance
           .collection('service_bookings')
-          .doc(widget.bookingId)
-          .update({
-        'paymentId': paymentId,
-        'paymentStatus': 'Verification Pending',
-        'paidUserName': paidUserName,
-        'paymentSubmittedAt': FieldValue.serverTimestamp(),
-      });
+          .doc(widget.bookingId);
+      if (widget.isCancellationFee) {
+        batch.update(serviceBookingRef, {
+          'cancellationRequested': true,
+          'cancellationReason': widget.cancellationReason,
+          'cancellationFee': 150,
+          'cancellationPaymentId': paymentId,
+          'cancellationPaymentStatus': 'Paid',
+          'cancellationRequestedAt': FieldValue.serverTimestamp(),
+          'cancellationStatus': 'Processing'
+        });
+
+        final paymentsRef = FirebaseFirestore.instance
+            .collection('payments')
+            .doc('CANCEL_${widget.bookingId}_$paymentId');
+        batch.set(paymentsRef, {
+          'bookingId': widget.bookingId,
+          'transactionId': paymentId,
+          'paymentId': paymentId,
+          'paymentMode': 'UPI',
+          'status': 'Paid',
+          'amount': 150,
+          'dateTime': dateTimeStr,
+          'itemName': 'Cancellation Convenience Fee',
+          'paymentType': 'ServiceCancellation',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        batch.update(serviceBookingRef, {
+          'paymentId': paymentId,
+          'paymentStatus': 'Paid',
+          'status': 'Paid',
+          'paidUserName': paidUserName,
+          'paymentSubmittedAt': FieldValue.serverTimestamp(),
+        });
+
+        final paymentsRef = FirebaseFirestore.instance
+            .collection('payments')
+            .doc(widget.bookingId);
+        batch.set(paymentsRef, {
+          'bookingId': widget.bookingId,
+          'transactionId': paymentId,
+          'paymentId': paymentId,
+          'paymentMode': 'UPI',
+          'status': 'Paid',
+          'amount': '₹${widget.totalAmount.toInt()}',
+          'dateTime': dateTimeStr,
+          'itemName': 'Service',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       if (_paymentAttemptId != null) {
-        await FirebaseFirestore.instance
+        final attemptRef = FirebaseFirestore.instance
             .collection('payment_attempts')
-            .doc(_paymentAttemptId)
-            .update({
+            .doc(_paymentAttemptId);
+        batch.update(attemptRef, {
           'transactionId': paymentId,
           'paidUserName': paidUserName,
-          'paymentStatus': 'Verification Pending',
+          'paymentStatus': 'Paid',
           'screenshotSubmittedAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
+
+      await batch.commit();
 
       Get.back(result: {
         'paymentId': paymentId,

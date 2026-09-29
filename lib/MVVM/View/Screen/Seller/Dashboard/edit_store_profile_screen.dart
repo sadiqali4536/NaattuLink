@@ -17,20 +17,41 @@ class _EditStoreProfileScreenState extends State<EditStoreProfileScreen> {
   final TextEditingController _aboutController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _upiIdController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _loadLatestData();
+  }
+
+  Future<void> _loadLatestData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      await SellerAccessController.to.loadSeller(uid);
+    }
+
     final seller = SellerAccessController.to.currentSeller.value;
     if (seller != null) {
-      _storeNameController.text = seller.storeName ?? "";
-      _aboutController.text = seller.aboutBusiness ?? "";
-      _phoneController.text = seller.phoneNumber.isNotEmpty
-          ? seller.phoneNumber
-          : (seller.phone ?? "");
-      _locationController.text = seller.location ?? "";
+      setState(() {
+        _storeNameController.text = seller.storeName ?? "";
+        _aboutController.text = seller.aboutBusiness ?? "";
+        _phoneController.text = seller.phoneNumber.isNotEmpty
+            ? seller.phoneNumber
+            : (seller.phone ?? "");
+        _locationController.text = seller.location ?? "";
+        _upiIdController.text = seller.upiId ?? "";
+      });
     }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> _updateProfile() async {
@@ -50,6 +71,7 @@ class _EditStoreProfileScreenState extends State<EditStoreProfileScreen> {
         'aboutBusiness': _aboutController.text.trim(),
         'phoneNumber': _phoneController.text.trim(),
         'location': _locationController.text.trim(),
+        'upiId': _upiIdController.text.trim(),
       });
 
       await SellerAccessController.to.loadSeller(uid);
@@ -89,6 +111,12 @@ class _EditStoreProfileScreenState extends State<EditStoreProfileScreen> {
               label: 'Phone Number',
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _upiIdController,
+              label: 'UPI ID',
+              icon: Icons.qr_code_2_outlined,
             ),
             const SizedBox(height: 16),
             _buildTextField(

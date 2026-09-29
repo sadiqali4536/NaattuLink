@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/controller/seller/add_product_controller.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
@@ -1891,7 +1892,7 @@ class AddProductScreen extends StatelessWidget {
               children: [
                 RadioListTile<bool>(
                   title: const Text(
-                    "Free Shipping",
+                    "Free Delivery",
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                   value: true,
@@ -1925,6 +1926,13 @@ class AddProductScreen extends StatelessWidget {
                   TextFormField(
                     controller: controller.deliveryChargeController,
                     keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (!controller.isFreeShipping.value &&
+                          (value == null || value.trim().isEmpty)) {
+                        return 'Delivery charge is required';
+                      }
+                      return null;
+                    },
                     decoration: _inputDecor(
                       'Delivery Charge (₹)',
                       icon: Icons.currency_rupee,
@@ -1972,8 +1980,17 @@ class AddProductScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: controller.returnPolicyController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (value) {
+                      if (controller.isReturnsAvailable.value &&
+                          (value == null || value.trim().isEmpty)) {
+                        return 'Return validity days is required';
+                      }
+                      return null;
+                    },
                     decoration: _inputDecor(
-                      'Return Validity (e.g., 7 days)',
+                      'Return Validity (e.g., 7)',
                       icon: Icons.event_repeat,
                     ),
                   ),

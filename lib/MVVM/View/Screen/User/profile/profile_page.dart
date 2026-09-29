@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:naattulink/MVVM/View/Screen/User/profile/Change_password/changepassword.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/edit_profile.dart';
 import 'package:naattulink/MVVM/Viewmodel/themes_bloc.dart';
 import 'package:naattulink/MVVM/utils/Constants/colors.dart';
@@ -287,44 +286,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                               ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Change Password button
-                        Material(
-                          elevation: 3,
-                          borderRadius: BorderRadius.circular(10),
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => ChangePasswordPage()),
-                              );
-                            },
-                            child: Container(
-                              height: 50,
-                              width: 350,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color:
-                                      const Color.fromARGB(255, 232, 232, 232),
-                                ),
-                              ),
-                              child: const Row(
-                                children: [
-                                  SizedBox(width: 15),
-                                  Image(
-                                      image:
-                                          AssetImage("assets/icons/lock.png")),
-                                  SizedBox(width: 10),
-                                  Text("Change Password"),
-                                ],
-                              ),
                             ),
                           ),
                         ),

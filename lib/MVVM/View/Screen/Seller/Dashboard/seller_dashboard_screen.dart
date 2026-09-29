@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -245,6 +246,38 @@ class SellerDashboardScreen extends StatelessWidget {
                         fontSize: 12,
                       ),
                     ),
+                    if (controller.currentSeller?.sellerPublicId != null &&
+                        controller
+                            .currentSeller!.sellerPublicId!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            "ID: ${controller.currentSeller!.sellerPublicId}",
+                            style: const TextStyle(
+                              color: Color(0xFF0EA5E9),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(
+                                  text: controller
+                                      .currentSeller!.sellerPublicId!));
+                              Get.snackbar(
+                                'Success',
+                                'Seller ID copied',
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                            },
+                            child: const Icon(Icons.copy,
+                                size: 12, color: Color(0xFF0EA5E9)),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -732,8 +765,8 @@ class SellerDashboardScreen extends StatelessWidget {
                   children: List.generate(docs.length, (index) {
                     final data = docs[index].data() as Map<String, dynamic>;
                     final docId = docs[index].id;
-                    final displayId = docId.length > 8
-                        ? "#${docId.substring(0, 8).toUpperCase()}"
+                    final displayId = data['orderId'] != null
+                        ? "#${data['orderId']}"
                         : "#${docId.toUpperCase()}";
 
                     // Handle cart array for items display
@@ -774,9 +807,17 @@ class SellerDashboardScreen extends StatelessWidget {
 
                     // Build mapped data for order details
                     final customerName =
-                        data['deliveryAddress']?['receiverName'] ?? 'Customer';
+                        data['customerName']?.toString().isNotEmpty == true
+                            ? data['customerName'].toString()
+                            : (data['deliveryAddress']?['receiverName']
+                                        ?.toString()
+                                        .isNotEmpty ==
+                                    true
+                                ? data['deliveryAddress']['receiverName']
+                                    .toString()
+                                : 'Customer');
                     final mappedData = {
-                      'orderId': docId,
+                      'orderId': data['orderId']?.toString() ?? docId,
                       'customerName': customerName,
                       'customerLocation': data['deliveryAddress']
                               ?['formattedAddress'] ??
@@ -816,6 +857,10 @@ class SellerDashboardScreen extends StatelessWidget {
                           price: priceText,
                           status: statusStr,
                           statusColor: statusColor,
+                          paymentMethod:
+                              mappedData['paymentMethod']?.toString(),
+                          paymentStatus:
+                              mappedData['paymentStatus']?.toString(),
                         ),
                       ),
                     );
@@ -834,6 +879,8 @@ class SellerDashboardScreen extends StatelessWidget {
     required String price,
     required String status,
     required Color statusColor,
+    String? paymentMethod,
+    String? paymentStatus,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -871,6 +918,68 @@ class SellerDashboardScreen extends StatelessWidget {
                   fontSize: 12,
                 ),
               ),
+              if (paymentMethod != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEAF3FF),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0xFFB9D5FF)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            paymentMethod.toLowerCase() == 'upi'
+                                ? Icons.currency_rupee
+                                : Icons.money,
+                            size: 10,
+                            color: const Color(0xFF0857A0),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            paymentMethod.toLowerCase() == 'upi'
+                                ? 'UPI'
+                                : 'Cash on Delivery',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0857A0),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (paymentMethod.toLowerCase() == 'upi' &&
+                        (paymentStatus?.toLowerCase() == 'completed' ||
+                            paymentStatus?.toLowerCase() == 'paid' ||
+                            paymentStatus?.toLowerCase() == 'success')) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Text(
+                          'PAID',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ],
           ),
           Column(

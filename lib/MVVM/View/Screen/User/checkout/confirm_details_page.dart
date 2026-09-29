@@ -152,10 +152,6 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
       }
     }
 
-    if (_deliveryAddress.value == null) {
-      _deliveryAddress.value = LocationController.to.currentLocationModel.value;
-    }
-
     setState(() => _isLoading = false);
   }
 
@@ -384,8 +380,9 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
                   minimumSize: const Size(50, 30),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('Change',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                child: Obx(() => Text(
+                    _deliveryAddress.value == null ? 'Add Address' : 'Change',
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
               ),
             ],
           ),
@@ -497,6 +494,14 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
                             width: 70,
                             height: 70,
                             fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                              width: 70,
+                              height: 70,
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.broken_image,
+                                  color: Colors.grey),
+                            ),
                           )
                         : Container(
                             width: 70,
@@ -767,24 +772,28 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
         ],
       ),
       child: SafeArea(
-        child: ElevatedButton(
-          onPressed: _confirmOrder,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2956D3),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        child: Obx(() {
+          final bool hasAddress = _deliveryAddress.value != null;
+          return ElevatedButton(
+            onPressed: hasAddress ? _confirmOrder : _showLocationBottomSheet,
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  hasAddress ? const Color(0xFF2956D3) : Colors.orange,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-          ),
-          child: const Text(
-            'Confirm Order',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+            child: Text(
+              hasAddress ? 'Confirm Order' : 'Add Address to Continue',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
-          ),
-        ),
+          );
+        }),
       ),
     );
   }

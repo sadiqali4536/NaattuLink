@@ -3,6 +3,7 @@ import 'product_variant.dart';
 
 class StoreProductModel {
   final String id;
+  final String? productPublicId;
   final String? sellerId;
   final String? storeId;
   final String? ownerId;
@@ -59,12 +60,14 @@ class StoreProductModel {
   final bool isCashOnDelivery;
   final bool isOnlinePayment;
   final bool isFeatured;
+  final List<String> paymentOptions;
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
   StoreProductModel({
     required this.id,
+    this.productPublicId,
     this.sellerId,
     this.storeId,
     this.ownerId,
@@ -105,6 +108,7 @@ class StoreProductModel {
     this.isCashOnDelivery = true,
     this.isOnlinePayment = true,
     this.isFeatured = false,
+    this.paymentOptions = const [],
     this.createdAt,
     this.updatedAt,
   });
@@ -133,6 +137,7 @@ class StoreProductModel {
 
     return StoreProductModel(
       id: docId,
+      productPublicId: map['productPublicId'] as String?,
       sellerId: map['sellerId'] ?? map['ownerId'] ?? map['storeId'],
       storeId: map['storeId'],
       ownerId: map['ownerId'],
@@ -189,6 +194,12 @@ class StoreProductModel {
       isCashOnDelivery: map['isCashOnDelivery'] ?? true,
       isOnlinePayment: map['isOnlinePayment'] ?? true,
       isFeatured: map['isFeatured'] ?? false,
+      paymentOptions: map['paymentOptions'] != null 
+          ? List<String>.from(map['paymentOptions'])
+          : [
+              if (map['isOnlinePayment'] ?? true) 'Online Payment',
+              if (map['isCashOnDelivery'] ?? true) 'Cash on Delivery',
+            ],
       createdAt: _parseTimestamp(map['createdAt']),
       updatedAt: _parseTimestamp(map['updatedAt']),
     );
@@ -196,6 +207,7 @@ class StoreProductModel {
 
   Map<String, dynamic> toMap() {
     return {
+      'productPublicId': productPublicId,
       'sellerId': sellerId,
       'storeId': storeId,
       'ownerId': ownerId,
@@ -250,6 +262,7 @@ class StoreProductModel {
       'isCashOnDelivery': isCashOnDelivery,
       'isOnlinePayment': isOnlinePayment,
       'isFeatured': isFeatured,
+      'paymentOptions': paymentOptions,
 
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
