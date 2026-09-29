@@ -4,6 +4,8 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:naattulink/MVVM/utils/payment_verification/ocr/payment_ocr_service.dart'
+    as modern_ocr;
 
 class PaymentReceiptData {
   final String? payerName;
@@ -353,174 +355,29 @@ class PaymentOcrService {
   /// and attempts to extract a Transaction ID based on common labels or a 12-digit numeric fallback.
   /// Returns the extracted Transaction ID or null if none could be found or if canceled.
   static Future<String?> extractTransactionId() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    // We now route this legacy method to our new, powerful spatial engine.
+    // This ensures that the full text data is properly extracted and analyzed spatially!
 
-    // User canceled the picker
-    if (image == null) return null;
+    final result = await modern_ocr.PaymentOcrService.extractPaymentReceipt();
 
-    String targetPath = image.path;
-    debugPrint('========== OCR IMAGE START ==========');
-    debugPrint('ORIGINAL IMAGE PATH: ${image.path}');
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final compressPath =
-          '${tempDir.path}/ocr_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final compressedFile = await FlutterImageCompress.compressAndGetFile(
-        image.path,
-        compressPath,
-        quality: 60,
-        minWidth: 1000,
-        minHeight: 1000,
-      );
-      if (compressedFile != null) {
-        targetPath = compressedFile.path;
-        debugPrint('COMPRESSED IMAGE PATH: $targetPath');
-      }
-    } catch (e) {
-      debugPrint("OCR Compress Error: $e");
+    if (result == null) return null;
+
+    if (result.transactionIds.isNotEmpty) {
+      return result.transactionIds.first;
     }
 
-    debugPrint('IMAGE ACTUALLY SENT TO ML KIT: $targetPath');
-    debugPrint('================================');
-
-    final inputImage = InputImage.fromFilePath(targetPath);
-    final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-
-    try {
-      final RecognizedText recognizedText =
-          await textRecognizer.processImage(inputImage);
-      String fullText = recognizedText.text;
-
-      debugPrint('========== FULL OCR RESULT ==========');
-      debugPrint(fullText);
-      debugPrint('=====================================');
-
-      // Helper function to extract ID based on line-by-line fallback
-      String? fallbackLineByLineSearch(String text) {
-        final lines = text.split('\n');
-        for (int i = 0; i < lines.length; i++) {
-          final line = lines[i].toLowerCase();
-          if (line.contains('upi') &&
-              line.contains('transaction') &&
-              line.contains('id')) {
-            // Check current line for digits
-            final inlineMatch =
-                RegExp(r'(T\d{22}|\d{8,20})', caseSensitive: false)
-                    .firstMatch(line);
-            if (inlineMatch != null &&
-                isValidUpiTransactionId(inlineMatch.group(1))) {
-              return inlineMatch.group(1);
-            }
-            // Check previous and next 1-3 lines (ML Kit ordering can vary)
-            for (int j = 1; j <= 3; j++) {
-              // Check backwards
-              if (i - j >= 0) {
-                final prevLineMatch =
-                    RegExp(r'(\d{8,20})').firstMatch(lines[i - j]);
-                if (prevLineMatch != null &&
-                    isValidUpiTransactionId(prevLineMatch.group(1))) {
-                  return prevLineMatch.group(1);
-                }
-              }
-              // Check forwards
-              if (i + j < lines.length) {
-                final nextLineMatch =
-                    RegExp(r'(\d{8,20})').firstMatch(lines[i + j]);
-                if (nextLineMatch != null &&
-                    isValidUpiTransactionId(nextLineMatch.group(1))) {
-                  return nextLineMatch.group(1);
-                }
-              }
-            }
-          }
-        }
-        return null;
-      }
-
-      final List<String> labels = [
-        'UPI transaction ID',
-        'UPI Reference ID',
-        'UPI Ref ID',
-        'PhonePe Transaction ID',
-        'Transaction ID',
-        'Transaction Id',
-        'Transaction No.',
-        'Transaction No',
-        'Txn ID',
-        'Txn Id',
-        'Txn No.',
-        'Txn No',
-        'UPI Ref No',
-        'Ref ID',
-        'RefID',
-        'Ref No.',
-        'Ref No',
-        'Reference Number',
-        'Reference No.',
-        'Reference No',
-        'Journal No.',
-        'Journal No',
-        'Journal Number',
-        'UTR',
-        'RRN',
-      ];
-
-      // 1. Primary Regex Extraction
-      for (String label in labels) {
-        final RegExp regex = RegExp(
-          '${RegExp.escape(label)}[^a-zA-Z0-9]*([a-zA-Z0-9\\-]{8,35})',
-          caseSensitive: false,
-        );
-
-        final match = regex.firstMatch(fullText);
-        if (match != null && match.groupCount >= 1) {
-          String? extracted = match.group(1);
-          if (extracted != null && extracted.trim().isNotEmpty) {
-            String cleaned = extracted.trim();
-            // Enforce that it MUST contain at least one digit (rejects 'Payments' or purely alphabetic GPay IDs)
-            if (RegExp(r'\d').hasMatch(cleaned)) {
-              if (label.toLowerCase().contains('upi') ||
-                  RegExp(r'^\d+$').hasMatch(cleaned)) {
-                if (isValidUpiTransactionId(cleaned)) return cleaned;
-              } else {
-                return cleaned;
-              }
-            }
-          }
-        }
-      }
-
-      // 2. Line-by-Line fallback specifically for UPI Transaction ID
-      final lineByLineResult = fallbackLineByLineSearch(fullText);
-      if (lineByLineResult != null) return lineByLineResult;
-
-      // 3. Fallbacks for specific formats if label extraction fails
-
-      // Fallback A: PhonePe Transaction ID (T followed by 22 digits)
-      final RegExp phonePeRegex = RegExp(r'\bT\d{22}\b');
-      final matchPhonePe = phonePeRegex.firstMatch(fullText);
-      if (matchPhonePe != null) {
-        return matchPhonePe.group(0)?.trim();
-      }
-
-      // Fallback B: Standard 12-digit UPI reference number (allowing optional spaces/newlines between digits)
-      final RegExp fallbackRegex = RegExp(r'(?<!\d)(?:\d[\s\n]*){12}(?!\d)');
-      final fallbackMatch = fallbackRegex.firstMatch(fullText);
-      if (fallbackMatch != null) {
-        return fallbackMatch.group(0)?.replaceAll(RegExp(r'\s+'), '');
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint("OCR Error: $e");
-      return null;
-    } finally {
-      // Release resources
-      await textRecognizer.close();
-      // The image file remains locally on the device or in temporary cache,
-      // and is never uploaded to any remote server (Firebase, ImageKit, etc).
+    if (result.referenceIds.isNotEmpty) {
+      return result.referenceIds.first;
     }
+
+    // Fallback: Just return the first 12-digit number found in raw text if the spatial engine missed it
+    final RegExp fallbackRegex = RegExp(r'(?<!\d)(?:\d[\s\n]*){12}(?!\d)');
+    final fallbackMatch = fallbackRegex.firstMatch(result.rawText);
+    if (fallbackMatch != null) {
+      return fallbackMatch.group(0)?.replaceAll(RegExp(r'\s+'), '');
+    }
+
+    return null;
   }
 
   /// Prompts the user to select an image from the gallery, performs OCR,

@@ -4,8 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/order_details_screen.dart';
 
-class SellerAllRecentOrdersScreen extends StatelessWidget {
-  const SellerAllRecentOrdersScreen({super.key});
+class SellerRefundPendingOrdersScreen extends StatelessWidget {
+  const SellerRefundPendingOrdersScreen({super.key});
 
   Widget _buildOrderItem({
     required String orderId,
@@ -164,7 +164,7 @@ class SellerAllRecentOrdersScreen extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         title: const Text(
-          "All Recent Orders",
+          "Refund Pending Orders",
           style: TextStyle(
             color: Color(0xFF0F2E5A),
             fontWeight: FontWeight.bold,
@@ -216,8 +216,40 @@ class SellerAllRecentOrdersScreen extends StatelessWidget {
                   );
                 }
 
-                // Sort locally by createdAt descending
-                final allDocs = snapshot.data!.docs.toList();
+                // Filter and sort locally
+                final allDocs = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final status =
+                      (data['status'] ?? '').toString().toLowerCase();
+                  if (!status.contains('cancel') && !status.contains('reject'))
+                    return false;
+
+                  final isRefunded = data['Refuned']?.toString() == '1' ||
+                      data['Refuned']?.toString().toLowerCase() == 'true' ||
+                      data['Refuned'] == true ||
+                      data['Refuned'] == 1;
+
+                  final paymentMethod =
+                      data['paymentMethod']?.toString().toLowerCase() ?? '';
+                  final transactionId = data['transactionId']?.toString() ?? '';
+                  final isOnline = paymentMethod.contains('online') ||
+                      paymentMethod.contains('upi') ||
+                      transactionId.isNotEmpty;
+
+                  return isOnline && !isRefunded;
+                }).toList();
+
+                if (allDocs.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32.0),
+                      child: Text(
+                        "No refund pending orders",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
                 allDocs.sort((a, b) {
                   final aData = a.data() as Map<String, dynamic>;
                   final bData = b.data() as Map<String, dynamic>;
@@ -302,7 +334,9 @@ class SellerAllRecentOrdersScreen extends StatelessWidget {
                       'deliveryFee': 0,
                       'paymentMethod': data['paymentMethod'] ?? 'Unknown',
                       'paymentStatus': data['paymentStatus'] ?? 'Pending',
-                      'transactionId': data['transactionId'], 'Refuned': data['Refuned'],
+                      'transactionId': data['transactionId'],
+                      'Refuned': data['Refuned'],
+                      'isFromRefundScreen': true,
                       'formattedReceipt': data['formattedReceipt'],
                       'ocrAmountExtracted': data['ocrAmountExtracted'],
                       'ocrReceiverUpi': data['ocrReceiverUpi'],

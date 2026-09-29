@@ -13,6 +13,7 @@ import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_store_profil
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_history_orders_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/order_details_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_all_recent_orders_screen.dart';
+import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_refund_pending_orders_screen.dart';
 
 class SellerDashboardScreen extends StatelessWidget {
   const SellerDashboardScreen({super.key});
@@ -50,36 +51,85 @@ class SellerDashboardScreen extends StatelessWidget {
                         const SizedBox(
                             height: 70), // space for overlapping card
                         Obx(() {
-                          if (controller.outOfStockProducts.value > 0) {
-                            return Container(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 10),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.red.shade200),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.warning_amber_rounded,
-                                      color: Colors.red),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      "Products count (${controller.outOfStockProducts.value}) are out of stock. Please update the stock.",
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
+                          final hasOutOfStock =
+                              controller.outOfStockProducts.value > 0;
+                          final hasRefundPending =
+                              controller.refundPendingOrders.value > 0;
+
+                          return Column(
+                            children: [
+                              if (hasOutOfStock)
+                                Container(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 5),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border:
+                                        Border.all(color: Colors.red.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.warning_amber_rounded,
+                                          color: Colors.red),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          "Products count (${controller.outOfStockProducts.value}) are out of stock. Please update the stock.",
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
                                       ),
+                                    ],
+                                  ),
+                                ),
+                              if (hasRefundPending)
+                                GestureDetector(
+                                  onTap: () {
+                                    Get.to(() =>
+                                        const SellerRefundPendingOrdersScreen());
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 20, vertical: 5),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                          color: Colors.orange.shade200),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                            Icons.currency_rupee,
+                                            color: Colors.orange),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            "You have ${controller.refundPendingOrders.value} online order(s) pending refund. Please process them within 2 days.",
+                                            style: const TextStyle(
+                                              color: Colors.orange,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.arrow_forward_ios,
+                                            color: Colors.orange, size: 14),
+                                      ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            );
-                          }
-                          return const SizedBox.shrink();
+                                ),
+                              if (!hasOutOfStock && !hasRefundPending)
+                                const SizedBox.shrink(),
+                            ],
+                          );
                         }),
                         //_buildQuickActions(),
                         _buildTodaysOverview(controller),
@@ -817,6 +867,7 @@ class SellerDashboardScreen extends StatelessWidget {
                                     .toString()
                                 : 'Customer');
                     final mappedData = {
+                      'docId': docId,
                       'orderId': data['orderId']?.toString() ?? docId,
                       'customerName': customerName,
                       'customerLocation': data['deliveryAddress']
@@ -831,6 +882,14 @@ class SellerDashboardScreen extends StatelessWidget {
                       'deliveryFee': 0,
                       'paymentMethod': data['paymentMethod'] ?? 'Unknown',
                       'paymentStatus': data['paymentStatus'] ?? 'Pending',
+                      'transactionId': data['transactionId'], 'Refuned': data['Refuned'],
+                      'formattedReceipt': data['formattedReceipt'],
+                      'ocrAmountExtracted': data['ocrAmountExtracted'],
+                      'ocrReceiverUpi': data['ocrReceiverUpi'],
+                      'ocrPaymentDateTime': data['ocrPaymentDateTime'],
+                      'ocrHasSuccessIndicator': data['ocrHasSuccessIndicator'],
+                      'cancellationReason': data['cancellationReason'],
+                      'cancellationComment': data['cancellationComment'],
                       'items': cart is List && cart.isNotEmpty
                           ? cart
                           : [

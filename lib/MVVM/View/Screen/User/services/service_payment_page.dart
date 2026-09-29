@@ -5,14 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'dart:typed_data';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
-import 'package:naattulink/MVVM/utils/payment_ocr_service.dart';
+import 'package:naattulink/MVVM/utils/payment_verification/ocr/payment_ocr_service.dart';
+import 'package:naattulink/MVVM/utils/payment_verification/models/payment_ocr_result.dart';
+import 'package:naattulink/MVVM/utils/payment_verification/models/payment_validation_result.dart';
+import 'package:naattulink/MVVM/utils/payment_verification/validator/payment_screenshot_validator.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
-import 'dart:typed_data';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 
@@ -46,6 +47,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
   bool _isExtractingOcr = false;
   String? _platformUpi;
   String? _qrGeneratedTimeStr; // Stores formatted time for UI return
+  PaymentOcrResult? _validatedOcrResult;
+  PaymentValidationResult? _validatedPaymentResult;
 
   String? _paymentAttemptId;
   DateTime? _qrGeneratedAt;
@@ -197,10 +200,32 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
         }
       }
       final now = DateTime.now();
-      final formattedNow = DateFormat('dd MMM, h:mm a').format(now);
-      final dateTimeStr = DateFormat('yyyy-MM-dd HH:mm').format(now);
+      String dateTimeStr = DateFormat('yyyy-MM-dd HH:mm').format(now);
+      String formattedNow = DateFormat('dd MMM, h:mm a').format(now);
+
+      if (_validatedOcrResult != null &&
+          _validatedOcrResult!.paymentDateTime != null) {
+        final ocrDt = _validatedOcrResult!.paymentDateTime!;
+        dateTimeStr = DateFormat('yyyy-MM-dd HH:mm').format(ocrDt);
+        formattedNow = DateFormat('dd MMM, h:mm a').format(ocrDt);
+      }
 
       final batch = FirebaseFirestore.instance.batch();
+
+      final Map<String, dynamic> ocrData = _validatedOcrResult != null
+          ? {
+              'ocrAmountExtracted': _validatedOcrResult!.amount,
+              'ocrReceiverUpi': _validatedOcrResult!.receiverUpi,
+              'ocrPaymentDateTime':
+                  _validatedOcrResult!.paymentDateTime?.toIso8601String(),
+              'ocrHasSuccessIndicator':
+                  _validatedOcrResult!.hasSuccessIndicator,
+              'ocrConfidence': _validatedOcrResult!.confidence,
+              'ocrReferenceIds': _validatedOcrResult!.referenceIds,
+              'ocrTransactionIds': _validatedOcrResult!.transactionIds,
+              'isOcrVerified': true,
+            }
+          : {};
 
       final serviceBookingRef = FirebaseFirestore.instance
           .collection('service_bookings')
@@ -213,7 +238,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
           'cancellationPaymentId': paymentId,
           'cancellationPaymentStatus': 'Paid',
           'cancellationRequestedAt': FieldValue.serverTimestamp(),
-          'cancellationStatus': 'Processing'
+          'cancellationStatus': 'Processing',
+          ...ocrData,
         });
 
         final paymentsRef = FirebaseFirestore.instance
@@ -230,6 +256,7 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
           'itemName': 'Cancellation Convenience Fee',
           'paymentType': 'ServiceCancellation',
           'createdAt': FieldValue.serverTimestamp(),
+          ...ocrData,
         });
       } else {
         batch.update(serviceBookingRef, {
@@ -238,22 +265,27 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
           'status': 'Paid',
           'paidUserName': paidUserName,
           'paymentSubmittedAt': FieldValue.serverTimestamp(),
+          ...ocrData,
         });
 
         final paymentsRef = FirebaseFirestore.instance
             .collection('payments')
-            .doc(widget.bookingId);
-        batch.set(paymentsRef, {
-          'bookingId': widget.bookingId,
-          'transactionId': paymentId,
-          'paymentId': paymentId,
-          'paymentMode': 'UPI',
-          'status': 'Paid',
-          'amount': '₹${widget.totalAmount.toInt()}',
-          'dateTime': dateTimeStr,
-          'itemName': 'Service',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+            .doc(paymentId); // Changed from widget.bookingId to paymentId
+        batch.set(
+            paymentsRef,
+            {
+              'bookingId': widget.bookingId,
+              'transactionId': paymentId,
+              'paymentId': paymentId,
+              'paymentMode': 'UPI',
+              'status': 'Paid',
+              'amount': '₹${widget.totalAmount.toInt()}',
+              'dateTime': dateTimeStr,
+              'itemName': 'Service',
+              'createdAt': FieldValue.serverTimestamp(),
+              ...ocrData,
+            },
+            SetOptions(merge: true));
       }
 
       if (_paymentAttemptId != null) {
@@ -265,6 +297,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
           'paidUserName': paidUserName,
           'paymentStatus': 'Paid',
           'screenshotSubmittedAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          ...ocrData,
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
@@ -294,33 +328,77 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
   Future<void> _handleOcrUpload() async {
     setState(() {
       _isExtractingOcr = true;
+      _validatedOcrResult = null;
+      _validatedPaymentResult = null;
     });
 
-    final extractedId = await PaymentOcrService.extractTransactionId();
+    final ocrResult = await PaymentOcrService.extractPaymentReceipt(
+      expectedAmount: widget.isCancellationFee ? 150.0 : widget.totalAmount,
+      expectedUpiId: _platformUpi,
+    );
 
     setState(() {
       _isExtractingOcr = false;
     });
 
-    if (extractedId != null && extractedId.isNotEmpty) {
-      _paymentIdController.text = extractedId;
-      if (mounted) {
-        CherryToast.success(
-          title: const Text('Success',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: const Text('Transaction ID extracted. Please verify.'),
-        ).show(context);
-      }
-    } else {
-      if (mounted) {
-        CherryToast.warning(
-          title: const Text('Not Found',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: const Text(
-              'Could not extract a valid Transaction ID. Please enter manually.'),
-        ).show(context);
-      }
+    if (ocrResult == null) return;
+
+    if (_qrGeneratedAt == null || _qrExpiresAt == null) {
+      CherryToast.error(
+        title:
+            const Text('Error', style: TextStyle(fontWeight: FontWeight.bold)),
+        description: const Text('Payment session has expired or is invalid.'),
+      ).show(context);
+      return;
     }
+
+    final validationResult = PaymentScreenshotValidator.validate(
+      ocrResult: ocrResult,
+      expectedAmount: widget.isCancellationFee ? 150.0 : widget.totalAmount,
+      qrGeneratedAt: _qrGeneratedAt!,
+      qrExpiresAt: _qrExpiresAt!,
+      expectedUpiId: _platformUpi,
+    );
+
+    if (validationResult.status != PaymentVerificationStatus.valid) {
+      setState(() {
+        _validatedOcrResult = null;
+        _validatedPaymentResult = validationResult;
+      });
+
+      String errorMsg =
+          'This receipt appears to be invalid or incomplete. Please upload the correct payment screenshot.';
+      if (validationResult.reasons
+          .contains(PaymentValidationReason.amountMismatch)) {
+        errorMsg =
+            'The amount on the receipt does not match the expected total.';
+      }
+
+      CherryToast.error(
+        title: const Text('Invalid Receipt',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        description: Text(errorMsg),
+      ).show(context);
+      return;
+    }
+
+    setState(() {
+      _validatedOcrResult = ocrResult;
+      _validatedPaymentResult = validationResult;
+    });
+
+    if (ocrResult.transactionIds.isNotEmpty) {
+      _paymentIdController.text = ocrResult.transactionIds.first;
+    } else if (ocrResult.referenceIds.isNotEmpty) {
+      _paymentIdController.text = ocrResult.referenceIds.first;
+    }
+
+    CherryToast.success(
+      title:
+          const Text('Success', style: TextStyle(fontWeight: FontWeight.bold)),
+      description:
+          const Text('Payment verified! All data extracted successfully.'),
+    ).show(context);
   }
 
   Future<void> _downloadQR() async {
@@ -666,71 +744,96 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  if (_isExtractingOcr)
-                    const Center(
-                      child: Column(
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 12),
-                          Text(
-                            "Extracting Transaction ID...",
+                  if (_validatedOcrResult != null &&
+                      _validatedPaymentResult?.status ==
+                          PaymentVerificationStatus.valid) ...[
+                    _buildPaymentReceiptUI(),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _validatedOcrResult = null;
+                            _validatedPaymentResult = null;
+                            _paymentIdController.clear();
+                          });
+                        },
+                        icon: const Icon(Icons.refresh, color: Colors.red),
+                        label: const Text(
+                            'Scan Another Receipt or Enter Manually',
                             style: TextStyle(
-                                color: Colors.black54,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ],
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold)),
                       ),
-                    )
-                  else
-                    ElevatedButton.icon(
-                      onPressed: _handleOcrUpload,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF0F2E5A),
-                        elevation: 0,
-                        minimumSize: const Size(double.infinity, 56),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ] else ...[
+                    if (_isExtractingOcr)
+                      const Center(
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 12),
+                            Text(
+                              "Extracting Full Receipt Data...",
+                              style: TextStyle(
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ElevatedButton.icon(
+                        onPressed: _handleOcrUpload,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF0F2E5A),
+                          elevation: 0,
+                          minimumSize: const Size(double.infinity, 56),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        icon: const Icon(Icons.document_scanner),
+                        label: const Text(
+                          "Upload Payment Success Screenshot",
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      icon: const Icon(Icons.document_scanner),
-                      label: const Text(
-                        "Upload Payment Success Screenshot",
-                        style: TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 24),
+                    const Text(
+                      "Or Enter Transaction ID Manually",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
                       ),
                     ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    "Or Enter Transaction ID Manually",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _paymentIdController,
-                    decoration: InputDecoration(
-                      hintText: "e.g., TXN123456789",
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF0F2E5A)),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _paymentIdController,
+                      decoration: InputDecoration(
+                        hintText: "e.g., TXN123456789",
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF0F2E5A)),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
@@ -758,6 +861,145 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildPaymentReceiptUI() {
+    final r = _validatedOcrResult!;
+    return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ]),
+        child: Column(children: [
+          Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0F2E5A),
+                borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16)),
+              ),
+              width: double.infinity,
+              child: const Column(
+                children: [
+                  Text('NAATTULINK',
+                      style: TextStyle(
+                          color: Color(0xFFF5B400),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          letterSpacing: 2)),
+                  SizedBox(height: 4),
+                  Text('Payment Receipt Extracted',
+                      style: TextStyle(color: Colors.white, fontSize: 14)),
+                ],
+              )),
+          Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green, size: 28),
+                        SizedBox(width: 8),
+                        Text('Details Extracted',
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                        '₹${(r.amount ?? (widget.isCancellationFee ? 150.0 : widget.totalAmount)).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F2E5A))),
+                    const SizedBox(height: 24),
+                    _buildReceiptCard('Payment Summary', [
+                      if (r.transactionIds.isNotEmpty)
+                        _buildReceiptRow(
+                            'Transaction ID', r.transactionIds.first)
+                      else if (r.referenceIds.isNotEmpty)
+                        _buildReceiptRow('Reference ID', r.referenceIds.first),
+                      if (r.paymentDateTime != null)
+                        _buildReceiptRow(
+                            'Date & Time',
+                            DateFormat('dd MMM yyyy, hh:mm a')
+                                .format(r.paymentDateTime!)),
+                    ]),
+                    if (r.receiverUpi != null) ...[
+                      const SizedBox(height: 16),
+                      _buildReceiptCard('Paid To', [
+                        _buildReceiptRow('Receiver UPI', r.receiverUpi!),
+                      ]),
+                    ],
+                    const SizedBox(height: 16),
+                    _buildReceiptCard('Transaction Details', [
+                      _buildReceiptRow(
+                          'Status',
+                          r.hasSuccessIndicator
+                              ? '✓ Completed'
+                              : 'Pending Verification'),
+                    ]),
+                  ]))
+        ]));
+  }
+
+  Widget _buildReceiptCard(String title, List<Widget> children) {
+    if (children.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF0F2E5A))),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReceiptRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+              flex: 2,
+              child: Text(label,
+                  style: const TextStyle(color: Colors.grey, fontSize: 14))),
+          Expanded(
+              flex: 3,
+              child: Text(value,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.black87),
+                  textAlign: TextAlign.right)),
+        ],
+      ),
     );
   }
 }

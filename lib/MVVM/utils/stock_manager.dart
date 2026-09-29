@@ -25,12 +25,14 @@ class StockManager {
     required String productId,
     required int quantity,
     String? variantId,
+    String? variantName,
   }) async {
     await _updateStockTransaction(
       bookingId: bookingId,
       productId: productId,
       quantityChange: quantity,
       variantId: variantId,
+      variantName: variantName,
       operationType: 'restore',
     );
   }
@@ -40,6 +42,7 @@ class StockManager {
     required String productId,
     required int quantityChange,
     String? variantId,
+    String? variantName,
     required String operationType,
   }) async {
     final db = FirebaseFirestore.instance;
@@ -64,12 +67,26 @@ class StockManager {
       }
 
       final data = productDoc.data()!;
+      List<dynamic> variants = data['variants'] ?? [];
+      bool variantFound = false;
+
+      // Backward compatibility: If variantId is missing but variantName is provided, try to find it
+      if ((variantId == null || variantId!.isEmpty) && variantName != null && variantName.isNotEmpty && variants.isNotEmpty) {
+        for (var v in variants) {
+          final attrs = v['attributes'] as Map<String, dynamic>? ?? {};
+          final sortedKeys = attrs.keys.toList()..sort();
+          final computedName = sortedKeys.map((k) => attrs[k].toString()).join('-');
+          
+          if (computedName == variantName || variantName.contains(computedName)) {
+            variantId = v['id'];
+            break;
+          }
+        }
+      }
 
       // 3. Update stock
-      if (variantId != null && variantId.isNotEmpty) {
+      if (variantId != null && variantId!.isNotEmpty) {
         // Update variant stock
-        List<dynamic> variants = data['variants'] ?? [];
-        bool variantFound = false;
 
         for (int i = 0; i < variants.length; i++) {
           final variant = variants[i] as Map<String, dynamic>;

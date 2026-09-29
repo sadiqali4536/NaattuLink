@@ -111,6 +111,60 @@ class MainActivity : FlutterActivity() {
                         result.error("IO_ERROR", e.localizedMessage ?: "Unknown IO Error", null)
                     }
                 }
+                "savePdfToDownloads" -> {
+                    Log.d("NaattuLinkUPI", "savePdfToDownloads received")
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val fileName = call.argument<String>("fileName") ?: "PackagingSlip.pdf"
+
+                    if (bytes == null) {
+                        result.error("INVALID_ARGS", "Missing PDF bytes", null)
+                        return@setMethodCallHandler
+                    }
+
+                    try {
+                        val resolver = context.contentResolver
+                        val contentValues = ContentValues().apply {
+                            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                put(MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/NaattuLink")
+                                put(MediaStore.MediaColumns.IS_PENDING, 1)
+                            }
+                        }
+
+                        Log.d("NaattuLinkUPI", "Saving PDF to Downloads/NaattuLink")
+                        val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                        } else {
+                            // Pre-Q: write directly to the Downloads folder
+                            val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                            val appDir = java.io.File(downloadsDir, "NaattuLink")
+                            if (!appDir.exists()) appDir.mkdirs()
+                            val file = java.io.File(appDir, fileName)
+                            file.writeBytes(bytes)
+                            Log.d("NaattuLinkUPI", "PDF saved (pre-Q): ${file.absolutePath}")
+                            result.success(true)
+                            return@setMethodCallHandler
+                        }
+
+                        if (uri != null) {
+                            resolver.openOutputStream(uri)?.use { outputStream ->
+                                outputStream.write(bytes)
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                contentValues.clear()
+                                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                                resolver.update(uri, contentValues, null, null)
+                            }
+                            Log.d("NaattuLinkUPI", "PDF saved successfully")
+                            result.success(true)
+                        } else {
+                            result.error("IO_ERROR", "Failed to create MediaStore entry for PDF", null)
+                        }
+                    } catch (e: Exception) {
+                        result.error("IO_ERROR", e.localizedMessage ?: "Unknown IO Error", null)
+                    }
+                }
                 else -> {
                     result.notImplemented()
                 }

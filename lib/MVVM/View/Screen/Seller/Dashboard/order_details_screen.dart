@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/stock_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'dart:typed_data';
+import 'package:naattulink/MVVM/controller/seller/seller_dashboard_controller.dart';
+
+const MethodChannel _slipChannel = MethodChannel('com.naattulink.upi/payment');
 
 class SellerOrderDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> orderData;
@@ -18,6 +26,7 @@ class SellerOrderDetailsScreen extends StatefulWidget {
 
 class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
   late String currentStatus;
+  bool _isDownloadingPdf = false;
 
   @override
   void initState() {
@@ -54,6 +63,446 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
     Clipboard.setData(
         ClipboardData(text: widget.orderData['orderId'] ?? '#NL1024'));
     toastSuccess("Order ID copied");
+  }
+
+  void _showReceiptDialog(String receipt) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0857A0),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.receipt_long,
+                        color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        "Payment Receipt",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Get.back(),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 20),
+                    ),
+                  ],
+                ),
+              ),
+              // Receipt content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Text(
+                      receipt,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF172033),
+                        height: 1.6,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Copy button
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: receipt));
+                      toastSuccess("Receipt copied");
+                    },
+                    icon: const Icon(Icons.copy, size: 15),
+                    label: const Text("Copy Receipt"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0857A0),
+                      side: const BorderSide(color: Color(0xFF0857A0)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _generateAndPrintPackagingSlip() async {
+    setState(() {
+      _isDownloadingPdf = true;
+    });
+
+    try {
+      final order = widget.orderData;
+      final String orderId = order['orderId'] ?? 'N/A';
+      // Load Unicode-capable fonts (Noto Sans supports all characters)
+      final pw.Font fontRegular = await PdfGoogleFonts.notoSansRegular();
+      final pw.Font fontBold = await PdfGoogleFonts.notoSansBold();
+      final String customerName = order['customerName'] ?? 'N/A';
+      final String customerPhone = order['customerPhone'] ?? '';
+      final String customerAltPhone = order['customerAltPhone'] ?? '';
+      final String customerAddress = order['customerLocation'] ?? 'N/A';
+      final String paymentMethod =
+          (order['paymentMethod'] ?? 'N/A').toString().toUpperCase();
+      final String paymentStatus = order['paymentStatus'] ?? 'N/A';
+      final String transactionId = order['transactionId'] ?? '';
+      final String status = order['status'] ?? 'N/A';
+      final num subtotal =
+          num.tryParse(order['subtotal']?.toString() ?? '0') ?? 0;
+      final List items = order['items'] is List ? order['items'] : [];
+      final String now =
+          DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
+
+      final pdf = pw.Document(
+        theme: pw.ThemeData.withFont(
+          base: fontRegular,
+          bold: fontBold,
+        ),
+      );
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: const PdfPageFormat(4 * 72.0, 6 * 72.0,
+              marginAll: 10), // 4x6 inches
+          build: (pw.Context ctx) {
+            final isCod =
+                paymentMethod.contains('COD') || paymentMethod.contains('CASH');
+            final topText = isCod
+                ? 'COD Collect amount : Rs. ${subtotal.toStringAsFixed(2)}'
+                : 'PREPAID : Rs. ${subtotal.toStringAsFixed(2)}';
+
+            return pw.Container(
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.black, width: 1.5),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Top Bar
+                  pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.all(4),
+                    color: PdfColors.grey300,
+                    child: pw.Text(
+                      topText,
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 10),
+                    ),
+                  ),
+
+                  // Delivery Address & QR
+                  pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      // Address (Left)
+                      pw.Expanded(
+                        flex: 6,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.all(4),
+                          decoration: const pw.BoxDecoration(
+                            border: pw.Border(
+                              right: pw.BorderSide(
+                                  color: PdfColors.black, width: 0.5),
+                              bottom: pw.BorderSide(
+                                  color: PdfColors.black, width: 0.5),
+                            ),
+                          ),
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Text('DELIVERY ADDRESS:',
+                                  style: pw.TextStyle(
+                                      fontWeight: pw.FontWeight.bold,
+                                      fontSize: 8)),
+                              pw.Text(customerName,
+                                  style: pw.TextStyle(
+                                      fontWeight: pw.FontWeight.bold,
+                                      fontSize: 9)),
+                              pw.Text(customerAddress,
+                                  style: const pw.TextStyle(fontSize: 8)),
+                              if (customerPhone.isNotEmpty)
+                                pw.Text('Ph: $customerPhone',
+                                    style: const pw.TextStyle(fontSize: 8)),
+                              if (customerAltPhone.isNotEmpty)
+                                pw.Text('Alt: $customerAltPhone',
+                                    style: const pw.TextStyle(fontSize: 8)),
+                              pw.SizedBox(height: 4),
+                              pw.Text('SURFACE',
+                                  style: pw.TextStyle(
+                                      fontWeight: pw.FontWeight.bold,
+                                      fontSize: 10,
+                                      letterSpacing: 2)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // QR Code (Right)
+                      pw.Expanded(
+                        flex: 4,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.all(4),
+                          decoration: const pw.BoxDecoration(
+                            border: pw.Border(
+                              bottom: pw.BorderSide(
+                                  color: PdfColors.black, width: 0.5),
+                            ),
+                          ),
+                          alignment: pw.Alignment.center,
+                          child: pw.BarcodeWidget(
+                            barcode: pw.Barcode.qrCode(),
+                            data: orderId,
+                            width: 80,
+                            height: 80,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Courier Info
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(4),
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(
+                          bottom: pw.BorderSide(
+                              color: PdfColors.black, width: 0.5)),
+                    ),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text('Courier Name: NaattuLink Logistics',
+                                style: pw.TextStyle(
+                                    fontWeight: pw.FontWeight.bold,
+                                    fontSize: 8)),
+                            pw.Text('AWB No: $orderId',
+                                style: pw.TextStyle(
+                                    fontWeight: pw.FontWeight.bold,
+                                    fontSize: 8)),
+                          ],
+                        ),
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text('Date: ${now.split(',')[0]}',
+                                style: pw.TextStyle(
+                                    fontWeight: pw.FontWeight.bold,
+                                    fontSize: 8)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Sold By
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(4),
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(
+                          bottom: pw.BorderSide(
+                              color: PdfColors.black, width: 0.5)),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('Sold By: NaattuLink Seller',
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold, fontSize: 8)),
+                        pw.Text('Registered Address',
+                            style: const pw.TextStyle(fontSize: 7)),
+                      ],
+                    ),
+                  ),
+
+                  // Products Table
+                  pw.Container(
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(
+                          bottom: pw.BorderSide(
+                              color: PdfColors.black, width: 0.5)),
+                    ),
+                    child: pw.Table(
+                      border: pw.TableBorder.symmetric(
+                          inside: const pw.BorderSide(
+                              color: PdfColors.black, width: 0.5)),
+                      columnWidths: {
+                        0: const pw.FlexColumnWidth(5),
+                        1: const pw.FlexColumnWidth(1),
+                      },
+                      children: [
+                        pw.TableRow(
+                          children: [
+                            pw.Padding(
+                                padding: const pw.EdgeInsets.all(2),
+                                child: pw.Text('Product',
+                                    style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 8))),
+                            pw.Padding(
+                                padding: const pw.EdgeInsets.all(2),
+                                child: pw.Text('Qty',
+                                    style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 8),
+                                    textAlign: pw.TextAlign.center)),
+                          ],
+                        ),
+                        ...items.map((item) {
+                          final name = item['name']?.toString() ?? 'Product';
+                          final qty =
+                              num.tryParse(item['qty']?.toString() ?? '1') ?? 1;
+                          return pw.TableRow(
+                            children: [
+                              pw.Padding(
+                                  padding: const pw.EdgeInsets.all(2),
+                                  child: pw.Text(name,
+                                      style: const pw.TextStyle(fontSize: 8))),
+                              pw.Padding(
+                                  padding: const pw.EdgeInsets.all(2),
+                                  child: pw.Text('$qty',
+                                      style: const pw.TextStyle(fontSize: 8),
+                                      textAlign: pw.TextAlign.center)),
+                            ],
+                          );
+                        }).toList(),
+                        pw.TableRow(
+                          children: [
+                            pw.Padding(
+                                padding: const pw.EdgeInsets.all(2),
+                                child: pw.Text('Total',
+                                    style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 8))),
+                            pw.Padding(
+                                padding: const pw.EdgeInsets.all(2),
+                                child: pw.Text('${items.length}',
+                                    style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 8),
+                                    textAlign: pw.TextAlign.center)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Bottom Section (Tracking and Barcode)
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(4),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 2),
+                            color: PdfColors.black,
+                            child: pw.Text('Handover to NaattuLink Logistics',
+                                style: pw.TextStyle(
+                                    color: PdfColors.white,
+                                    fontWeight: pw.FontWeight.bold,
+                                    fontSize: 8)),
+                          ),
+                          pw.SizedBox(height: 6),
+                          pw.Text('Tracking ID: $orderId',
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold, fontSize: 8)),
+                          pw.SizedBox(height: 6),
+                          pw.BarcodeWidget(
+                            barcode: pw.Barcode.code128(),
+                            data: orderId,
+                            width: double.infinity,
+                            height: 40,
+                            drawText: false,
+                          ),
+                          pw.SizedBox(height: 6),
+                          pw.Text('Order ID: $orderId',
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold, fontSize: 8)),
+                          pw.Spacer(),
+                          pw.Align(
+                            alignment: pw.Alignment.bottomRight,
+                            child: pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.end,
+                              children: [
+                                pw.Text('Ordered Through',
+                                    style: const pw.TextStyle(fontSize: 6)),
+                                pw.Text('NaattuLink',
+                                    style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 10,
+                                        fontStyle: pw.FontStyle.italic)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+
+      final Uint8List pdfBytes = await pdf.save();
+      await _slipChannel.invokeMethod('savePdfToDownloads', {
+        'bytes': pdfBytes,
+        'fileName': 'PackagingSlip_$orderId.pdf',
+      });
+      toastSuccess('Packaging slip saved to Downloads/NaattuLink');
+    } on PlatformException catch (e) {
+      toastError('Failed to save slip: ${e.message}');
+    } catch (e) {
+      toastError('Failed to save slip: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloadingPdf = false;
+        });
+      }
+    }
   }
 
   @override
@@ -100,10 +549,25 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Color(0xFF172033)),
-            onPressed: () {},
-          ),
+          if (currentStatus != 'Cancelled' &&
+              currentStatus != 'Rejected' &&
+              currentStatus != 'Dispatched')
+            _isDownloadingPdf
+                ? const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Color(0xFF172033)),
+                    ),
+                  )
+                : IconButton(
+                    tooltip: 'Download Packaging Slip',
+                    icon: const Icon(Icons.download_outlined,
+                        color: Color(0xFF172033)),
+                    onPressed: _generateAndPrintPackagingSlip,
+                  ),
         ],
       ),
       body: SafeArea(
@@ -117,6 +581,12 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildStatusBanner(),
+                    if (widget.orderData['Refuned']?.toString() == '1' ||
+                        widget.orderData['Refuned']?.toString().toLowerCase() ==
+                            'true' ||
+                        widget.orderData['Refuned'] == true ||
+                        widget.orderData['Refuned'] == 1)
+                      _buildRefundStatusBanner(),
                     const SizedBox(height: 16),
                     _buildCustomerDetails(),
                     const SizedBox(height: 16),
@@ -132,6 +602,49 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
             _buildBottomActions(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildRefundStatusBanner() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_outline,
+              color: Colors.green.shade700, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Refund Processed Successfully",
+                  style: TextStyle(
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "The refund for this order has been marked as completed.",
+                  style: TextStyle(
+                    color: Colors.green.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -684,33 +1197,99 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
               widget.orderData['transactionId'].toString().isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("🆔 ", style: TextStyle(fontSize: 12)),
-                  const Text(
-                    "Trxn ID: ",
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF667085)),
+                  Row(
+                    children: [
+                      const Text("🆔 ", style: TextStyle(fontSize: 12)),
+                      const Text(
+                        "Transaction ID: ",
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF667085)),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${widget.orderData['transactionId']}',
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF172033)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                  Flexible(
-                    child: Text(
-                      '${widget.orderData['transactionId']}',
-                      style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF172033)),
-                      overflow: TextOverflow.ellipsis,
+                  if (widget.orderData['ocrPaymentDateTime'] != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_outlined,
+                            size: 12, color: Color(0xFF667085)),
+                        const SizedBox(width: 5),
+                        Text(
+                          () {
+                            try {
+                              final dt = DateTime.parse(
+                                  widget.orderData['ocrPaymentDateTime']);
+                              return DateFormat('dd MMM yyyy, hh:mm a')
+                                  .format(dt.toLocal());
+                            } catch (_) {
+                              return widget.orderData['ocrPaymentDateTime']
+                                  .toString();
+                            }
+                          }(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF667085),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
+                  if (widget.orderData['formattedReceipt'] != null &&
+                      widget.orderData['formattedReceipt']
+                          .toString()
+                          .isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => _showReceiptDialog(
+                          widget.orderData['formattedReceipt'].toString()),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0857A0),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.receipt_long,
+                                size: 13, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text(
+                              "View Payment Receipt",
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -761,9 +1340,25 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
                   title: currentStatus == 'Cancelled'
                       ? "Order Cancelled"
                       : "Order Rejected",
-                  subtitle: currentStatus == 'Cancelled'
-                      ? "The order was cancelled by the buyer"
-                      : "You rejected this order",
+                  subtitle: () {
+                    final paymentMethod =
+                        (widget.orderData['paymentMethod'] ?? '')
+                            .toString()
+                            .toLowerCase();
+                    final transactionId =
+                        (widget.orderData['transactionId'] ?? '').toString();
+                    final isOnline = paymentMethod.contains('online') ||
+                        paymentMethod.contains('upi') ||
+                        transactionId.isNotEmpty;
+
+                    if (isOnline) {
+                      return "Refund amount will process within 2 days";
+                    }
+
+                    return currentStatus == 'Cancelled'
+                        ? "The order was cancelled by the buyer"
+                        : "You rejected this order";
+                  }(),
                   isCompleted: false,
                   isError: true,
                   isLast: true,
@@ -882,9 +1477,29 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
   }
 
   Widget _buildBottomActions() {
+    final isRefunded = widget.orderData['Refuned']?.toString() == '1' ||
+        widget.orderData['Refuned']?.toString().toLowerCase() == 'true' ||
+        widget.orderData['Refuned'] == true ||
+        widget.orderData['Refuned'] == 1;
+
+    final paymentMethod =
+        widget.orderData['paymentMethod']?.toString().toLowerCase() ?? '';
+    final transactionId = widget.orderData['transactionId']?.toString() ?? '';
+    final isOnline = paymentMethod.contains('online') ||
+        paymentMethod.contains('upi') ||
+        transactionId.isNotEmpty;
+
+    final isFromRefundScreen = widget.orderData['isFromRefundScreen'] == true;
+
+    final isRefundPending = isFromRefundScreen &&
+        (currentStatus == 'Cancelled' || currentStatus == 'Rejected') &&
+        isOnline &&
+        !isRefunded;
+
     if (currentStatus != 'Pending' &&
         currentStatus != 'Pending Verification' &&
-        currentStatus != 'Processing') {
+        currentStatus != 'Processing' &&
+        !isRefundPending) {
       return const SizedBox.shrink();
     }
 
@@ -981,8 +1596,125 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
                 ),
               ),
             ),
+          ] else if (isRefundPending) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _showRefundCompletedDialog,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle_outline, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      "Refund Completed",
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ],
+      ),
+    );
+  }
+
+  void _showRefundCompletedDialog() {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check_circle_outline,
+                  color: Colors.green, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                "Confirm Refund",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Are you sure you have completed the refund for this order? This action cannot be undone.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text("Cancel"),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Get.back(); // close dialog
+                        Get.dialog(
+                            const Center(child: CircularProgressIndicator()),
+                            barrierDismissible: false);
+
+                        try {
+                          await FirebaseFirestore.instance
+                              .collection('bookings')
+                              .doc(widget.orderData['docId'])
+                              .update({
+                            'Refuned': true,
+                            'refundedAt': FieldValue.serverTimestamp(),
+                          });
+
+                          Get.back(); // close loader
+                          setState(() {
+                            widget.orderData['Refuned'] = true;
+                          });
+                          toastSuccess("Order marked as refunded");
+
+                          if (Get.isRegistered<SellerDashboardController>()) {
+                            Get.find<SellerDashboardController>()
+                                .fetchDashboardMetrics();
+                          }
+
+                          Get.back(); // return to previous screen
+                        } catch (e) {
+                          Get.back(); // close loader
+                          toastError("Failed to update refund status");
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text("Confirm"),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1286,15 +2018,17 @@ class _SellerOrderDetailsScreenState extends State<SellerOrderDetailsScreen> {
             final data = widget.orderData;
             final productId = data['productId'];
             final variantId = data['variantId'];
+            final variantName = data['variantName'];
             final quantityStr = data['quantity']?.toString() ?? '1';
             final quantity = int.tryParse(quantityStr) ?? 1;
 
             if (productId != null) {
               await StockManager.restoreStock(
-                bookingId: orderId,
+                bookingId: docId ?? orderId,
                 productId: productId.toString(),
                 quantity: quantity,
                 variantId: variantId?.toString(),
+                variantName: variantName?.toString(),
               );
             }
           } catch (e) {

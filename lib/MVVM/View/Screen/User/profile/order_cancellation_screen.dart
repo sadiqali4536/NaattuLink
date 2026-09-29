@@ -119,6 +119,7 @@ class _OrderCancellationScreenState extends State<OrderCancellationScreen> {
         final productId = data['productId'];
         if (productId != null) {
           final variantId = data['variantId'];
+          final variantName = data['variantName'];
           final quantityStr = data['quantity']?.toString() ?? '1';
           final quantity = int.tryParse(quantityStr) ?? 1;
 
@@ -127,6 +128,7 @@ class _OrderCancellationScreenState extends State<OrderCancellationScreen> {
             productId: productId.toString(),
             quantity: quantity,
             variantId: variantId?.toString(),
+            variantName: variantName?.toString(),
           );
         }
       } catch (e) {

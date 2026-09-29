@@ -12,7 +12,10 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart';
 import 'package:naattulink/MVVM/model/user/cart_item_model.dart';
-import 'package:naattulink/MVVM/utils/payment_ocr_service.dart';
+import 'package:naattulink/MVVM/utils/payment_verification/ocr/payment_ocr_service.dart';
+import 'package:naattulink/MVVM/utils/payment_verification/models/payment_ocr_result.dart';
+import 'package:naattulink/MVVM/utils/payment_verification/models/payment_validation_result.dart';
+import 'package:naattulink/MVVM/utils/payment_verification/validator/payment_screenshot_validator.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/View/Screen/User/checkout/controller/payment_controller.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -58,7 +61,8 @@ class _PaymentPageState extends State<PaymentPage> {
   final GlobalKey _qrKey = GlobalKey();
   final TextEditingController _transactionIdController =
       TextEditingController();
-  PaymentReceiptData? _paymentReceiptData;
+  PaymentOcrResult? _validatedOcrResult;
+  PaymentValidationResult? _validatedPaymentResult;
   DateTime? _qrGeneratedAt;
   String? _qrNote;
 
@@ -328,146 +332,87 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Future<void> _handleOcrUpload() async {
-    setState(() => _isExtractingOcr = true);
-    final receiptData = await PaymentOcrService.extractPaymentReceipt();
+    setState(() {
+      _isExtractingOcr = true;
+      _validatedOcrResult = null;
+      _validatedPaymentResult = null;
+    });
+    final ocrResult = await PaymentOcrService.extractPaymentReceipt(
+      expectedAmount: widget.totalAmount,
+      expectedUpiId: _platformUpi,
+    );
     setState(() => _isExtractingOcr = false);
 
-    if (receiptData != null &&
-        receiptData.upiTransactionId != null &&
-        receiptData.upiTransactionId!.isNotEmpty) {
-      if (!_validateOcrData(receiptData)) {
-        return; // Do not show receipt UI if invalid
-      }
-      _paymentReceiptData = receiptData;
-      _transactionIdController.text = receiptData.upiTransactionId!;
-      if (mounted) {
-        CherryToast.success(
-          title: const Text('Success',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: const Text('Payment details extracted. Please verify.'),
-        ).show(context);
-      }
-    } else {
-      if (mounted) {
-        CherryToast.warning(
-          title: const Text('Not Found',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: const Text(
-              'Could not extract Transaction ID. Please enter manually.'),
-        ).show(context);
-      }
+    if (ocrResult == null) return;
+
+    if (_qrGeneratedAt == null || _qrExpiresAt == null) {
+      CherryToast.error(
+        title:
+            const Text('Error', style: TextStyle(fontWeight: FontWeight.bold)),
+        description: const Text('Payment session has expired or is invalid.'),
+      ).show(context);
+      return;
     }
+
+    final validationResult = PaymentScreenshotValidator.validate(
+      ocrResult: ocrResult,
+      expectedAmount: widget.totalAmount,
+      qrGeneratedAt: _qrGeneratedAt!,
+      qrExpiresAt: _qrExpiresAt!,
+      expectedUpiId: _platformUpi,
+    );
+
+    if (validationResult.status != PaymentVerificationStatus.valid) {
+      setState(() {
+        _validatedOcrResult = null;
+        _validatedPaymentResult = validationResult;
+      });
+
+      String errorMsg =
+          'This receipt appears to be invalid or incomplete. Please upload the correct payment screenshot.';
+      if (validationResult.reasons
+          .contains(PaymentValidationReason.amountMismatch)) {
+        errorMsg = 'The amount on the receipt does not match the order total.';
+      } else if (validationResult.reasons
+          .contains(PaymentValidationReason.paymentBeforeQrCreation)) {
+        errorMsg =
+            'This payment was made before the QR was generated. It looks like an old payment.';
+      }
+
+      CherryToast.error(
+        title: const Text('Invalid Receipt',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        description: Text(errorMsg),
+      ).show(context);
+      return;
+    }
+
+    setState(() {
+      _validatedOcrResult = ocrResult;
+      _validatedPaymentResult = validationResult;
+    });
+
+    if (ocrResult.transactionIds.isNotEmpty) {
+      _transactionIdController.text = ocrResult.transactionIds.first;
+    } else if (ocrResult.referenceIds.isNotEmpty) {
+      _transactionIdController.text = ocrResult.referenceIds.first;
+    }
+
+    CherryToast.success(
+      title:
+          const Text('Success', style: TextStyle(fontWeight: FontWeight.bold)),
+      description: const Text('Payment verified! Please confirm to proceed.'),
+    ).show(context);
   }
 
-  bool _validateOcrData(PaymentReceiptData r) {
-    if (r.amount == null) {
-      CherryToast.error(
-        title: const Text('Missing Amount',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        description: const Text(
-            'We could not read the payment amount from this screenshot. Please upload a clear receipt.'),
-      ).show(context);
-      return false;
+  Future<void> _submitUpiPayment({
+    required PaymentOcrResult ocrResult,
+    required PaymentValidationResult validationResult,
+  }) async {
+    if (validationResult.status != PaymentVerificationStatus.valid) {
+      return;
     }
 
-    if (r.status == null) {
-      if (r.upiTransactionId != null &&
-          r.upiTransactionId!.isNotEmpty &&
-          r.amount == widget.totalAmount) {
-        // If we found a valid transaction ID and the amount matches perfectly, assume success.
-        // Some apps (like super.money) hide the "Success" text or use icons that OCR misses.
-      } else {
-        CherryToast.error(
-          title: const Text('Missing Status',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: const Text(
-              'We could not verify if the payment was completed from this screenshot.'),
-        ).show(context);
-        return false;
-      }
-    }
-
-    final bool amountMatches = r.amount == widget.totalAmount;
-    final bool amountMatchesMisread = r.amount != null &&
-        (r.amount.toString() == '7${widget.totalAmount.toStringAsFixed(0)}' ||
-            r.amount.toString() ==
-                '7${widget.totalAmount.toStringAsFixed(1)}' ||
-            r.amount.toString() ==
-                '7${widget.totalAmount.toStringAsFixed(2)}' ||
-            r.amount.toString() == '7${widget.totalAmount}' ||
-            r.amount ==
-                double.tryParse('7${widget.totalAmount.toStringAsFixed(0)}') ||
-            r.amount == double.tryParse('7${widget.totalAmount}'));
-
-    final bool isMissingAmountButValidTxn = r.amount == null &&
-        r.upiTransactionId != null &&
-        r.status?.toLowerCase() == 'completed';
-
-    if (!amountMatches &&
-        !amountMatchesMisread &&
-        !isMissingAmountButValidTxn) {
-      CherryToast.error(
-        title: const Text('Payment Amount Does Not Match',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        description: Text(
-            'Paid amount: ₹${r.amount}\nRequired amount: ₹${widget.totalAmount}'),
-      ).show(context);
-      return false;
-    }
-
-    if (_platformUpi != null && _platformUpi!.isNotEmpty) {
-      final expectedUsername = _platformUpi!.toLowerCase().split('@')[0];
-      final expectedDomain = _platformUpi!.toLowerCase().split('@').length > 1
-          ? _platformUpi!.toLowerCase().split('@')[1]
-          : '';
-
-      bool isMatch = false;
-      final extractedReceiver = r.receiverUpi?.toLowerCase() ?? '';
-      final extractedPayer = r.payerUpi?.toLowerCase() ?? '';
-
-      // Some apps like GPay mask the UPI ID like ......4536@slc
-      String last4 = expectedUsername.length >= 4
-          ? expectedUsername.substring(expectedUsername.length - 4)
-          : expectedUsername;
-
-      if (extractedReceiver.isEmpty && extractedPayer.isEmpty) {
-        // If the screenshot doesn't contain ANY UPI IDs, we let it pass
-        // because apps like super.money don't show the UPI ID on the success screen.
-        isMatch = true;
-      } else if (extractedReceiver.contains(expectedUsername) ||
-          extractedReceiver.contains(last4 + '@') ||
-          extractedPayer.contains(expectedUsername) ||
-          extractedPayer.contains(last4 + '@')) {
-        isMatch = true;
-      }
-
-      if (!isMatch) {
-        CherryToast.error(
-          title: const Text('Invalid Receiver',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description:
-              const Text('The payment was sent to an incorrect UPI ID.'),
-        ).show(context);
-        return false;
-      }
-    }
-
-    if (r.status != null &&
-        !r.status!.toLowerCase().contains('completed') &&
-        !r.status!.toLowerCase().contains('success')) {
-      CherryToast.error(
-        title: const Text('Payment Not Completed',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        description:
-            const Text('The payment receipt does not show a completed status.'),
-      ).show(context);
-      return false;
-    }
-
-    return true;
-  }
-
-  Future<void> _submitUpiPayment() async {
     final txnId = _transactionIdController.text.trim();
     if (txnId.isEmpty) {
       CherryToast.warning(
@@ -487,26 +432,16 @@ class _PaymentPageState extends State<PaymentPage> {
       return;
     }
 
-    final r = _paymentReceiptData;
-    if (r == null) {
-      CherryToast.error(
-        title:
-            const Text('Error', style: TextStyle(fontWeight: FontWeight.bold)),
-        description: const Text('Please upload a valid payment receipt.'),
-      ).show(context);
-      return;
-    }
+    final r = ocrResult;
 
     // --- 3. PRINT OCR LOGS ---
     debugPrint('\n=============================================');
     debugPrint('          OCR EXTRACTED RESULT               ');
     debugPrint('=============================================');
     debugPrint('[OCR] Extracted Amount        : ₹${r.amount}');
-    debugPrint('[OCR] Extracted Date          : ${r.transactionDate}');
-    debugPrint('[OCR] Extracted Time          : ${r.transactionTime}');
+    debugPrint('[OCR] Extracted Date Time     : ${r.paymentDateTime}');
     debugPrint('[OCR] Extracted Receiver UPI  : ${r.receiverUpi}');
-    debugPrint('[OCR] Extracted Payer UPI     : ${r.payerUpi}');
-    debugPrint('[OCR] Extracted Status        : ${r.status}');
+    debugPrint('[OCR] Has Success Indicator   : ${r.hasSuccessIndicator}');
     debugPrint('[USER] Entered Txn ID         : $txnId');
     debugPrint('---------------------------------------------');
     debugPrint('[EXPECTED] Order Amount       : ₹${widget.totalAmount}');
@@ -514,7 +449,7 @@ class _PaymentPageState extends State<PaymentPage> {
     debugPrint('[EXPECTED] Receiver UPI       : $_platformUpi');
     debugPrint('=============================================\n');
 
-    if (!_validateOcrData(r)) return;
+    // Validation is already handled in _handleOcrUpload via PaymentScreenshotValidator
 
     // --- 10. ALL CHECKS PASSED ---
     setState(() => _isSubmitting = true);
@@ -560,18 +495,10 @@ class _PaymentPageState extends State<PaymentPage> {
       };
 
       paymentDocData.addAll({
-        if (r.payerName != null) 'payerName': r.payerName!,
-        if (r.payerPhone != null) 'payerPhone': r.payerPhone!,
-        if (r.payerBank != null) 'payerBank': r.payerBank!,
-        if (r.payerUpi != null) 'payerUpi': r.payerUpi!,
-        if (r.receiverName != null) 'receiverName': r.receiverName!,
-        if (r.receiverBank != null) 'receiverBank': r.receiverBank!,
         if (r.receiverUpi != null) 'receiverUpi': r.receiverUpi!,
-        if (r.googleTransactionId != null)
-          'googleTransactionId': r.googleTransactionId!,
-        if (r.status != null) 'status': r.status!,
-        if (r.transactionDate != null) 'transactionDate': r.transactionDate!,
-        if (r.transactionTime != null) 'transactionTime': r.transactionTime!,
+        if (r.paymentDateTime != null)
+          'transactionDateTime': r.paymentDateTime!.toIso8601String(),
+        'hasSuccessIndicator': r.hasSuccessIndicator,
       });
 
       final receiptBuffer = StringBuffer();
@@ -579,56 +506,21 @@ class _PaymentPageState extends State<PaymentPage> {
           '# NAATTULINK\n\n### Payment Receipt\n\n**PAYMENT COMPLETED**\n\n---');
       receiptBuffer.writeln(
           '\n### Payment Summary\n\n**Amount Paid**\n\n# ₹${widget.totalAmount.toStringAsFixed(2)}');
-      if (r.paymentReference != null)
-        receiptBuffer.writeln('\n**Payment Reference**\n${r.paymentReference}');
       if (txnId.isNotEmpty)
         receiptBuffer.writeln('\n**UPI Transaction ID**\n$txnId');
-      if (r.transactionDate != null)
-        receiptBuffer.writeln('\n**Date**\n${r.transactionDate}');
-      if (r.transactionTime != null)
-        receiptBuffer.writeln('\n**Time**\n${r.transactionTime}');
+      if (r.paymentDateTime != null)
+        receiptBuffer.writeln('\n**Date & Time**\n${r.paymentDateTime}');
       receiptBuffer.writeln('\n---');
 
-      if (r.payerName != null ||
-          r.payerPhone != null ||
-          r.payerBank != null ||
-          r.payerUpi != null) {
-        receiptBuffer.writeln('\n### Paid By');
-        if (r.payerName != null)
-          receiptBuffer.writeln('\n**Name**\n${r.payerName}');
-        if (r.payerPhone != null)
-          receiptBuffer.writeln('\n**Phone**\n${r.payerPhone}');
-        if (r.payerBank != null)
-          receiptBuffer.writeln('\n**Sender Bank**\n${r.payerBank}');
-        if (r.payerUpi != null)
-          receiptBuffer.writeln('\n**Sender UPI**\n${r.payerUpi}');
-        receiptBuffer.writeln('\n---');
-      }
-
-      if (r.receiverName != null ||
-          r.receiverBank != null ||
-          r.receiverUpi != null) {
+      if (r.receiverUpi != null) {
         receiptBuffer.writeln('\n### Paid To');
-        if (r.receiverName != null)
-          receiptBuffer.writeln('\n**Name**\n${r.receiverName}');
-        if (r.receiverBank != null)
-          receiptBuffer.writeln('\n**Receiver Bank**\n${r.receiverBank}');
-        if (r.receiverUpi != null)
-          receiptBuffer.writeln('\n**Receiver UPI**\n${r.receiverUpi}');
+        receiptBuffer.writeln('\n**Receiver UPI**\n${r.receiverUpi}');
         receiptBuffer.writeln('\n---');
       }
 
-      if (r.googleTransactionId != null ||
-          (r.status != null && r.status!.isNotEmpty)) {
-        receiptBuffer.writeln('\n### Transaction Details');
-        if (r.googleTransactionId != null)
-          receiptBuffer
-              .writeln('\n**Google Transaction ID**\n${r.googleTransactionId}');
-        if (r.status != null && r.status!.isNotEmpty)
-          receiptBuffer.writeln(
-              '\n**Status**\n✓ ${r.status![0].toUpperCase()}${r.status!.substring(1)}');
-        receiptBuffer.writeln('\n---');
-      }
+      receiptBuffer.writeln('\n### Transaction Details');
+      receiptBuffer.writeln('\n**Status**\n✓ Completed');
+      receiptBuffer.writeln('\n---');
 
       receiptBuffer.writeln(
           '\n**Payment successfully completed through UPI**\n\nPowered by Unified Payments Interface (UPI)\n\n**NaattuLink**\nYour City, One App');
@@ -638,12 +530,24 @@ class _PaymentPageState extends State<PaymentPage> {
       await FirebaseFirestore.instance.collection('payments').doc(txnId).set(
           paymentDocData); // Removed merge: true to avoid overwriting blindly if logic somehow gets here
 
+      final Map<String, dynamic> ocrData = {
+        'ocrAmountExtracted': r.amount,
+        'ocrReceiverUpi': r.receiverUpi,
+        'ocrPaymentDateTime': r.paymentDateTime?.toIso8601String(),
+        'ocrHasSuccessIndicator': r.hasSuccessIndicator,
+        'ocrConfidence': r.confidence,
+        'ocrReferenceIds': r.referenceIds,
+        'ocrTransactionIds': r.transactionIds,
+        'isOcrVerified': true,
+      };
+
       controller.placeOrder(
         cartItems: widget.cartItems,
         totalAmount: widget.totalAmount,
         address: widget.address,
         isFromCart: widget.isFromCart,
         formattedReceipt: receiptBuffer.toString(),
+        ocrData: ocrData,
       );
     } catch (e) {
       if (mounted) {
@@ -1039,14 +943,17 @@ class _PaymentPageState extends State<PaymentPage> {
                 color: Colors.black87)),
         const SizedBox(height: 16),
 
-        if (_paymentReceiptData != null) ...[
+        if (_validatedOcrResult != null &&
+            _validatedPaymentResult?.status ==
+                PaymentVerificationStatus.valid) ...[
           _buildPaymentReceiptUI(),
           const SizedBox(height: 24),
           Center(
             child: TextButton.icon(
               onPressed: () {
                 setState(() {
-                  _paymentReceiptData = null;
+                  _validatedOcrResult = null;
+                  _validatedPaymentResult = null;
                   _transactionIdController.clear();
                 });
               },
@@ -1119,7 +1026,16 @@ class _PaymentPageState extends State<PaymentPage> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: _isSubmitting ? null : _submitUpiPayment,
+            onPressed: (_isSubmitting ||
+                    _validatedOcrResult == null ||
+                    _validatedPaymentResult == null ||
+                    _validatedPaymentResult!.status !=
+                        PaymentVerificationStatus.valid)
+                ? null
+                : () => _submitUpiPayment(
+                      ocrResult: _validatedOcrResult!,
+                      validationResult: _validatedPaymentResult!,
+                    ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0F2E5A),
               shape: RoundedRectangleBorder(
@@ -1247,7 +1163,7 @@ class _PaymentPageState extends State<PaymentPage> {
   // ─── Receipt UI Helpers ──────────────────────────────────────────────────────
 
   Widget _buildPaymentReceiptUI() {
-    final r = _paymentReceiptData!;
+    final r = _validatedOcrResult!;
     return Container(
         width: double.infinity,
         decoration: BoxDecoration(
@@ -1308,58 +1224,28 @@ class _PaymentPageState extends State<PaymentPage> {
                             color: Color(0xFF0F2E5A))),
                     const SizedBox(height: 24),
                     _buildReceiptCard('Payment Summary', [
-                      if (r.paymentReference != null)
+                      if (r.transactionIds.isNotEmpty)
                         _buildReceiptRow(
-                            'Payment Reference', r.paymentReference!),
-                      if (r.upiTransactionId != null)
+                            'Transaction ID', r.transactionIds.first)
+                      else if (r.referenceIds.isNotEmpty)
+                        _buildReceiptRow('Reference ID', r.referenceIds.first),
+                      if (r.paymentDateTime != null)
                         _buildReceiptRow(
-                            'UPI Transaction ID', r.upiTransactionId!),
-                      if (r.transactionDate != null)
-                        _buildReceiptRow('Date', r.transactionDate!),
-                      if (r.transactionTime != null)
-                        _buildReceiptRow('Time', r.transactionTime!),
+                            'Date & Time',
+                            DateFormat('dd MMM yyyy, hh:mm a')
+                                .format(r.paymentDateTime!)),
                     ]),
-                    if (r.payerName != null ||
-                        r.payerPhone != null ||
-                        r.payerBank != null ||
-                        r.payerUpi != null) ...[
-                      const SizedBox(height: 16),
-                      _buildReceiptCard('Paid By', [
-                        if (r.payerName != null)
-                          _buildReceiptRow('Name', r.payerName!),
-                        if (r.payerPhone != null)
-                          _buildReceiptRow('Phone', r.payerPhone!),
-                        if (r.payerBank != null)
-                          _buildReceiptRow('Sender Bank', r.payerBank!),
-                        if (r.payerUpi != null)
-                          _buildReceiptRow('Sender UPI', r.payerUpi!),
-                      ]),
-                    ],
-                    if (r.receiverName != null ||
-                        r.receiverBank != null ||
-                        r.receiverUpi != null) ...[
+                    if (r.receiverUpi != null) ...[
                       const SizedBox(height: 16),
                       _buildReceiptCard('Paid To', [
-                        if (r.receiverName != null)
-                          _buildReceiptRow('Name', r.receiverName!),
-                        if (r.receiverBank != null)
-                          _buildReceiptRow('Receiver Bank', r.receiverBank!),
-                        if (r.receiverUpi != null)
-                          _buildReceiptRow('Receiver UPI', r.receiverUpi!),
+                        _buildReceiptRow('Receiver UPI', r.receiverUpi!),
                       ]),
                     ],
-                    if (r.googleTransactionId != null ||
-                        (r.status != null && r.status!.isNotEmpty)) ...[
-                      const SizedBox(height: 16),
-                      _buildReceiptCard('Transaction Details', [
-                        if (r.googleTransactionId != null)
-                          _buildReceiptRow(
-                              'Google Transaction ID', r.googleTransactionId!),
-                        if (r.status != null && r.status!.isNotEmpty)
-                          _buildReceiptRow('Status',
-                              '✓ ${r.status![0].toUpperCase()}${r.status!.substring(1)}'),
-                      ]),
-                    ],
+                    const SizedBox(height: 16),
+                    _buildReceiptCard('Transaction Details', [
+                      if (r.hasSuccessIndicator)
+                        _buildReceiptRow('Status', '✓ Completed'),
+                    ]),
                     const SizedBox(height: 24),
                     const Text('Payment successfully completed through UPI',
                         style: TextStyle(

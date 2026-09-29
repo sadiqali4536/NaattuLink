@@ -418,6 +418,7 @@ class _MyBookingsState extends State<MyBookings> {
                                 if (isProductOrder) {
                                   final productId = data['productId'];
                                   final variantId = data['variantId'];
+                                  final variantName = data['variantName'];
                                   final quantity = data['quantity'] ?? 1;
 
                                   if (productId != null) {
@@ -426,6 +427,7 @@ class _MyBookingsState extends State<MyBookings> {
                                       productId: productId.toString(),
                                       quantity: quantity,
                                       variantId: variantId?.toString(),
+                                      variantName: variantName?.toString(),
                                     );
                                   }
                                 }
@@ -1050,14 +1052,60 @@ class _BookingCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _statusBadge(),
-                          const SizedBox(height: 6),
-                          _paymentBadge(),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _statusBadge(),
+                            const SizedBox(height: 6),
+                            _paymentBadge(),
+                            if (_status == 'cancelled')
+                              Builder(
+                                builder: (context) {
+                                  final paymentMethod = data['paymentMethod']
+                                          ?.toString()
+                                          .toLowerCase() ??
+                                      '';
+                                  final transactionId =
+                                      data['transactionId']?.toString() ?? '';
+                                  final isOnline =
+                                      paymentMethod.contains('online') ||
+                                          paymentMethod.contains('upi') ||
+                                          transactionId.isNotEmpty;
+
+                                  final isRefunded =
+                                      data['Refuned']?.toString() == '1' ||
+                                          data['Refuned']
+                                                  ?.toString()
+                                                  .toLowerCase() ==
+                                              'true' ||
+                                          data['Refuned'] == true ||
+                                          data['Refuned'] == 1;
+
+                                  if (isOnline) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 6),
+                                      child: Text(
+                                        isRefunded
+                                            ? 'Refund completed successfully'
+                                            : 'Refund amount will process within 2 days',
+                                        style: TextStyle(
+                                          color: isRefunded
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       SizedBox(
                         height: 32,
                         child: OutlinedButton(
@@ -1331,25 +1379,58 @@ class _BookingCard extends StatelessWidget {
                           data['Refuned']?.toString().toLowerCase() == 'true' ||
                           data['Refuned'] == true ||
                           data['Refuned'] == 1;
-                      return Row(
-                        children: [
-                          Text(
-                            isRefunded ? 'REFUNDED: ' : 'REFUND: ',
-                            style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.black45,
-                                fontWeight: FontWeight.w500),
-                          ),
-                          Text(
-                            isRefunded ? '₹$_price' : 'Pending',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFDC2626),
+
+                      final paymentMethod =
+                          data['paymentMethod']?.toString().toLowerCase() ?? '';
+                      final transactionId =
+                          data['transactionId']?.toString() ?? '';
+                      final isOnline = paymentMethod.contains('online') ||
+                          paymentMethod.contains('upi') ||
+                          transactionId.isNotEmpty;
+
+                      if (isRefunded) {
+                        return Row(
+                          children: [
+                            const Text(
+                              'REFUNDED: ',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.black45,
+                                  fontWeight: FontWeight.w500),
                             ),
+                            Text(
+                              '₹$_price',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFDC2626),
+                              ),
+                            ),
+                          ],
+                        );
+                      } else if (isOnline) {
+                        return Text(
+                          isRefunded
+                              ? 'Refund completed successfully'
+                              : 'Refund amount will process within 2 days',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isRefunded
+                                ? Colors.green
+                                : const Color(0xFFDC2626),
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
-                      );
+                        );
+                      } else {
+                        return const Text(
+                          'Cancelled',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFDC2626),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      }
                     } else {
                       return Row(
                         children: [

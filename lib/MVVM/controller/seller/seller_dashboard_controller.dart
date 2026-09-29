@@ -18,6 +18,7 @@ class SellerDashboardController extends GetxController {
   final RxDouble averageRating = 0.0.obs;
   final RxInt totalViews = 0.obs;
   final RxInt outOfStockProducts = 0.obs;
+  final RxInt refundPendingOrders = 0.obs;
 
   // Today's Sales State
   final Rx<DateTime> selectedSalesDate = DateTime.now().obs;
@@ -72,6 +73,7 @@ class SellerDashboardController extends GetxController {
       double sales = 0.0;
       double currentMonthSales = 0.0;
       int dispatchedOrdersCount = 0;
+      int refundPendingCount = 0;
       Set<String> uniqueCustomers = {};
       Set<String> todayUniqueCustomers = {};
 
@@ -98,6 +100,25 @@ class SellerDashboardController extends GetxController {
         // Count pending and processing orders
         if (status.contains('pending') || status.contains('process')) {
           pendingAndProcessingCount++;
+        }
+
+        // Count refund pending online orders
+        if (status.contains('cancel') || status.contains('reject')) {
+          final isRefunded = data['Refuned']?.toString() == '1' ||
+              data['Refuned']?.toString().toLowerCase() == 'true' ||
+              data['Refuned'] == true ||
+              data['Refuned'] == 1;
+
+          final paymentMethod =
+              data['paymentMethod']?.toString().toLowerCase() ?? '';
+          final transactionId = data['transactionId']?.toString() ?? '';
+          final isOnline = paymentMethod.contains('online') ||
+              paymentMethod.contains('upi') ||
+              transactionId.isNotEmpty;
+
+          if (isOnline && !isRefunded) {
+            refundPendingCount++;
+          }
         }
 
         // Check if the order is from this month
@@ -138,6 +159,7 @@ class SellerDashboardController extends GetxController {
       totalCustomers.value = uniqueCustomers.length;
       todayCustomers.value = todayUniqueCustomers.length;
       totalDispatchedOrders.value = dispatchedOrdersCount;
+      refundPendingOrders.value = refundPendingCount;
     } catch (e) {
       print("Error fetching dashboard metrics: $e");
     }

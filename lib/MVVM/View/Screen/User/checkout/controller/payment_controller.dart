@@ -130,6 +130,7 @@ class PaymentController extends GetxController {
     required AppLocationModel address,
     required bool isFromCart,
     String? formattedReceipt,
+    Map<String, dynamic>? ocrData,
   }) async {
     if (isPlacingOrder.value) return;
 
@@ -152,10 +153,12 @@ class PaymentController extends GetxController {
 
     try {
       String? generatedOrderId;
-      final String currentGroupId =
-          'ORD-${DateTime.now().millisecondsSinceEpoch}';
 
       for (var item in cartItems) {
+        // Generate a 13-digit unique ID using millisecondsSinceEpoch for EACH item
+        final String currentOrderId =
+            'ORD-${DateTime.now().millisecondsSinceEpoch}';
+
         String? finalSellerId = item.sellerId;
         if (finalSellerId == null || finalSellerId.isEmpty) {
           try {
@@ -174,7 +177,7 @@ class PaymentController extends GetxController {
         }
 
         final bookingData = {
-          'orderId': currentGroupId,
+          'orderId': currentOrderId,
           'userId': user.uid,
           'customerName': address.receiverName ?? user.displayName ?? '',
           'productId': item.productId,
@@ -199,6 +202,7 @@ class PaymentController extends GetxController {
           'sellerId': finalSellerId,
           'quantity': item.quantity,
           'variantName': item.variantName,
+          'variantId': item.variantId,
           'deliveryAddress': {
             'formattedAddress': _buildFullAddress(address),
             'latitude': address.latitude,
@@ -214,37 +218,57 @@ class PaymentController extends GetxController {
           if (formattedReceipt != null) 'formattedReceipt': formattedReceipt,
           if (selectedPaymentMethod.value == PaymentMethod.upi)
             'paymentStatus': 'completed',
+          if (ocrData != null) ...ocrData,
         };
 
-        final docRef = await FirebaseFirestore.instance
+        // Use the generated orderId as the Firestore Document ID
+        await FirebaseFirestore.instance
             .collection('bookings')
-            .add(bookingData);
+            .doc(currentOrderId)
+            .set(bookingData);
+
         if (generatedOrderId == null) {
-          generatedOrderId = currentGroupId;
+          generatedOrderId = currentOrderId;
         }
 
         if (selectedPaymentMethod.value == PaymentMethod.upi) {
           final now = DateTime.now();
-          final formattedDateTime =
+          String formattedDateTime =
               "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
 
-          await FirebaseFirestore.instance.collection('payments').add({
+          if (ocrData != null && ocrData['ocrPaymentDateTime'] != null) {
+            final ocrDateStr = ocrData['ocrPaymentDateTime'] as String;
+            try {
+              final ocrDate = DateTime.parse(ocrDateStr);
+              formattedDateTime =
+                  "${ocrDate.year}-${ocrDate.month.toString().padLeft(2, '0')}-${ocrDate.day.toString().padLeft(2, '0')} ${ocrDate.hour.toString().padLeft(2, '0')}:${ocrDate.minute.toString().padLeft(2, '0')}";
+            } catch (e) {
+              // Fallback to now
+            }
+          }
+
+          final txnIdStr = transactionId.value.trim();
+          await FirebaseFirestore.instance
+              .collection('payments')
+              .doc(txnIdStr)
+              .set({
             'amount':
                 '₹${(item.offerPrice * item.quantity).toStringAsFixed(0)}',
-            'bookingId': docRef.id,
+            'bookingId': currentOrderId,
             'createdAt': FieldValue.serverTimestamp(),
             'dateTime': formattedDateTime,
             'itemName': item.productName,
             'paymentMode': 'UPI',
             'status': 'Paid',
-            'transactionId': transactionId.value.trim(),
-          });
+            'transactionId': txnIdStr,
+            if (ocrData != null) ...ocrData,
+          }, SetOptions(merge: true));
         }
 
         // Deduct stock for the ordered item
         try {
           await StockManager.deductStock(
-            bookingId: docRef.id,
+            bookingId: currentOrderId,
             productId: item.productId,
             quantity: item.quantity,
             variantId: item.variantId,

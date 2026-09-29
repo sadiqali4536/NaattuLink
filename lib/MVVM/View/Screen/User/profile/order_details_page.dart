@@ -200,6 +200,91 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                               ],
                             ),
 
+                            Builder(builder: (context) {
+                              final paymentMethod = data['paymentMethod']
+                                      ?.toString()
+                                      .toLowerCase() ??
+                                  '';
+                              final transactionId =
+                                  data['transactionId']?.toString() ?? '';
+                              final isOnline =
+                                  paymentMethod.contains('online') ||
+                                      paymentMethod.contains('upi') ||
+                                      transactionId.isNotEmpty;
+
+                              final isRefunded = data['Refuned']?.toString() ==
+                                      '1' ||
+                                  data['Refuned']?.toString().toLowerCase() ==
+                                      'true' ||
+                                  data['Refuned'] == true ||
+                                  data['Refuned'] == 1;
+
+                              if (isCancelled && isOnline) {
+                                return Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(top: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: isRefunded
+                                        ? Colors.green.shade50
+                                        : Colors.orange.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: isRefunded
+                                            ? Colors.green.shade200
+                                            : Colors.orange.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                          isRefunded
+                                              ? Icons.check_circle_outline
+                                              : Icons.currency_rupee,
+                                          color: isRefunded
+                                              ? Colors.green.shade700
+                                              : Colors.orange.shade700,
+                                          size: 20),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              isRefunded
+                                                  ? "Refund Processed Successfully"
+                                                  : "Refund Pending",
+                                              style: TextStyle(
+                                                color: isRefunded
+                                                    ? Colors.green.shade700
+                                                    : Colors.orange.shade700,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              isRefunded
+                                                  ? "Your refund has been marked as completed by the seller."
+                                                  : "Your refund amount will process within 2 days.",
+                                              style: TextStyle(
+                                                color: isRefunded
+                                                    ? Colors.green.shade600
+                                                    : Colors.orange.shade600,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            }),
+
                             const SizedBox(height: 24),
 
                             // Timeline
@@ -246,7 +331,34 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                     subtitle = 'Your order has been dispatched';
                                   } else if (step == 'cancelled') {
                                     title = 'Order Cancelled';
-                                    subtitle = 'Your order has been cancelled';
+                                    final paymentMethod = data['paymentMethod']
+                                            ?.toString()
+                                            .toLowerCase() ??
+                                        '';
+                                    final transactionId =
+                                        data['transactionId']?.toString() ?? '';
+                                    final isOnline =
+                                        paymentMethod.contains('online') ||
+                                            paymentMethod.contains('upi') ||
+                                            transactionId.isNotEmpty;
+
+                                    final isRefunded =
+                                        data['Refuned']?.toString() == '1' ||
+                                            data['Refuned']
+                                                    ?.toString()
+                                                    .toLowerCase() ==
+                                                'true' ||
+                                            data['Refuned'] == true ||
+                                            data['Refuned'] == 1;
+
+                                    if (isOnline) {
+                                      subtitle = isRefunded
+                                          ? 'Refund completed successfully'
+                                          : 'Refund amount will process within 2 days';
+                                    } else {
+                                      subtitle =
+                                          'Your order has been cancelled';
+                                    }
                                   }
 
                                   String dateText = isCompleted
@@ -294,165 +406,275 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                   return Padding(
                                       padding: const EdgeInsets.only(top: 24),
                                       child: Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF8FAFC),
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                          border: Border.all(
-                                              color: Colors.grey.shade200),
-                                        ),
-                                        child: InkWell(
-                                          onTap: () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (context) => Dialog(
-                                                backgroundColor: Colors.transparent,
-                                                insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                                                child: Container(
-                                                  width: double.infinity,
-                                                  padding: const EdgeInsets.all(20),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFFFDFDFD),
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    border: Border.all(color: Colors.grey.shade300, width: 1.5),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.black.withOpacity(0.1),
-                                                        blurRadius: 20,
-                                                        offset: const Offset(0, 10),
-                                                      )
-                                                    ],
-                                                  ),
-                                                  child: Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Row(
-                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                        children: [
-                                                          const Text(
-                                                            'RECEIPT',
-                                                            style: TextStyle(
-                                                              letterSpacing: 2,
-                                                              fontWeight: FontWeight.w900,
-                                                              fontSize: 18,
-                                                              color: Colors.black87,
-                                                            ),
-                                                          ),
-                                                          IconButton(
-                                                            icon: const Icon(Icons.close, color: Colors.black54),
-                                                            onPressed: () => Navigator.of(context).pop(),
-                                                            padding: EdgeInsets.zero,
-                                                            constraints: const BoxConstraints(),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      const SizedBox(height: 12),
-                                                      LayoutBuilder(
-                                                        builder: (context, constraints) {
-                                                          final boxWidth = constraints.constrainWidth();
-                                                          const dashWidth = 6.0;
-                                                          const dashHeight = 1.5;
-                                                          final dashCount = (boxWidth / (2 * dashWidth)).floor();
-                                                          return Flex(
-                                                            direction: Axis.horizontal,
-                                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                            children: List.generate(dashCount, (_) {
-                                                              return const SizedBox(
-                                                                width: dashWidth,
-                                                                height: dashHeight,
-                                                                child: DecoratedBox(decoration: BoxDecoration(color: Colors.grey)),
-                                                              );
-                                                            }),
-                                                          );
-                                                        },
-                                                      ),
-                                                      const SizedBox(height: 16),
-                                                      Flexible(
-                                                        child: SingleChildScrollView(
-                                                          child: MarkdownBody(
-                                                            data: pData['formattedReceipt'].toString(),
-                                                            styleSheet: MarkdownStyleSheet(
-                                                              h1: const TextStyle(
-                                                                  color: Colors.black87,
-                                                                  fontSize: 20,
-                                                                  fontWeight: FontWeight.bold),
-                                                              h3: const TextStyle(
-                                                                  color: Colors.black87,
-                                                                  fontSize: 15,
-                                                                  fontWeight: FontWeight.bold),
-                                                              p: const TextStyle(
-                                                                  color: Colors.black87,
-                                                                  fontSize: 14,
-                                                                  height: 1.5),
-                                                              strong: const TextStyle(
-                                                                  fontWeight: FontWeight.bold,
-                                                                  color: Colors.black),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 16),
-                                                      LayoutBuilder(
-                                                        builder: (context, constraints) {
-                                                          final boxWidth = constraints.constrainWidth();
-                                                          const dashWidth = 6.0;
-                                                          const dashHeight = 1.5;
-                                                          final dashCount = (boxWidth / (2 * dashWidth)).floor();
-                                                          return Flex(
-                                                            direction: Axis.horizontal,
-                                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                            children: List.generate(dashCount, (_) {
-                                                              return const SizedBox(
-                                                                width: dashWidth,
-                                                                height: dashHeight,
-                                                                child: DecoratedBox(decoration: BoxDecoration(color: Colors.grey)),
-                                                              );
-                                                            }),
-                                                          );
-                                                        },
-                                                      ),
-                                                      const SizedBox(height: 16),
-                                                      const Center(
-                                                        child: Text(
-                                                          'Thank you for your order!',
-                                                          style: TextStyle(
-                                                            fontStyle: FontStyle.italic,
-                                                            color: Colors.black54,
-                                                            fontSize: 13,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    const Icon(Icons.receipt_long, color: Color(0xFF0F2E5A)),
-                                                    const SizedBox(width: 12),
-                                                    const Text(
-                                                      'View Payment Receipt',
-                                                      style: TextStyle(
-                                                        color: Color(0xFF0F2E5A),
-                                                        fontWeight: FontWeight.bold,
-                                                        fontSize: 16,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.black45),
-                                              ],
-                                            ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF8FAFC),
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                            border: Border.all(
+                                                color: Colors.grey.shade200),
                                           ),
-                                        )                                      ));
+                                          child: InkWell(
+                                            onTap: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) => Dialog(
+                                                  backgroundColor:
+                                                      Colors.transparent,
+                                                  insetPadding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 20,
+                                                      vertical: 24),
+                                                  child: Container(
+                                                    width: double.infinity,
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            20),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                          0xFFFDFDFD),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12),
+                                                      border: Border.all(
+                                                          color: Colors
+                                                              .grey.shade300,
+                                                          width: 1.5),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black
+                                                              .withOpacity(0.1),
+                                                          blurRadius: 20,
+                                                          offset: const Offset(
+                                                              0, 10),
+                                                        )
+                                                      ],
+                                                    ),
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            const Text(
+                                                              'RECEIPT',
+                                                              style: TextStyle(
+                                                                letterSpacing:
+                                                                    2,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w900,
+                                                                fontSize: 18,
+                                                                color: Colors
+                                                                    .black87,
+                                                              ),
+                                                            ),
+                                                            IconButton(
+                                                              icon: const Icon(
+                                                                  Icons.close,
+                                                                  color: Colors
+                                                                      .black54),
+                                                              onPressed: () =>
+                                                                  Navigator.of(
+                                                                          context)
+                                                                      .pop(),
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .zero,
+                                                              constraints:
+                                                                  const BoxConstraints(),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 12),
+                                                        LayoutBuilder(
+                                                          builder: (context,
+                                                              constraints) {
+                                                            final boxWidth =
+                                                                constraints
+                                                                    .constrainWidth();
+                                                            const dashWidth =
+                                                                6.0;
+                                                            const dashHeight =
+                                                                1.5;
+                                                            final dashCount =
+                                                                (boxWidth /
+                                                                        (2 *
+                                                                            dashWidth))
+                                                                    .floor();
+                                                            return Flex(
+                                                              direction: Axis
+                                                                  .horizontal,
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .spaceBetween,
+                                                              children:
+                                                                  List.generate(
+                                                                      dashCount,
+                                                                      (_) {
+                                                                return const SizedBox(
+                                                                  width:
+                                                                      dashWidth,
+                                                                  height:
+                                                                      dashHeight,
+                                                                  child: DecoratedBox(
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                              color: Colors.grey)),
+                                                                );
+                                                              }),
+                                                            );
+                                                          },
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 16),
+                                                        Flexible(
+                                                          child:
+                                                              SingleChildScrollView(
+                                                            child: MarkdownBody(
+                                                              data: pData[
+                                                                      'formattedReceipt']
+                                                                  .toString(),
+                                                              styleSheet:
+                                                                  MarkdownStyleSheet(
+                                                                h1: const TextStyle(
+                                                                    color: Colors
+                                                                        .black87,
+                                                                    fontSize:
+                                                                        20,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold),
+                                                                h3: const TextStyle(
+                                                                    color: Colors
+                                                                        .black87,
+                                                                    fontSize:
+                                                                        15,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold),
+                                                                p: const TextStyle(
+                                                                    color: Colors
+                                                                        .black87,
+                                                                    fontSize:
+                                                                        14,
+                                                                    height:
+                                                                        1.5),
+                                                                strong: const TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    color: Colors
+                                                                        .black),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 16),
+                                                        LayoutBuilder(
+                                                          builder: (context,
+                                                              constraints) {
+                                                            final boxWidth =
+                                                                constraints
+                                                                    .constrainWidth();
+                                                            const dashWidth =
+                                                                6.0;
+                                                            const dashHeight =
+                                                                1.5;
+                                                            final dashCount =
+                                                                (boxWidth /
+                                                                        (2 *
+                                                                            dashWidth))
+                                                                    .floor();
+                                                            return Flex(
+                                                              direction: Axis
+                                                                  .horizontal,
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .spaceBetween,
+                                                              children:
+                                                                  List.generate(
+                                                                      dashCount,
+                                                                      (_) {
+                                                                return const SizedBox(
+                                                                  width:
+                                                                      dashWidth,
+                                                                  height:
+                                                                      dashHeight,
+                                                                  child: DecoratedBox(
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                              color: Colors.grey)),
+                                                                );
+                                                              }),
+                                                            );
+                                                          },
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 16),
+                                                        const Center(
+                                                          child: Text(
+                                                            'Thank you for your order!',
+                                                            style: TextStyle(
+                                                              fontStyle:
+                                                                  FontStyle
+                                                                      .italic,
+                                                              color: Colors
+                                                                  .black54,
+                                                              fontSize: 13,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 20,
+                                                      vertical: 16),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      const Icon(
+                                                          Icons.receipt_long,
+                                                          color: Color(
+                                                              0xFF0F2E5A)),
+                                                      const SizedBox(width: 12),
+                                                      const Text(
+                                                        'View Payment Receipt',
+                                                        style: TextStyle(
+                                                          color:
+                                                              Color(0xFF0F2E5A),
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const Icon(
+                                                      Icons.arrow_forward_ios,
+                                                      size: 16,
+                                                      color: Colors.black45),
+                                                ],
+                                              ),
+                                            ),
+                                          )));
                                 },
                               ),
 

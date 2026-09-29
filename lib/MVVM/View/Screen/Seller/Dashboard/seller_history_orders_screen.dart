@@ -655,6 +655,7 @@ class _SellerHistoryOrdersScreenState extends State<SellerHistoryOrdersScreen> {
                       child: ElevatedButton(
                         onPressed: () {
                           final mappedData = {
+                            'docId': doc.id,
                             'orderId': data['orderId']?.toString() ?? doc.id,
                             'customerName': customerName,
                             'customerLocation': data['deliveryAddress']
@@ -670,6 +671,14 @@ class _SellerHistoryOrdersScreenState extends State<SellerHistoryOrdersScreen> {
                             'deliveryFee': 0,
                             'paymentMethod': data['paymentMethod'] ?? 'Unknown',
                             'paymentStatus': data['paymentStatus'] ?? 'Pending',
+                            'transactionId': data['transactionId'], 'Refuned': data['Refuned'],
+                            'formattedReceipt': data['formattedReceipt'],
+                            'ocrAmountExtracted': data['ocrAmountExtracted'],
+                            'ocrReceiverUpi': data['ocrReceiverUpi'],
+                            'ocrPaymentDateTime': data['ocrPaymentDateTime'],
+                            'ocrHasSuccessIndicator': data['ocrHasSuccessIndicator'],
+                            'cancellationReason': data['cancellationReason'],
+                            'cancellationComment': data['cancellationComment'],
                             'items': [
                               {
                                 'name': data['serviceTitle'] ?? 'Product',
