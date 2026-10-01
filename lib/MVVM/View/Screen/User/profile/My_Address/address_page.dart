@@ -6,6 +6,7 @@ import 'package:naattulink/MVVM/utils/widget/card/addresscard.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:naattulink/MVVM/utils/add_sample_zone.dart';
+import 'package:get/get.dart';
 
 class AddressPage extends StatefulWidget {
   const AddressPage({super.key});
@@ -53,7 +54,7 @@ class _AddressPageState extends State<AddressPage> {
         onPressed: () {
           ZoneSeeder.addSampleZone();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Adding sample zone to Firebase...')),
+            SnackBar(content: Text('Adding sample zone to Firebase...')),
           );
         },
         child: const Icon(Icons.add_location_alt),

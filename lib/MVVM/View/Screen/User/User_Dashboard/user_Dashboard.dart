@@ -65,13 +65,13 @@ class _BottomNavigationBarScreenState extends State<user_Dashboard> {
   String _getLabel(int index) {
     switch (index) {
       case 0:
-        return "Home";
+        return 'home'.tr;
       case 1:
-        return "My Cart";
+        return 'my_cart'.tr;
       case 2:
-        return "Bookings";
+        return 'bookings'.tr;
       case 3:
-        return "Profile";
+        return 'profile'.tr;
       default:
         return "";
     }

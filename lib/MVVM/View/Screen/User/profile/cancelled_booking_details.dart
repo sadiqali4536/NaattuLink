@@ -38,8 +38,8 @@ class CancelledBookingDetails extends StatelessWidget {
         leading: AppBackButton(
           onPressed: () => Get.offAll(() => const user_Dashboard()),
         ),
-        title: const Text(
-          'Booking Details',
+        title: Text(
+          'booking_details'.tr,
           style: TextStyle(
               color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
         ),
@@ -68,7 +68,9 @@ class CancelledBookingDetails extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              _isCancelled ? 'Booking Cancelled!' : 'Booking Completed!',
+              _isCancelled
+                  ? 'booking_cancelled_title'.tr
+                  : 'booking_completed_title'.tr,
               style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -79,8 +81,8 @@ class CancelledBookingDetails extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               _isCancelled
-                  ? "We'll keep you posted on the status."
-                  : "Thank you for using our service.",
+                  ? 'booking_cancelled_desc'.tr
+                  : 'booking_completed_desc'.tr,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.black54, fontSize: 13),
             ),
@@ -99,7 +101,7 @@ class CancelledBookingDetails extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('ORDER NO',
+                      Text('order_no'.tr,
                           style:
                               TextStyle(fontSize: 11, color: Colors.black54)),
                       Text(bookingId.toUpperCase(),
@@ -118,7 +120,7 @@ class CancelledBookingDetails extends StatelessWidget {
                       onPressed: () {},
                       icon: const Icon(Icons.chat_bubble_outline,
                           size: 18, color: Color(0xFF3B82F6)),
-                      label: const Text('Chat with us',
+                      label: Text('chat_with_us'.tr,
                           style: TextStyle(color: Color(0xFF3B82F6))),
                       style: TextButton.styleFrom(
                           backgroundColor: const Color(0xFFF3F4F6),
@@ -155,7 +157,7 @@ class CancelledBookingDetails extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('SERVICE ADDRESS',
+                        Text('service_address'.tr,
                             style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.black45,
@@ -186,25 +188,30 @@ class CancelledBookingDetails extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Booking Details',
+                  Text('booking_details'.tr,
                       style:
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(height: 12),
                   const Divider(height: 1, color: Color(0xFFF0F0F0)),
                   const SizedBox(height: 16),
-                  _buildDetailRow('Service', data['serviceName'] ?? 'Service'),
+                  _buildDetailRow(
+                      'service_label'.tr, data['serviceName'] ?? 'Service'),
                   const SizedBox(height: 12),
                   _buildDetailRow(
-                      'Order Status', _isCancelled ? 'Cancelled' : 'Completed',
+                      'order_status_label'.tr,
+                      _isCancelled
+                          ? 'status_cancelled'.tr
+                          : 'status_completed'.tr,
                       valueColor: _isCancelled
                           ? const Color(0xFFDC2626)
                           : const Color(0xFF2563EB)),
                   const SizedBox(height: 12),
-                  _buildDetailRow('Booked Date', _formattedDate),
+                  _buildDetailRow('booked_date_label'.tr, _formattedDate),
                   const SizedBox(height: 12),
                   if (data['selectedTimeSlot'] != null &&
                       data['selectedTimeSlot'].toString().isNotEmpty)
-                    _buildDetailRow('Time slot', data['selectedTimeSlot']),
+                    _buildDetailRow(
+                        'time_slot_label'.tr, data['selectedTimeSlot']),
                 ],
               ),
             ),
@@ -218,13 +225,14 @@ class CancelledBookingDetails extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.grey.shade300)),
               child: Row(
-                children: const [
+                children: [
                   Icon(Icons.info_outline, color: Color(0xFF3B82F6), size: 18),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Need to re-schedule or have questions? Contact our support team directly through the chat or call.',
-                      style: TextStyle(fontSize: 11, color: Colors.black54),
+                      'reschedule_support_desc'.tr,
+                      style:
+                          const TextStyle(fontSize: 11, color: Colors.black54),
                     ),
                   )
                 ],
@@ -253,7 +261,7 @@ class CancelledBookingDetails extends StatelessWidget {
                       ));
                 },
                 icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
-                label: const Text('Book Again',
+                label: Text('book_again'.tr,
                     style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/stock_manager.dart';
 
-import 'confirmed_booking_details.dart';
 import 'cancelled_booking_details.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/confirmed_booking_details.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/order_details_page.dart';
@@ -27,24 +26,92 @@ class _MyBookingsState extends State<MyBookings> {
   static const _amber = Color(0xFFFFC107);
 
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   String _selectedStatus = 'All';
   final Rx<MyBookingSection> selectedSection = MyBookingSection.bookings.obs;
 
-  int _limit = 10;
-  final ScrollController _scrollController = ScrollController();
+  bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDocument;
+  final int _pageSize = 15;
+  List<QueryDocumentSnapshot> _bookingDocs = [];
+  List<QueryDocumentSnapshot> _filteredDocs = [];
 
   @override
   void initState() {
     super.initState();
+    _fetchBookings();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent * 0.9) {
-        setState(() {
-          _limit += 10;
-        });
+          _scrollController.position.maxScrollExtent * 0.8) {
+        _fetchBookings(isLoadMore: true);
       }
     });
+  }
+
+  Future<void> _fetchBookings({bool isLoadMore = false}) async {
+    if (isLoadMore) {
+      if (_isLoadingMore || !_hasMore || _lastDocument == null) return;
+      setState(() => _isLoadingMore = true);
+    } else {
+      setState(() {
+        _isLoading = true;
+        _bookingDocs.clear();
+        _filteredDocs.clear();
+        _lastDocument = null;
+        _hasMore = true;
+      });
+    }
+
+    try {
+      int newFilteredCount = 0;
+      while (newFilteredCount < 5 && _hasMore) {
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid == null) break;
+
+        final collection = selectedSection.value == MyBookingSection.bookings
+            ? 'service_bookings'
+            : 'bookings';
+
+        var query = FirebaseFirestore.instance
+            .collection(collection)
+            .where('userId', isEqualTo: uid)
+            .orderBy('createdAt', descending: true)
+            .limit(_pageSize);
+
+        if (_lastDocument != null) {
+          query = query.startAfterDocument(_lastDocument!);
+        }
+
+        final snapshot = await query.get();
+
+        if (snapshot.docs.isNotEmpty) {
+          _lastDocument = snapshot.docs.last;
+          _bookingDocs.addAll(snapshot.docs);
+
+          final justFetchedFiltered = _filter(snapshot.docs);
+          newFilteredCount += justFetchedFiltered.length;
+          _filteredDocs.addAll(justFetchedFiltered);
+
+          if (snapshot.docs.length < _pageSize) {
+            _hasMore = false;
+          }
+        } else {
+          _hasMore = false;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching bookings: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+      }
+    }
   }
 
   List<String> get _statusFilters {
@@ -59,26 +126,6 @@ class _MyBookingsState extends State<MyBookings> {
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  Stream<QuerySnapshot> get serviceBookingsStream {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    return FirebaseFirestore.instance
-        .collection('service_bookings')
-        .where('userId', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
-        .limit(_limit)
-        .snapshots();
-  }
-
-  Stream<QuerySnapshot> get ordersStream {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    return FirebaseFirestore.instance
-        .collection('bookings')
-        .where('userId', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
-        .limit(_limit)
-        .snapshots();
   }
 
   List<QueryDocumentSnapshot> _filter(List<QueryDocumentSnapshot> docs) {
@@ -235,7 +282,7 @@ class _MyBookingsState extends State<MyBookings> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Cancel Booking?',
+                Text('cancel_booking_q'.tr,
                     style:
                         TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 14),
@@ -297,7 +344,7 @@ class _MyBookingsState extends State<MyBookings> {
                   ),
                   const SizedBox(height: 20),
                 ],
-                const Text('Please select a reason for cancelling:',
+                Text('select_cancel_reason'.tr,
                     style: TextStyle(fontSize: 13, color: Colors.black54)),
                 const SizedBox(height: 10),
                 ...reasons.map((r) {
@@ -358,7 +405,7 @@ class _MyBookingsState extends State<MyBookings> {
                   );
                 }),
                 const SizedBox(height: 16),
-                const Text('Additional comments (Optional)',
+                Text('additional_comments'.tr,
                     style: TextStyle(fontSize: 13, color: Colors.black54)),
                 const SizedBox(height: 8),
                 TextField(
@@ -448,7 +495,7 @@ class _MyBookingsState extends State<MyBookings> {
                           },
                     icon:
                         const Icon(Icons.close, color: Colors.white, size: 18),
-                    label: const Text('Confirm Cancellation',
+                    label: Text('confirm_cancellation'.tr,
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 15,
@@ -473,7 +520,7 @@ class _MyBookingsState extends State<MyBookings> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(25)),
                     ),
-                    child: const Text('Keep Booking',
+                    child: Text('keep_booking'.tr,
                         style: TextStyle(
                             color: Color(0xFF0F2E5A),
                             fontSize: 15,
@@ -543,6 +590,7 @@ class _MyBookingsState extends State<MyBookings> {
                                           _selectedStatus = 'All';
                                           _searchController.clear();
                                           _searchQuery = '';
+                                          _fetchBookings();
                                         });
                                       }
                                     },
@@ -562,7 +610,7 @@ class _MyBookingsState extends State<MyBookings> {
                                           const CustomCalendarIcon(),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'BOOKINGS',
+                                            'bookings_caps'.tr,
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 13,
@@ -588,6 +636,7 @@ class _MyBookingsState extends State<MyBookings> {
                                           _selectedStatus = 'All';
                                           _searchController.clear();
                                           _searchQuery = '';
+                                          _fetchBookings();
                                         });
                                       }
                                     },
@@ -610,7 +659,7 @@ class _MyBookingsState extends State<MyBookings> {
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'ORDERS',
+                                            'orders_caps'.tr,
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 13,
@@ -646,14 +695,16 @@ class _MyBookingsState extends State<MyBookings> {
                         ),
                         child: Obx(() => TextField(
                               controller: _searchController,
-                              onChanged: (v) =>
-                                  setState(() => _searchQuery = v),
+                              onChanged: (v) {
+                                setState(() => _searchQuery = v);
+                                _fetchBookings();
+                              },
                               style: const TextStyle(fontSize: 14),
                               decoration: InputDecoration(
                                 hintText: selectedSection.value ==
                                         MyBookingSection.bookings
-                                    ? 'Search your bookings'
-                                    : 'Search your orders',
+                                    ? 'search_bookings'.tr
+                                    : 'search_orders'.tr,
                                 hintStyle: TextStyle(
                                     color: Colors.grey.shade500, fontSize: 14),
                                 prefixIcon: const Icon(Icons.search,
@@ -666,6 +717,7 @@ class _MyBookingsState extends State<MyBookings> {
                                         onTap: () => setState(() {
                                           _searchController.clear();
                                           _searchQuery = '';
+                                          _fetchBookings();
                                         }),
                                         child: const Icon(Icons.close,
                                             color: Colors.grey, size: 18),
@@ -692,8 +744,10 @@ class _MyBookingsState extends State<MyBookings> {
                                 final st = _statusFilters[i];
                                 final sel = _selectedStatus == st;
                                 return GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _selectedStatus = st),
+                                  onTap: () {
+                                    setState(() => _selectedStatus = st);
+                                    _fetchBookings();
+                                  },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 18, vertical: 8),
@@ -710,7 +764,7 @@ class _MyBookingsState extends State<MyBookings> {
                                       ),
                                     ),
                                     child: Text(
-                                      st,
+                                      st.tr,
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: sel
@@ -735,29 +789,18 @@ class _MyBookingsState extends State<MyBookings> {
                   child: Container(
                     color: const Color(0xFFF5F6FA),
                     child: Obx(() {
-                      final stream =
-                          selectedSection.value == MyBookingSection.bookings
-                              ? serviceBookingsStream
-                              : ordersStream;
                       final isBookings =
                           selectedSection.value == MyBookingSection.bookings;
 
-                      return StreamBuilder<QuerySnapshot>(
-                        stream: stream,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                                  ConnectionState.waiting &&
-                              !snapshot.hasData) {
+                      return Builder(
+                        builder: (context) {
+                          if (_isLoading && _filteredDocs.isEmpty) {
                             return const Center(
                                 child: CircularProgressIndicator(
                                     color: Color(0xFF0F2E5A)));
                           }
-                          if (snapshot.hasError) {
-                            return Center(
-                                child: Text('Error: ${snapshot.error}'));
-                          }
 
-                          final filtered = _filter(snapshot.data?.docs ?? []);
+                          final filtered = _filteredDocs;
 
                           if (filtered.isEmpty) {
                             return EmptyStateWidget(
@@ -780,46 +823,17 @@ class _MyBookingsState extends State<MyBookings> {
                             itemCount: filtered.length + 1,
                             itemBuilder: (context, index) {
                               if (index == filtered.length) {
-                                final hasMore =
-                                    (snapshot.data?.docs.length ?? 0) >= _limit;
                                 return Column(
                                   children: [
-                                    if (hasMore)
+                                    if (_isLoadingMore)
                                       const Padding(
-                                        padding: EdgeInsets.all(16.0),
+                                        padding:
+                                            EdgeInsets.symmetric(vertical: 20),
                                         child: Center(
-                                            child: CircularProgressIndicator()),
-                                      )
-                                    else ...[
-                                      const SizedBox(height: 24),
-                                      Icon(
-                                        Icons.inventory_2_outlined,
-                                        size: 56,
-                                        color: Colors.grey.shade400,
+                                            child: CircularProgressIndicator(
+                                                color: Color(0xFF0F2E5A))),
                                       ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        isBookings
-                                            ? 'End of your booking history'
-                                            : 'End of your order history',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: Colors.grey.shade700),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        isBookings
-                                            ? "You've reached the end. Check back later for\nmore bookings."
-                                            : "You've reached the end. Check back later for\nmore orders.",
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            height: 1.4,
-                                            color: Colors.grey.shade500),
-                                      ),
-                                      const SizedBox(height: 24),
-                                    ],
+                                    const SizedBox(height: 40),
                                   ],
                                 );
                               }
@@ -1029,8 +1043,8 @@ class _BookingCard extends StatelessWidget {
                   // Price
                   Row(
                     children: [
-                      const Text(
-                        'PRICE: ',
+                      Text(
+                        'price_colon'.tr,
                         style: TextStyle(
                             fontSize: 11,
                             color: Colors.black54,
@@ -1121,8 +1135,8 @@ class _BookingCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16)),
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                           ),
-                          child: const Text(
-                            'View Details',
+                          child: Text(
+                            'view_details'.tr,
                             style: TextStyle(
                                 color: Color(0xFF0F2E5A),
                                 fontWeight: FontWeight.bold,
@@ -1227,7 +1241,7 @@ class _BookingCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text('TOTAL PRICE',
+                    Text('total_price_caps'.tr,
                         style: TextStyle(
                             fontSize: 10,
                             color: Colors.black45,
@@ -1299,7 +1313,7 @@ class _BookingCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(22)),
                       ),
-                      child: const Text('View Details',
+                      child: Text('view_details'.tr,
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 14)),
                     ),
@@ -1317,7 +1331,7 @@ class _BookingCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(22)),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                     ),
-                    child: const Text('Cancel',
+                    child: Text('cancel_btn'.tr,
                         style: TextStyle(
                             color: Color(0xFFDC2626),
                             fontWeight: FontWeight.bold,
@@ -1391,8 +1405,8 @@ class _BookingCard extends StatelessWidget {
                       if (isRefunded) {
                         return Row(
                           children: [
-                            const Text(
-                              'REFUNDED: ',
+                            Text(
+                              'refunded_colon'.tr,
                               style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.black45,
@@ -1422,8 +1436,8 @@ class _BookingCard extends StatelessWidget {
                           ),
                         );
                       } else {
-                        return const Text(
-                          'Cancelled',
+                        return Text(
+                          'cancelled_label'.tr,
                           style: TextStyle(
                             fontSize: 11,
                             color: Color(0xFFDC2626),
@@ -1434,8 +1448,8 @@ class _BookingCard extends StatelessWidget {
                     } else {
                       return Row(
                         children: [
-                          const Text(
-                            'PRICE: ',
+                          Text(
+                            'price_colon'.tr,
                             style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.black45,
@@ -1484,7 +1498,7 @@ class _BookingCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
                 child: Text(
-                  'View Details',
+                  'view_details'.tr,
                   style: TextStyle(
                       color: _statusTextColor,
                       fontWeight: FontWeight.bold,
@@ -1521,12 +1535,15 @@ class _BookingCard extends StatelessWidget {
             size: 11,
           ),
           const SizedBox(width: 3),
-          Text(
-            _statusLabel,
-            style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: _statusTextColor),
+          Flexible(
+            child: Text(
+              _statusLabel,
+              style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: _statusTextColor),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -1547,48 +1564,56 @@ class _BookingCard extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEAF3FF),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: const Color(0xFFB9D5FF)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isUpi ? Icons.currency_rupee : Icons.money,
-                size: 10,
-                color: const Color(0xFF0857A0),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                isUpi ? 'UPI' : 'Cash on Delivery',
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0857A0),
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF3FF),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: const Color(0xFFB9D5FF)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isUpi ? Icons.currency_rupee : Icons.money,
+                  size: 10,
+                  color: const Color(0xFF0857A0),
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    isUpi ? 'UPI' : 'Cash on Delivery',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0857A0),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         if (isPaid) ...[
           const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            decoration: BoxDecoration(
-              color: Colors.green.shade50,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.green.shade200),
-            ),
-            child: Text(
-              'PAID',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.green.shade700,
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Text(
+                'paid_caps'.tr,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green.shade700,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
@@ -1672,7 +1697,7 @@ class EmptyStateWidget extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             searchQuery.isNotEmpty
-                ? 'No matches for "$searchQuery"'
+                ? 'no_matches'.trParams({'query': searchQuery})
                 : defaultMessage,
             textAlign: TextAlign.center,
             style: TextStyle(

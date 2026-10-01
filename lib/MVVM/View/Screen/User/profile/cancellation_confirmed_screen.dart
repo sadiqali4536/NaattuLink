@@ -47,8 +47,7 @@ class CancellationConfirmedScreen extends StatelessWidget {
             const SizedBox(height: 32),
             
             // Title
-            const Text(
-              'Cancellation Request Submitted',
+            Text('cancel_req_submitted'.tr,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -128,8 +127,7 @@ class CancellationConfirmedScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'View Order',
+                child: Text('view_order'.tr,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -150,8 +148,7 @@ class CancellationConfirmedScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Continue Shopping',
+                child: Text('continue_shopping'.tr,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),

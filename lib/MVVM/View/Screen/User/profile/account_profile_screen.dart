@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:get/get.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
@@ -14,6 +13,8 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:naattulink/MVVM/utils/Constants/constants.dart';
+import 'package:naattulink/controllers/language_controller.dart';
+import 'package:naattulink/MVVM/View/Screen/User/profile/language_selection_screen.dart';
 
 class AccountProfileScreen extends StatefulWidget {
   const AccountProfileScreen({Key? key}) : super(key: key);
@@ -60,8 +61,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                       color: Colors.red, size: 36),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  "Logout",
+                Text(
+                  'logout'.tr,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -69,8 +70,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  "Are you sure you want to log out of your account?",
+                Text(
+                  'logout_warn'.tr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
@@ -91,7 +92,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                             side: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        child: const Text("Cancel",
+                        child: Text("cancel_btn".tr,
                             style: TextStyle(
                                 color: Color(0xFF64748B),
                                 fontWeight: FontWeight.bold,
@@ -121,7 +122,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                             );
                           }
                         },
-                        child: const Text("Logout",
+                        child: Text('logout'.tr,
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -173,8 +174,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                       color: Colors.red, size: 36),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  "Delete Account",
+                Text(
+                  'delete_account'.tr,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -182,8 +183,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  "Are you sure you want to completely delete your account? This action cannot be undone and you will lose all your data.",
+                Text(
+                  'delete_account_warn'.tr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
@@ -204,7 +205,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                             side: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        child: const Text("Cancel",
+                        child: Text("cancel_btn".tr,
                             style: TextStyle(
                                 color: Color(0xFF64748B),
                                 fontWeight: FontWeight.bold,
@@ -226,11 +227,10 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                           Navigator.pop(context); // Close dialog
                           // TODO: Implement actual account deletion logic here
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Account deletion requested.')),
+                            SnackBar(content: Text('account_deletion_req'.tr)),
                           );
                         },
-                        child: const Text("Delete",
+                        child: Text('delete_btn'.tr,
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -278,8 +278,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Text(
-                'Contact Support',
+              Text(
+                'contact_support'.tr,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -287,8 +287,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'How would you like to reach us?',
+              Text(
+                'how_to_reach_us'.tr,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey,
@@ -307,7 +307,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                     await launchUrl(uri);
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Could not open WhatsApp.')),
+                      SnackBar(content: Text('whatsapp_error'.tr)),
                     );
                   }
                 },
@@ -317,7 +317,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                 context,
                 icon: Icons.call_outlined,
                 title: 'Call Support',
-                subtitle: 'Available during support hours',
+                subtitle: 'available_during_support'.tr,
                 onTap: () async {
                   Navigator.pop(context);
                   if (supportPhone.isNotEmpty) {
@@ -326,16 +326,13 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                       await launchUrl(uri);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('Support phone number is not available.')),
+                        SnackBar(
+                            content: Text('support_phone_not_available'.tr)),
                       );
                     }
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content:
-                              Text('Support phone number is not available.')),
+                      SnackBar(content: Text('support_phone_not_available'.tr)),
                     );
                   }
                 },
@@ -344,8 +341,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
               _buildSupportOption(
                 context,
                 icon: Icons.email_outlined,
-                title: 'Email Support',
-                subtitle: 'Get a response within 24 hours',
+                title: 'email_support'.tr,
+                subtitle: 'email_support_desc'.tr,
                 onTap: () async {
                   Navigator.pop(context);
                   if (supportEmail.isNotEmpty) {
@@ -354,14 +351,13 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                       await launchUrl(uri);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Support email is not available.')),
+                        SnackBar(
+                            content: Text('support_email_not_available'.tr)),
                       );
                     }
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Support email is not available.')),
+                      SnackBar(content: Text('support_email_not_available'.tr)),
                     );
                   }
                 },
@@ -391,8 +387,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Support Hours',
+                          Text(
+                            'support_hours'.tr,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -516,7 +512,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
           }
 
           if (!futureSnapshot.hasData || futureSnapshot.data == null) {
-            return const Center(child: Text('User not found'));
+            return Center(child: Text('user_not_found'.tr));
           }
 
           final identity = futureSnapshot.data!;
@@ -537,7 +533,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                 }
               }
 
-              return const Center(child: Text('Something went wrong'));
+              return Center(child: Text('something_went_wrong'.tr));
             },
           );
         },
@@ -794,8 +790,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                         const Icon(Icons.emergency_outlined,
                             color: Colors.white, size: 24),
                         const SizedBox(width: 12),
-                        const Text(
-                          "Emergency Services",
+                        Text(
+                          'emergency_services'.tr,
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -953,17 +949,17 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                 _buildSellerStockWarning(),
 
                 const SizedBox(height: 20),
-                _buildSectionTitle('Earn With NaattuLink'),
+                _buildSectionTitle('earn_with_naattulink'.tr),
                 _buildSectionContainer([
                   _buildSellOnNaattuLinkItem(),
                 ]),
 
                 const SizedBox(height: 20),
-                _buildSectionTitle('Preferences'),
+                _buildSectionTitle('preferences_title'.tr),
                 _buildSectionContainer([
                   _buildListTileWithSwitch(
                     icon: Icons.notifications_none_outlined,
-                    title: 'Notifications',
+                    title: 'notifications_title'.tr,
                     value: _notificationsEnabled,
                     onChanged: (val) =>
                         setState(() => _notificationsEnabled = val),
@@ -971,24 +967,37 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                   _buildDivider(),
                   _buildListItem(
                     icon: Icons.language_outlined,
-                    title: 'Language',
-                    trailingText: 'English',
-                    onTap: () {},
+                    title: 'language_title'.tr,
+                    trailingWidget: Obx(() {
+                      final locale =
+                          Get.find<LanguageController>().locale.value;
+                      String display = 'English';
+                      if (locale.languageCode == 'ml') display = 'മലയാളം';
+                      if (locale.languageCode == 'hi') display = 'हिन्दी';
+                      return Text(
+                        display,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
+                      );
+                    }),
+                    onTap: () => _showLanguagePicker(context),
                   ),
                 ]),
 
                 const SizedBox(height: 20),
-                _buildSectionTitle('Support'),
+                _buildSectionTitle('support_title'.tr),
                 _buildSectionContainer([
                   _buildListItem(
                     icon: Icons.help_outline,
-                    title: 'Help Center',
+                    title: 'help_center'.tr,
                     onTap: () => _showSupportBottomSheet(context),
                   ),
                   _buildDivider(),
                   _buildListItem(
                     icon: Icons.description_outlined,
-                    title: 'Terms & Conditions',
+                    title: 'terms_conditions'.tr,
                     onTap: () {},
                   ),
                 ]),
@@ -1000,7 +1009,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                 _buildSectionContainer([
                   _buildListItem(
                     icon: Icons.logout_outlined,
-                    title: 'Logout',
+                    title: 'logout'.tr,
                     titleColor: Colors.red,
                     iconColor: Colors.red,
                     showArrow: false,
@@ -1009,7 +1018,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                   _buildDivider(),
                   _buildListItem(
                     icon: Icons.delete_outline,
-                    title: 'Delete Account',
+                    title: 'delete_account'.tr,
                     titleColor: Colors.red,
                     iconColor: Colors.red,
                     showArrow: false,
@@ -1127,6 +1136,15 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
     );
   }
 
+  void _showLanguagePicker(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const LanguageSelectionScreen(),
+      ),
+    );
+  }
+
   Widget _buildSellOnNaattuLinkItem() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return const SizedBox.shrink();
@@ -1142,10 +1160,10 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
 
         return _buildListItem(
           icon: Icons.shopping_cart_outlined,
-          title: 'Sell on NaattuLink',
+          title: 'sell_on_naattulink'.tr,
           subtitle: isRegistered
-              ? 'Manage your store and products'
-              : 'Start earning by listing your products',
+              ? 'manage_store_products'.tr
+              : 'start_earning_listing'.tr,
           onTap: () {
             if (!Get.isRegistered<SellerAccessController>()) {
               Get.put(SellerAccessController());
@@ -1198,6 +1216,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
     required String title,
     String? subtitle,
     String? trailingText,
+    Widget? trailingWidget,
     Color titleColor = const Color(0xFF0F2E5A),
     Color iconColor = const Color(0xFF0F2E5A),
     bool showArrow = true,
@@ -1227,19 +1246,21 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
               style: const TextStyle(color: Colors.grey, fontSize: 12),
             )
           : null,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (trailingText != null)
-            Text(
-              trailingText,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          if (trailingText != null) const SizedBox(width: 4),
-          if (showArrow)
-            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 14),
-        ],
-      ),
+      trailing: trailingWidget ??
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (trailingText != null)
+                Text(
+                  trailingText,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              if (trailingText != null) const SizedBox(width: 4),
+              if (showArrow)
+                const Icon(Icons.arrow_forward_ios,
+                    color: Colors.grey, size: 14),
+            ],
+          ),
     );
   }
 
@@ -1336,8 +1357,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Edit Pharmacy Details",
+                      Text(
+                        'edit_pharmacy_details'.tr,
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -1364,8 +1385,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                         ],
                       ),
                       const SizedBox(height: 15),
-                      const Text(
-                        "Available Time",
+                      Text(
+                        'available_time'.tr,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -1495,8 +1516,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                               }
                               Navigator.pop(context);
                             },
-                            child: const Text(
-                              "Save",
+                            child: Text(
+                              'save_btn'.tr,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.white,
@@ -1586,7 +1607,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Modify your business details below.",
+                        'modify_business_details'.tr,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,
@@ -1613,7 +1634,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        "Working Hours",
+                        'working_hours'.tr,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -1683,8 +1704,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
                             }
                             Navigator.pop(context);
                           },
-                          child: const Text(
-                            "Save Changes",
+                          child: Text(
+                            'save_changes'.tr,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -1919,7 +1940,7 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Follow Us On'),
+            _buildSectionTitle('follow_us_on'.tr),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

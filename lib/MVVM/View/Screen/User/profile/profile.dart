@@ -66,7 +66,7 @@ class Profile extends StatelessWidget {
           }
 
           if (!futureSnapshot.hasData || futureSnapshot.data == null) {
-            return const Center(child: Text('User not found'));
+            return Center(child: Text('user_not_found'.tr));
           }
 
           final identity = futureSnapshot.data!;
@@ -87,7 +87,7 @@ class Profile extends StatelessWidget {
                 }
               }
 
-              return const Center(child: Text('Something went wrong'));
+              return Center(child: Text('something_went_wrong'.tr));
             },
           );
         },
@@ -155,8 +155,8 @@ class Profile extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Edit Pharmacy Details",
+                      Text(
+                        'edit_pharmacy_details'.tr,
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -183,8 +183,8 @@ class Profile extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 15),
-                      const Text(
-                        "Available Time",
+                      Text(
+                        'available_time'.tr,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -314,8 +314,8 @@ class Profile extends StatelessWidget {
                               }
                               Navigator.pop(context);
                             },
-                            child: const Text(
-                              "Save",
+                            child: Text(
+                              'save_btn'.tr,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.white,
@@ -499,8 +499,8 @@ class Profile extends StatelessWidget {
                           const Icon(Icons.emergency_outlined,
                               color: Colors.white, size: 24),
                           const SizedBox(width: 12),
-                          const Text(
-                            "Emergency Services",
+                          Text(
+                            'emergency_services'.tr,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -587,7 +587,7 @@ class Profile extends StatelessWidget {
             Padding(
               padding: EdgeInsets.only(right: mq.height * 0.37),
               child: Text(
-                'General',
+                'general'.tr,
                 style: TextStyle(color: const Color.fromRGBO(133, 118, 138, 1)),
               ),
             ),
@@ -615,7 +615,7 @@ class Profile extends StatelessWidget {
                     SizedBox(width: mq.width * 0.05),
                     Icon(Icons.person),
                     SizedBox(width: mq.width * 0.05),
-                    Text("Profile")
+                    Text('profile'.tr)
                   ],
                 ),
                 height: 60,
@@ -640,7 +640,7 @@ class Profile extends StatelessWidget {
                     SizedBox(width: 20),
                     Icon(Icons.my_location),
                     SizedBox(width: 10),
-                    Text("My Address")
+                    Text('my_address'.tr)
                   ],
                 ),
                 height: 60,
@@ -665,7 +665,7 @@ class Profile extends StatelessWidget {
                     SizedBox(width: 20),
                     Image.asset("assets/icons/booking.png"),
                     SizedBox(width: 10),
-                    Text("My Bookings")
+                    Text('my_bookings'.tr)
                   ],
                 ),
                 height: 60,
@@ -679,7 +679,7 @@ class Profile extends StatelessWidget {
             Padding(
               padding: EdgeInsets.only(right: mq.width * 0.680),
               child: Text(
-                'Loyality Points',
+                'loyalty_points'.tr,
                 style: TextStyle(color: const Color.fromRGBO(133, 118, 138, 1)),
               ),
             ),
@@ -705,7 +705,7 @@ class Profile extends StatelessWidget {
                       ),
                     ),
                     SizedBox(width: 10),
-                    Text("Loyality Points"),
+                    Text('loyalty_points'.tr),
                     SizedBox(width: mq.width * 0.250),
                     Container(
                       child: Padding(
@@ -780,7 +780,7 @@ class Profile extends StatelessWidget {
                                       ),
                                       SizedBox(height: 30),
                                       Text(
-                                        "Are you sure want to logout",
+                                        'sure_logout'.tr,
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontSize: 20,
@@ -810,7 +810,7 @@ class Profile extends StatelessWidget {
                                                   Get.off(LoginAndSigning());
                                                 },
                                                 child: Text(
-                                                  "Yes",
+                                                  'yes_btn'.tr,
                                                   style: TextStyle(
                                                       fontSize: 20,
                                                       color: Colors.black),
@@ -835,7 +835,7 @@ class Profile extends StatelessWidget {
                                                   Navigator.pop(context);
                                                 },
                                                 child: Text(
-                                                  "NO",
+                                                  'no_btn'.tr,
                                                   style: TextStyle(
                                                       fontSize: 20,
                                                       color: Colors.white),
@@ -872,7 +872,7 @@ class Profile extends StatelessWidget {
                         height: 24,
                       ),
                       SizedBox(width: 8),
-                      Text("Logout"),
+                      Text('logout'.tr),
                     ],
                   ),
                 ),

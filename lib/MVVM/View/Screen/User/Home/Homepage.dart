@@ -70,8 +70,72 @@ class HomepageState extends State<Homepage> {
   final List<DocumentSnapshot> _loadedFeedProducts = [];
   DocumentSnapshot? _lastFeedDocument;
   bool _isLoadingFeed = false;
+  final List<DocumentSnapshot> _loadedWorkers = [];
+  DocumentSnapshot? _lastWorkerDocument;
+  bool _isLoadingWorkers = false;
+  bool _hasMoreWorkers = true;
   bool _hasMoreFeed = true;
   final Set<String> _displayedProductIds = {};
+
+  Future<void> _loadInitialWorkers() async {
+    setState(() {
+      _isLoadingWorkers = true;
+      _loadedWorkers.clear();
+      _lastWorkerDocument = null;
+      _hasMoreWorkers = true;
+    });
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('services')
+          .limit(15)
+          .get();
+      if (snapshot.docs.isNotEmpty) {
+        _lastWorkerDocument = snapshot.docs.last;
+        _loadedWorkers.addAll(snapshot.docs);
+        if (snapshot.docs.length < 15) {
+          _hasMoreWorkers = false;
+        }
+      } else {
+        _hasMoreWorkers = false;
+      }
+    } catch (e) {
+      debugPrint("Error loading workers: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingWorkers = false);
+    }
+  }
+
+  Future<void> _loadMoreWorkers() async {
+    if (_isLoadingWorkers || !_hasMoreWorkers || _lastWorkerDocument == null)
+      return;
+    setState(() => _isLoadingWorkers = true);
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('services')
+          .startAfterDocument(_lastWorkerDocument!)
+          .limit(15)
+          .get();
+      if (snapshot.docs.isNotEmpty) {
+        _lastWorkerDocument = snapshot.docs.last;
+
+        final newDocs = snapshot.docs
+            .where((doc) =>
+                !_loadedWorkers.any((existing) => existing.id == doc.id))
+            .toList();
+        _loadedWorkers.addAll(newDocs);
+
+        if (snapshot.docs.length < 15) {
+          _hasMoreWorkers = false;
+        }
+      } else {
+        _hasMoreWorkers = false;
+      }
+    } catch (e) {
+      debugPrint("Error loading more workers: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingWorkers = false);
+    }
+  }
 
   Future<void> _loadInitialFeedProducts() async {
     setState(() {
@@ -272,10 +336,17 @@ class HomepageState extends State<Homepage> {
     super.initState();
     _loadRecentSearch();
     _loadInitialFeedProducts();
+    _loadInitialWorkers();
     _homeScrollController.addListener(() {
       if (_homeScrollController.position.pixels >=
           _homeScrollController.position.maxScrollExtent - 500) {
-        if (selectedCategory == "Online Shops" && !_isLoadingFeed) {
+        if ((selectedCategory == "Workers" ||
+                selectedCategory == "Local Ads") &&
+            !_isLoadingWorkers) {
+          _loadMoreWorkers();
+        } else if ((selectedCategory == "Online Shops" ||
+                selectedCategory == "For You") &&
+            !_isLoadingFeed) {
           _loadMoreFeedProducts();
         }
       }
@@ -483,8 +554,8 @@ class HomepageState extends State<Homepage> {
   ) async {
     if (serviceId == null || serviceId.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This service is no longer available.'),
+        SnackBar(
+          content: Text('service_unavailable'.tr),
           backgroundColor: Colors.red,
         ),
       );
@@ -515,8 +586,8 @@ class HomepageState extends State<Homepage> {
       if (!doc.exists) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('This service is no longer available.'),
+            SnackBar(
+              content: Text('service_unavailable'.tr),
               backgroundColor: Colors.red,
             ),
           );
@@ -529,8 +600,8 @@ class HomepageState extends State<Homepage> {
       if (status == 'inactive') {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('This service is no longer available.'),
+            SnackBar(
+              content: Text('service_unavailable'.tr),
               backgroundColor: Colors.red,
             ),
           );
@@ -595,8 +666,8 @@ class HomepageState extends State<Homepage> {
           if (nav.canPop()) nav.pop();
         } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('This service is no longer available.'),
+          SnackBar(
+            content: Text('service_unavailable'.tr),
             backgroundColor: Colors.red,
           ),
         );
@@ -612,8 +683,8 @@ class HomepageState extends State<Homepage> {
     if (inAppPageId == null || inAppPageId.trim().isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('This page is currently unavailable.'),
+          SnackBar(
+            content: Text('page_unavailable'.tr),
             backgroundColor: Colors.red,
           ),
         );
@@ -673,8 +744,8 @@ class HomepageState extends State<Homepage> {
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('This page is currently unavailable.'),
+          SnackBar(
+            content: Text('page_unavailable'.tr),
             backgroundColor: Colors.red,
           ),
         );
@@ -689,8 +760,8 @@ class HomepageState extends State<Homepage> {
   ) async {
     if (productId == null || productId.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This product is no longer available.'),
+        SnackBar(
+          content: Text('product_unavailable'.tr),
           backgroundColor: Colors.red,
         ),
       );
@@ -730,8 +801,8 @@ class HomepageState extends State<Homepage> {
       if (!doc.exists) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('This product is no longer available.'),
+            SnackBar(
+              content: Text('product_unavailable'.tr),
               backgroundColor: Colors.red,
             ),
           );
@@ -744,8 +815,8 @@ class HomepageState extends State<Homepage> {
       if (status == 'inactive') {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('This product is no longer available.'),
+            SnackBar(
+              content: Text('product_unavailable'.tr),
               backgroundColor: Colors.red,
             ),
           );
@@ -817,8 +888,8 @@ class HomepageState extends State<Homepage> {
           if (nav.canPop()) nav.pop();
         } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('This product is no longer available.'),
+          SnackBar(
+            content: Text('product_unavailable'.tr),
             backgroundColor: Colors.red,
           ),
         );
@@ -874,7 +945,7 @@ class HomepageState extends State<Homepage> {
                   children: [
                     // Title
                     Text(
-                      "Need to publish an advertisement?",
+                      'need_publish_ad'.tr,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -935,7 +1006,7 @@ class HomepageState extends State<Homepage> {
                                   ),
                                   const SizedBox(width: 10),
                                   Text(
-                                    "WhatsApp",
+                                    'whatsapp'.tr,
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -971,7 +1042,7 @@ class HomepageState extends State<Homepage> {
                                 size: 22,
                               ),
                               label: Text(
-                                "Call Now",
+                                'call_now'.tr,
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -1011,11 +1082,9 @@ class HomepageState extends State<Homepage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: PremiumAppBackground(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: _servicesStream ??=
-                FirebaseFirestore.instance.collection('services').snapshots(),
-            builder: (context, snapshot) {
-              final allServices = snapshot.hasData ? snapshot.data!.docs : [];
+          child: Builder(
+            builder: (context) {
+              final allServices = _loadedWorkers;
 
               // 1. Build category list dynamically starting with defaults
               final List<String> currentCategoryList = [
@@ -1169,9 +1238,10 @@ class HomepageState extends State<Homepage> {
                                                         ScaffoldMessenger.of(
                                                           context,
                                                         ).showSnackBar(
-                                                          const SnackBar(
+                                                          SnackBar(
                                                             content: Text(
-                                                              'Fetching location...',
+                                                              'fetching_location'
+                                                                  .tr,
                                                             ),
                                                           ),
                                                         );
@@ -1431,7 +1501,7 @@ class HomepageState extends State<Homepage> {
                                     );
                                   },
                                   decoration: InputDecoration(
-                                    hintText: "Search for workers, services...",
+                                    hintText: 'search_for_workers'.tr,
                                     hintStyle: const TextStyle(
                                       color: Color(0xFF94A3B8),
                                       fontSize: 13,
@@ -1457,45 +1527,33 @@ class HomepageState extends State<Homepage> {
                           const SizedBox(height: 20),
                           SizedBox(
                             height: 80,
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: snapshot.connectionState ==
-                                      ConnectionState.waiting
-                                  ? const CategoryRowSkeleton(
-                                      key: ValueKey('category_loading'),
-                                    )
-                                  : ScrollableHorizontalButtons(
-                                      key: const ValueKey('category_loaded'),
-                                      categories: currentCategoryList,
-                                      selectedIndex: selectedCategoryIndex,
-                                      onSelected: (index) {
-                                        setState(() {
-                                          selectedCategoryIndex = index;
-                                          _clearBusSearch();
-                                          _shuffleSeed = DateTime.now()
-                                              .millisecondsSinceEpoch;
-                                          if (currentCategoryList[index] ==
-                                              "Bus") {
-                                            _searchController.clear();
-                                            searchQuery = "";
-                                          }
-                                          // Randomize Brands Spotlight position each time Online Shops is opened
-                                          if (currentCategoryList[index] ==
-                                              "Online Shops") {
-                                            _spotlightPosition =
-                                                Random().nextInt(4);
-                                          }
-                                        });
-                                        if (index <
-                                            currentCategoryList.length) {
-                                          RecommendationController.to
-                                              .trackCategoryClick(
-                                            currentCategoryList[index],
-                                          );
-                                        }
-                                      },
-                                      isDark: true,
-                                    ),
+                            child: ScrollableHorizontalButtons(
+                              key: const ValueKey('category_loaded'),
+                              categories: currentCategoryList,
+                              selectedIndex: selectedCategoryIndex,
+                              onSelected: (index) {
+                                setState(() {
+                                  selectedCategoryIndex = index;
+                                  _clearBusSearch();
+                                  _shuffleSeed =
+                                      DateTime.now().millisecondsSinceEpoch;
+                                  if (currentCategoryList[index] == "Bus") {
+                                    _searchController.clear();
+                                    searchQuery = "";
+                                  }
+                                  if (currentCategoryList[index] ==
+                                      "Online Shops") {
+                                    _spotlightPosition = Random().nextInt(4);
+                                  }
+                                });
+                                if (index < currentCategoryList.length) {
+                                  RecommendationController.to
+                                      .trackCategoryClick(
+                                    currentCategoryList[index],
+                                  );
+                                }
+                              },
+                              isDark: true,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -1980,8 +2038,7 @@ class HomepageState extends State<Homepage> {
                             _searchController.text.isEmpty)
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 500),
-                            child: snapshot.connectionState ==
-                                    ConnectionState.waiting
+                            child: (_isLoadingWorkers || _isLoadingFeed)
                                 ? const Column(
                                     key: ValueKey('loading_dashboard'),
                                     children: [
@@ -2008,8 +2065,7 @@ class HomepageState extends State<Homepage> {
                             _searchController.text.isEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: snapshot.connectionState ==
-                                    ConnectionState.waiting
+                            child: _isLoadingWorkers
                                 ? const ServiceCardListSkeleton()
                                 : buildWorkersTab(filtered),
                           )
@@ -2024,15 +2080,14 @@ class HomepageState extends State<Homepage> {
                         else if (_searchController.text.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: snapshot.connectionState ==
-                                    ConnectionState.waiting
+                            child: _isLoadingWorkers
                                 ? const ServiceCardListSkeleton()
                                 : filtered.isEmpty
-                                    ? const Padding(
+                                    ? Padding(
                                         padding: EdgeInsets.only(top: 100.0),
                                         child: Center(
                                           child: Text(
-                                            "No results found for your search.",
+                                            'no_results_search'.tr,
                                             style: TextStyle(
                                               color: Colors.grey,
                                               fontSize: 14,
@@ -2532,9 +2587,9 @@ class HomepageState extends State<Homepage> {
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        "Expert Services",
+                        'expert_services'.tr,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -2543,7 +2598,7 @@ class HomepageState extends State<Homepage> {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        "Highly-rated local professionals",
+                        'highly_rated'.tr,
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF64748B),
@@ -2564,10 +2619,10 @@ class HomepageState extends State<Homepage> {
                         );
                       }
                     },
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.only(top: 4),
                       child: Text(
-                        "View All",
+                        'see_all'.tr,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -2828,8 +2883,8 @@ class HomepageState extends State<Homepage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "City Essentials",
+                    Text(
+                      'city_essentials'.tr,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -2844,7 +2899,7 @@ class HomepageState extends State<Homepage> {
                       children: [
                         buildEssentialItem(
                           imagePath: "assets/image/online_sevices.png",
-                          label: "Online Services",
+                          label: 'online_services'.tr,
                           bgColor: const Color.fromARGB(255, 255, 255, 255),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
@@ -2858,7 +2913,7 @@ class HomepageState extends State<Homepage> {
                         ),
                         buildEssentialItem(
                           imagePath: 'assets/image/healthcare.png',
-                          label: "Healthcare",
+                          label: 'healthcare'.tr,
                           bgColor: const Color.fromARGB(255, 251, 251, 251),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
@@ -2873,7 +2928,7 @@ class HomepageState extends State<Homepage> {
                         ),
                         buildEssentialItem(
                           imagePath: 'assets/image/shops.png',
-                          label: "Shops",
+                          label: 'shops'.tr,
                           bgColor: const Color.fromARGB(255, 255, 255, 255),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
@@ -2887,7 +2942,7 @@ class HomepageState extends State<Homepage> {
                         ),
                         buildEssentialItem(
                           imagePath: 'assets/image/tranportation.png',
-                          label: "Transportation",
+                          label: 'transportation'.tr,
                           bgColor: const Color.fromARGB(255, 255, 255, 255),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
@@ -2902,7 +2957,7 @@ class HomepageState extends State<Homepage> {
                         ),
                         buildEssentialItem(
                           imagePath: "assets/image/education.png",
-                          label: "Education",
+                          label: 'education'.tr,
                           bgColor: const Color.fromARGB(255, 255, 255, 255),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
@@ -2916,7 +2971,7 @@ class HomepageState extends State<Homepage> {
                         ),
                         buildEssentialItem(
                           imagePath: "assets/image/public_services.png",
-                          label: "Public Services",
+                          label: 'public_services'.tr,
                           bgColor: const Color.fromARGB(255, 255, 255, 255),
                           iconColor: const Color(0xFF0F2E5A),
                           onTap: () {
@@ -2944,8 +2999,8 @@ class HomepageState extends State<Homepage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Text(
-                      "Local Marketplace",
+                    Text(
+                      'local_marketplace'.tr,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -2961,8 +3016,8 @@ class HomepageState extends State<Homepage> {
                         color: const Color(0xFFFFB800),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        "Top Deals",
+                      child: Text(
+                        'top_deals'.tr,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -3117,7 +3172,7 @@ class HomepageState extends State<Homepage> {
                           height: 115,
                           width: double.infinity,
                           color: const Color(0xFFF1F5F9),
-                          child: const Column(
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -3127,7 +3182,7 @@ class HomepageState extends State<Homepage> {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                "No Connection",
+                                'no_connection'.tr,
                                 style: TextStyle(
                                   color: Colors.grey,
                                   fontSize: 10,
@@ -3146,7 +3201,7 @@ class HomepageState extends State<Homepage> {
                           height: 115,
                           width: double.infinity,
                           color: const Color(0xFFF1F5F9),
-                          child: const Column(
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -3156,7 +3211,7 @@ class HomepageState extends State<Homepage> {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                "No Connection",
+                                'no_connection'.tr,
                                 style: TextStyle(
                                   color: Colors.grey,
                                   fontSize: 10,
@@ -3319,8 +3374,8 @@ class HomepageState extends State<Homepage> {
                     color: const Color(0xFFFFB800),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
-                    "Visit Store",
+                  child: Text(
+                    'visit_store'.tr,
                     style: TextStyle(
                       color: Color(0xFF0F2E5A),
                       fontSize: 9,
@@ -3445,8 +3500,8 @@ class HomepageState extends State<Homepage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Service Directory",
+        Text(
+          'service_directory'.tr,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -3455,7 +3510,7 @@ class HomepageState extends State<Homepage> {
         ),
         const SizedBox(height: 2),
         Text(
-          "Find the right expert for your task",
+          'find_expert'.tr,
           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
         GridView.builder(
@@ -3630,18 +3685,24 @@ class HomepageState extends State<Homepage> {
                           const SizedBox(height: 8),
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 6),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFB800),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             alignment: Alignment.center,
-                            child: const Text(
-                              "Book Now",
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0F2E5A),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'book_now'.tr,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F2E5A),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
@@ -3654,6 +3715,18 @@ class HomepageState extends State<Homepage> {
             );
           },
         ),
+        if (_isLoadingWorkers)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -3866,15 +3939,17 @@ class HomepageState extends State<Homepage> {
             children: [
               Row(
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
@@ -3891,16 +3966,28 @@ class HomepageState extends State<Homepage> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Row(
-                      children: const [
-                        Text(
-                          "See All",
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
+                      children: [
+                        if (title.length <= 20) ...[
+                          Text(
+                            'see_all'.tr,
+                            style: const TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
                           ),
-                        ),
-                        Icon(Icons.arrow_forward, color: Colors.blue, size: 12),
+                          const Icon(Icons.arrow_forward,
+                              color: Colors.blue, size: 12),
+                        ] else
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(Icons.arrow_forward,
+                                color: Colors.blue, size: 14),
+                          ),
                       ],
                     ),
                   ),
@@ -3908,9 +3995,10 @@ class HomepageState extends State<Homepage> {
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 180,
+                height: 200,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
                   itemCount: listToUse.isEmpty
                       ? 4
                       : (listToUse.length > 6 ? 6 : listToUse.length),
@@ -3982,9 +4070,10 @@ class HomepageState extends State<Homepage> {
                       ),
                       const SizedBox(height: 14),
                       SizedBox(
-                        height: 145,
+                        height: 165,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
+                          clipBehavior: Clip.none,
                           itemCount: searchResults.length > 5
                               ? 5
                               : searchResults.length,
@@ -4034,157 +4123,160 @@ class HomepageState extends State<Homepage> {
               // 1. Top Promo Banner (Redmi A7 Pro)
 
               // 1. "Afternoon picks for " layout
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF4F8FE),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          DynamicContentService.getGreeting(username),
-                          style: const TextStyle(
-                            color: Color(0xFF0F172A),
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      height: 145,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: (searchResults.isNotEmpty
-                                        ? searchResults
-                                        : products)
-                                    .length >
-                                5
-                            ? 5
-                            : (searchResults.isNotEmpty
-                                    ? searchResults
-                                    : products)
-                                .length,
-                        itemBuilder: (context, index) {
-                          final doc = (searchResults.isNotEmpty
-                              ? searchResults
-                              : products)[index];
-                          final data = doc.data() as Map<String, dynamic>;
-                          final prodId = doc.id;
-
-                          String actionText = "Continue Search";
-                          final product = StoreProductModel.fromMap(
-                            data,
-                            prodId,
-                          );
-                          if (product.hasDiscount) {
-                            actionText = "Upgrade Now";
-                          }
-
-                          final String imageUrl =
-                              (data['imageUrl']?.toString() ?? '').isNotEmpty
-                                  ? data['imageUrl']
-                                  : (data['image']?.toString() ?? '').isNotEmpty
-                                      ? data['image']
-                                      : "assets/image/car_clean.png";
-
-                          return GestureDetector(
-                            onTap: () =>
-                                _openProductFromBanner(context, prodId),
-                            child: Container(
-                              width: 110,
-                              margin: const EdgeInsets.only(right: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.all(8),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: (imageUrl.startsWith('http') ||
-                                              imageUrl.startsWith('https'))
-                                          ? Image.network(
-                                              imageUrl,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              errorBuilder: (
-                                                context,
-                                                error,
-                                                stackTrace,
-                                              ) =>
-                                                  const Icon(
-                                                Icons.image_outlined,
-                                                color: Colors.grey,
-                                                size: 30,
-                                              ),
-                                            )
-                                          : Image.asset(
-                                              imageUrl,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              errorBuilder: (
-                                                context,
-                                                error,
-                                                stackTrace,
-                                              ) =>
-                                                  const Icon(
-                                                Icons.image_outlined,
-                                                color: Colors.grey,
-                                                size: 30,
-                                              ),
-                                            ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    data['productName']?.toString() ??
-                                        data['title']?.toString() ??
-                                        "Product",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    actionText,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                ],
-                              ),
+              if (searchResults.isNotEmpty || products.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F8FE),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            DynamicContentService.getGreeting(username),
+                            style: const TextStyle(
+                              color: Color(0xFF0F172A),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
-                          );
-                        },
+                          ),
+                          const SizedBox(width: 4),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        height: 165,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          clipBehavior: Clip.none,
+                          itemCount: (searchResults.isNotEmpty
+                                          ? searchResults
+                                          : products)
+                                      .length >
+                                  5
+                              ? 5
+                              : (searchResults.isNotEmpty
+                                      ? searchResults
+                                      : products)
+                                  .length,
+                          itemBuilder: (context, index) {
+                            final doc = (searchResults.isNotEmpty
+                                ? searchResults
+                                : products)[index];
+                            final data = doc.data() as Map<String, dynamic>;
+                            final prodId = doc.id;
+
+                            String actionText = "Continue Search";
+                            final product = StoreProductModel.fromMap(
+                              data,
+                              prodId,
+                            );
+                            if (product.hasDiscount) {
+                              actionText = "Upgrade Now";
+                            }
+
+                            final String imageUrl =
+                                (data['imageUrl']?.toString() ?? '').isNotEmpty
+                                    ? data['imageUrl']
+                                    : (data['image']?.toString() ?? '')
+                                            .isNotEmpty
+                                        ? data['image']
+                                        : "assets/image/car_clean.png";
+
+                            return GestureDetector(
+                              onTap: () =>
+                                  _openProductFromBanner(context, prodId),
+                              child: Container(
+                                width: 110,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.all(8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: (imageUrl.startsWith('http') ||
+                                                imageUrl.startsWith('https'))
+                                            ? Image.network(
+                                                imageUrl,
+                                                fit: BoxFit.cover,
+                                                width: double.infinity,
+                                                errorBuilder: (
+                                                  context,
+                                                  error,
+                                                  stackTrace,
+                                                ) =>
+                                                    const Icon(
+                                                  Icons.image_outlined,
+                                                  color: Colors.grey,
+                                                  size: 30,
+                                                ),
+                                              )
+                                            : Image.asset(
+                                                imageUrl,
+                                                fit: BoxFit.cover,
+                                                width: double.infinity,
+                                                errorBuilder: (
+                                                  context,
+                                                  error,
+                                                  stackTrace,
+                                                ) =>
+                                                    const Icon(
+                                                  Icons.image_outlined,
+                                                  color: Colors.grey,
+                                                  size: 30,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      data['productName']?.toString() ??
+                                          data['title']?.toString() ??
+                                          "Product",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      actionText,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              //],
+              ],
               const SizedBox(height: 16),
               // 3. Redesigned Suggested For You Sections
               if (basedOnYourSearch.isNotEmpty) ...[
                 buildProductList(
-                  "Suggested for You",
+                  'suggested_for_you'.tr,
                   Icons.search,
                   Colors.blue,
                   false,
@@ -4264,7 +4356,7 @@ class HomepageState extends State<Homepage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Product Ads',
+                              'product_ads'.tr,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -4280,8 +4372,8 @@ class HomepageState extends State<Homepage> {
                                 border: Border.all(
                                     color: const Color(0xFFFFD54F), width: 0.5),
                               ),
-                              child: const Text(
-                                'SPONSORED',
+                              child: Text(
+                                'sponsored'.tr,
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
@@ -4293,8 +4385,8 @@ class HomepageState extends State<Homepage> {
                           ],
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'Sponsored products from local sellers',
+                        Text(
+                          'sponsored_products'.tr,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
@@ -4302,9 +4394,10 @@ class HomepageState extends State<Homepage> {
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
-                          height: 160,
+                          height: 180,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
+                            clipBehavior: Clip.none,
                             itemCount: ads.length,
                             itemBuilder: (context, index) {
                               final data =
@@ -4471,9 +4564,10 @@ class HomepageState extends State<Homepage> {
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
-                      height: 160,
+                      height: 180,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
                         itemCount:
                             topValueDeals.isEmpty ? 6 : topValueDeals.length,
                         itemBuilder: (context, index) {
@@ -4561,438 +4655,444 @@ class HomepageState extends State<Homepage> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // 5. TOP DEALS OF THE DAY
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.bolt, color: Colors.orange, size: 18),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "TOP DEALS OF THE DAY",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F172A),
+// 5. TOP DEALS OF THE DAY
+              if (products.isNotEmpty) ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.bolt, color: Colors.orange, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'top_deals_day'.tr,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ViewAllPage(
-                                title: "TOP DEALS OF THE DAY",
-                                products: products,
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ViewAllPage(
+                                  title: 'top_deals_day'.tr,
+                                  products: products,
+                                ),
+                              ),
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                'see_all'.tr,
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_forward,
+                                color: Colors.blue,
+                                size: 12,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 265,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        itemCount: products.isEmpty
+                            ? 4
+                            : (products.length > 6 ? 6 : products.length),
+                        itemBuilder: (context, index) {
+                          final p = products.isNotEmpty
+                              ? StoreProductModel.fromMap(
+                                  pData(index, products),
+                                  pId(index, products),
+                                )
+                              : null;
+
+                          return GestureDetector(
+                            onTap: () {
+                              if (p != null) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ProductDetailsPage(product: p),
+                                  ),
+                                );
+                              }
+                            },
+                            child: Container(
+                              width: 155,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      8,
+                                      8,
+                                      8,
+                                      0,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFD1FAE5),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            "${p?.discountPercentage.round() ?? (index == 0 ? 72 : 68)}% OFF",
+                                            style: const TextStyle(
+                                              color: Color(0xFF059669),
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          width: double.infinity,
+                                          color: Colors.grey.shade100,
+                                          child: p != null &&
+                                                  p.coverImage.isNotEmpty
+                                              ? Image.network(
+                                                  p.coverImage,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) =>
+                                                      Image.asset(
+                                                    "assets/image/car_clean.png",
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                )
+                                              : Image.asset(
+                                                  "assets/image/car_clean.png",
+                                                  fit: BoxFit.cover,
+                                                ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          p?.productName ??
+                                              (index == 0
+                                                  ? "Mivi DuoPods F40"
+                                                  : "Noise ColorFit Pro 5"),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          index == 0
+                                              ? "True Wireless Earbuds"
+                                              : "Bluetooth Calling",
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.blueGrey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: Color(0xFFF1F5F9),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Row(
+                                      children: [
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "\u20b9${p?.sellingPrice.round() ?? (index == 0 ? 799 : 1799)}",
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "\u20b9${p?.originalPrice.round() ?? (index == 0 ? 2999 : 5499)}",
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            decoration:
+                                                TextDecoration.lineThrough,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           );
                         },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 0),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Row(
-                          children: const [
-                            Text(
-                              "See All",
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                            Icon(
-                              Icons.arrow_forward,
-                              color: Colors.blue,
-                              size: 12,
-                            ),
-                          ],
-                        ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 240,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: products.isEmpty
-                          ? 4
-                          : (products.length > 6 ? 6 : products.length),
-                      itemBuilder: (context, index) {
-                        final p = products.isNotEmpty
-                            ? StoreProductModel.fromMap(
-                                pData(index, products),
-                                pId(index, products),
-                              )
-                            : null;
-
-                        return GestureDetector(
-                          onTap: () {
-                            if (p != null) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ProductDetailsPage(product: p),
-                                ),
-                              );
-                            }
-                          },
-                          child: Container(
-                            width: 155,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    8,
-                                    8,
-                                    8,
-                                    0,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFD1FAE5),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          "${p?.discountPercentage.round() ?? (index == 0 ? 72 : 68)}% OFF",
-                                          style: const TextStyle(
-                                            color: Color(0xFF059669),
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        width: double.infinity,
-                                        color: Colors.grey.shade100,
-                                        child:
-                                            p != null && p.coverImage.isNotEmpty
-                                                ? Image.network(
-                                                    p.coverImage,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) =>
-                                                        Image.asset(
-                                                      "assets/image/car_clean.png",
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  )
-                                                : Image.asset(
-                                                    "assets/image/car_clean.png",
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        p?.productName ??
-                                            (index == 0
-                                                ? "Mivi DuoPods F40"
-                                                : "Noise ColorFit Pro 5"),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF0F172A),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        index == 0
-                                            ? "True Wireless Earbuds"
-                                            : "Bluetooth Calling",
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.blueGrey,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                const Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: Color(0xFFF1F5F9),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    children: [
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        "\u20b9${p?.sellingPrice.round() ?? (index == 0 ? 799 : 1799)}",
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF0F172A),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        "\u20b9${p?.originalPrice.round() ?? (index == 0 ? 2999 : 5499)}",
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          decoration:
-                                              TextDecoration.lineThrough,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
 
               // Spotlight: position 0 = before Flash Deals
               if (_spotlightPosition == 0) ...[
                 const SpotlightCampaignSection(isOnlineStore: true),
                 const SizedBox(height: 20)
               ],
-
-              // Section A: Flash Deals
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department_outlined,
-                        color: Colors.redAccent,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "Flash Deals",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F172A),
+// Section A: Flash Deals
+              if (products.isNotEmpty) ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department_outlined,
+                          color: Colors.redAccent,
+                          size: 20,
                         ),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ViewAllPage(
-                                title: "Flash Deals",
-                                products: products,
+                        const SizedBox(width: 8),
+                        Text(
+                          'flash_deals'.tr,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ViewAllPage(
+                                  title: 'flash_deals'.tr,
+                                  products: products,
+                                ),
+                              ),
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                'see_all'.tr,
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right,
+                                color: Colors.blue,
+                                size: 16,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 160,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        itemCount: products.isEmpty
+                            ? 4
+                            : (products.length > 6 ? 6 : products.length),
+                        itemBuilder: (context, index) {
+                          final p = products.isNotEmpty
+                              ? StoreProductModel.fromMap(
+                                  pData(index),
+                                  pId(index),
+                                )
+                              : null;
+
+                          return GestureDetector(
+                            onTap: () {
+                              if (p != null) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ProductDetailsPage(product: p),
+                                  ),
+                                );
+                              }
+                            },
+                            child: Container(
+                              width: 100,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFD1FAE5),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      "Upto ${index == 0 ? 60 : index == 1 ? 50 : index == 2 ? 45 : 70}% OFF",
+                                      style: const TextStyle(
+                                        color: Color(0xFF059669),
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0,
+                                      ),
+                                      child: Container(
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.all(2),
+                                        child: ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          child: p != null &&
+                                                  p.coverImage.isNotEmpty
+                                              ? Image.network(
+                                                  p.coverImage,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) =>
+                                                      Image.asset(
+                                                    "assets/image/car_clean.png",
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                )
+                                              : Image.asset(
+                                                  "assets/image/car_clean.png",
+                                                  fit: BoxFit.cover,
+                                                ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4.0,
+                                    ),
+                                    child: Text(
+                                      p?.productName ??
+                                          (index == 0
+                                              ? "Smart Watch"
+                                              : index == 1
+                                                  ? "Wireless Earbud"
+                                                  : index == 2
+                                                      ? "Home Appliance"
+                                                      : "Fashion"),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
                               ),
                             ),
                           );
                         },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 0),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Row(
-                          children: const [
-                            Text(
-                              "See All",
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Icon(
-                              Icons.chevron_right,
-                              color: Colors.blue,
-                              size: 16,
-                            ),
-                          ],
-                        ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 140,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: products.isEmpty
-                          ? 4
-                          : (products.length > 6 ? 6 : products.length),
-                      itemBuilder: (context, index) {
-                        final p = products.isNotEmpty
-                            ? StoreProductModel.fromMap(
-                                pData(index),
-                                pId(index),
-                              )
-                            : null;
-
-                        return GestureDetector(
-                          onTap: () {
-                            if (p != null) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ProductDetailsPage(product: p),
-                                ),
-                              );
-                            }
-                          },
-                          child: Container(
-                            width: 100,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFD1FAE5),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    "Upto ${index == 0 ? 60 : index == 1 ? 50 : index == 2 ? 45 : 70}% OFF",
-                                    style: const TextStyle(
-                                      color: Color(0xFF059669),
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0,
-                                    ),
-                                    child: Container(
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade100,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      padding: const EdgeInsets.all(2),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(6),
-                                        child:
-                                            p != null && p.coverImage.isNotEmpty
-                                                ? Image.network(
-                                                    p.coverImage,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) =>
-                                                        Image.asset(
-                                                      "assets/image/car_clean.png",
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  )
-                                                : Image.asset(
-                                                    "assets/image/car_clean.png",
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4.0,
-                                  ),
-                                  child: Text(
-                                    p?.productName ??
-                                        (index == 0
-                                            ? "Smart Watch"
-                                            : index == 1
-                                                ? "Wireless Earbud"
-                                                : index == 2
-                                                    ? "Home Appliance"
-                                                    : "Fashion"),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
 
               // Spotlight: position 1 = after Flash Deals, before Popular Near You
               if (_spotlightPosition == 1) ...[
@@ -5098,109 +5198,141 @@ class HomepageState extends State<Homepage> {
                 const SpotlightCampaignSection(isOnlineStore: true),
                 const SizedBox(height: 20)
               ],
-
-              // 9. Suggested For You (Grid)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.person, color: Colors.blue, size: 16),
-                          SizedBox(width: 8),
-                          Text(
-                            "Suggested For You",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
+// 9. Suggested For You (Grid)
+              if (products.isNotEmpty) ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person,
+                                  color: Colors.blue, size: 16),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'suggested_for_you'.tr,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ViewAllPage(
-                                title: "Suggested For You",
-                                products: products,
-                              ),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 0),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        child: Row(
-                          children: const [
-                            Text(
-                              "See All",
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ViewAllPage(
+                                  title: 'suggested_for_you'.tr,
+                                  products: products,
+                                ),
                               ),
-                            ),
-                            Icon(
-                              Icons.arrow_forward,
-                              color: Colors.blue,
-                              size: 12,
-                            ),
-                          ],
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Row(
+                            children: [
+                              if ('suggested_for_you'.tr.length <= 20) ...[
+                                Text(
+                                  'see_all'.tr,
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.arrow_forward,
+                                  color: Colors.blue,
+                                  size: 12,
+                                ),
+                              ] else
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_forward,
+                                    color: Colors.blue,
+                                    size: 14,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: products.isEmpty ? 4 : products.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.95,
+                      ],
                     ),
-                    itemBuilder: (context, index) {
-                      final product = StoreProductModel.fromMap(
-                        pData(index),
-                        pId(index),
-                      );
-                      return GestureDetector(
-                        onTap: () => products.isNotEmpty
-                            ? _openProductFromBanner(context, pId(index))
-                            : null,
-                        child: _buildSuggestedCard(
-                          product.productName,
-                          "₹${product.sellingPrice.round()}",
-                          product.hasDiscount
-                              ? "₹${product.originalPrice.round()}"
-                              : "",
-                          "${product.discountPercentage.round()}% OFF",
-                          product.coverImage.isNotEmpty
-                              ? product.coverImage
-                              : "assets/image/add_image.png",
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+                    const SizedBox(height: 12),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: products.isEmpty ? 4 : products.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.95,
+                      ),
+                      itemBuilder: (context, index) {
+                        final product = StoreProductModel.fromMap(
+                          pData(index),
+                          pId(index),
+                        );
+                        return GestureDetector(
+                          onTap: () => products.isNotEmpty
+                              ? _openProductFromBanner(context, pId(index))
+                              : null,
+                          child: _buildSuggestedCard(
+                            product.productName,
+                            "₹${product.sellingPrice.round()}",
+                            product.hasDiscount
+                                ? "₹${product.originalPrice.round()}"
+                                : "",
+                            "${product.discountPercentage.round()}% OFF",
+                            product.coverImage.isNotEmpty
+                                ? product.coverImage
+                                : "assets/image/add_image.png",
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
               // Spotlight: position 3 = after Suggested For You (last slot)
               if (_spotlightPosition == 3) ...[
                 const SizedBox(height: 20),
                 const SpotlightCampaignSection(isOnlineStore: true)
               ],
-              const SizedBox(height: 20),
+              if (_isLoadingFeed)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 80),
             ],
           ),
         );
@@ -5772,6 +5904,17 @@ class HomepageState extends State<Homepage> {
                     }
                   }
 
+                  final lang = Get.locale?.languageCode ?? 'en';
+                  String getLocalizedName(
+                      Map<String, dynamic>? loc, String fallback) {
+                    if (loc == null) return fallback;
+                    if (lang == 'ml')
+                      return loc['malayalam'] ?? loc['english'] ?? fallback;
+                    if (lang == 'hi')
+                      return loc['hindi'] ?? loc['english'] ?? fallback;
+                    return loc['english'] ?? fallback;
+                  }
+
                   return {
                     "id": item['bus_id'],
                     "driver_id": item['driver_id'],
@@ -5779,21 +5922,34 @@ class HomepageState extends State<Homepage> {
                     "tags": [isKsrtc ? "KSRTC" : "PRIVATE", subType],
                     "timeMain": timeMain,
                     "timePeriod": timePeriod,
-                    "from": busData['start_place']?.toString() ??
-                        driverData['main_stand']?.toString() ??
-                        "",
-                    "to": busData['destination']?.toString() ?? "",
+                    "searchFrom":
+                        "${busData['fromLocation']?['english'] ?? ''} ${busData['fromLocation']?['malayalam'] ?? ''} ${busData['fromLocation']?['hindi'] ?? ''} ${busData['start_place'] ?? ''} ${driverData['main_stand'] ?? ''}"
+                            .toLowerCase(),
+                    "searchTo":
+                        "${busData['toLocation']?['english'] ?? ''} ${busData['toLocation']?['malayalam'] ?? ''} ${busData['toLocation']?['hindi'] ?? ''} ${busData['destination'] ?? ''}"
+                            .toLowerCase(),
+                    "from": getLocalizedName(
+                        busData['fromLocation'],
+                        busData['start_place']?.toString() ??
+                            driverData['main_stand']?.toString() ??
+                            ""),
+                    "to": getLocalizedName(busData['toLocation'],
+                        busData['destination']?.toString() ?? ""),
                     "via": firstStop.isNotEmpty ? "Via $firstStop" : "",
                     "stops": [
                       {
-                        "name": busData['start_place']?.toString() ??
-                            driverData['main_stand']?.toString() ??
-                            "Origin",
+                        "name": getLocalizedName(
+                            busData['fromLocation'],
+                            busData['start_place']?.toString() ??
+                                driverData['main_stand']?.toString() ??
+                                "Origin"),
                         "time": "Departs ${busData['departure_time'] ?? ''}",
                       },
                       {
-                        "name":
-                            busData['destination']?.toString() ?? "Destination",
+                        "name": getLocalizedName(
+                            busData['toLocation'],
+                            busData['destination']?.toString() ??
+                                "Destination"),
                         "status": "Arrives ${busData['arrival_time'] ?? ''}",
                         "statusColor": Colors.green,
                       },
@@ -5835,14 +5991,21 @@ class HomepageState extends State<Homepage> {
           final toSearch = _toBusController.text.trim().toLowerCase();
 
           final matchesFrom = fromSearch.isEmpty ||
-              bus['from'].toString().toLowerCase().contains(fromSearch);
+              (bus['searchFrom']?.contains(fromSearch) ??
+                  bus['from'].toString().toLowerCase().contains(fromSearch));
           final matchesTo = toSearch.isEmpty ||
-              bus['to'].toString().toLowerCase().contains(toSearch);
+              (bus['searchTo']?.contains(toSearch) ??
+                  bus['to'].toString().toLowerCase().contains(toSearch));
 
           final globalSearch = _searchController.text.trim().toLowerCase();
           final matchesGlobal = globalSearch.isEmpty ||
-              bus['from'].toString().toLowerCase().contains(globalSearch) ||
-              bus['to'].toString().toLowerCase().contains(globalSearch) ||
+              (bus['searchFrom']?.contains(globalSearch) ??
+                  bus['from']
+                      .toString()
+                      .toLowerCase()
+                      .contains(globalSearch)) ||
+              (bus['searchTo']?.contains(globalSearch) ??
+                  bus['to'].toString().toLowerCase().contains(globalSearch)) ||
               bus['frequency'].toString().toLowerCase().contains(
                     globalSearch,
                   ) ||
@@ -5903,8 +6066,8 @@ class HomepageState extends State<Homepage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                "FROM",
+                              Text(
+                                'from_label'.tr,
                                 style: TextStyle(
                                   fontSize: 9,
                                   color: Colors.grey,
@@ -5970,8 +6133,8 @@ class HomepageState extends State<Homepage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                "TO",
+                              Text(
+                                'to_label'.tr,
                                 style: TextStyle(
                                   fontSize: 9,
                                   color: Colors.grey,
@@ -6039,8 +6202,8 @@ class HomepageState extends State<Homepage> {
                               ),
                               elevation: 0,
                             ),
-                            child: const Text(
-                              "Search Schedules",
+                            child: Text(
+                              'search_schedules'.tr,
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
@@ -6131,8 +6294,8 @@ class HomepageState extends State<Homepage> {
                       color: Color(0xFF0F2E5A),
                     ),
                     const SizedBox(width: 4),
-                    const Text(
-                      "Saved Routes",
+                    Text(
+                      'saved_routes'.tr,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -6234,8 +6397,8 @@ class HomepageState extends State<Homepage> {
                     color: Color(0xFF0F2E5A),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    "District:",
+                  Text(
+                    'district_label'.tr,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -6307,6 +6470,24 @@ class HomepageState extends State<Homepage> {
                                     "Idukki",
                                     "Kasaragod",
                                   ];
+                                  final Map<String, String> districtKeyMap = {
+                                    "All Districts": 'dist_all',
+                                    "Kozhikode": 'dist_kozhikode',
+                                    "Kannur": 'dist_kannur',
+                                    "Malappuram": 'dist_malappuram',
+                                    "Wayanad": 'dist_wayanad',
+                                    "Palakkad": 'dist_palakkad',
+                                    "Thrissur": 'dist_thrissur',
+                                    "Ernakulam": 'dist_ernakulam',
+                                    "Kottayam": 'dist_kottayam',
+                                    "Alappuzha": 'dist_alappuzha',
+                                    "Pathanamthitta": 'dist_pathanamthitta',
+                                    "Kollam": 'dist_kollam',
+                                    "Thiruvananthapuram":
+                                        'dist_thiruvananthapuram',
+                                    "Idukki": 'dist_idukki',
+                                    "Kasaragod": 'dist_kasaragod',
+                                  };
                                   if (!districts.contains(_selectedDistrict)) {
                                     districts.add(_selectedDistrict);
                                   }
@@ -6314,9 +6495,11 @@ class HomepageState extends State<Homepage> {
                                       .map<DropdownMenuItem<String>>((
                                     String value,
                                   ) {
+                                    final key = districtKeyMap[value];
+                                    final label = key != null ? key.tr : value;
                                     return DropdownMenuItem<String>(
                                       value: value,
-                                      child: Text(value),
+                                      child: Text(label),
                                     );
                                   }).toList();
                                 }(),
@@ -6349,8 +6532,8 @@ class HomepageState extends State<Homepage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Upcoming Schedules",
+                  Text(
+                    'upcoming_schedules'.tr,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -6359,7 +6542,7 @@ class HomepageState extends State<Homepage> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "Live status for your route",
+                    'live_status'.tr,
                     style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   ),
                 ],
@@ -6379,14 +6562,14 @@ class HomepageState extends State<Homepage> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.orange.shade300),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.location_on, color: Colors.orange),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        "Please select a district to view available bus routes.",
+                        'select_district_bus'.tr,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.orange,
@@ -6399,11 +6582,11 @@ class HomepageState extends State<Homepage> {
                 ),
               )
             else if (filteredSchedules.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(40),
                 child: Center(
                   child: Text(
-                    "No bus schedules found for the selected district.",
+                    'no_bus_schedules'.tr,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey, fontSize: 13),
                   ),
@@ -6422,7 +6605,7 @@ class HomepageState extends State<Homepage> {
   // ─── Local Ads Tab ──────────────────────────────────────────────────────────
   Widget buildLocalAdsTab(List<dynamic> allServices) {
     if (allServices.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 60),
         child: Center(
           child: Column(
@@ -6430,7 +6613,7 @@ class HomepageState extends State<Homepage> {
               Icon(Icons.campaign_outlined, size: 48, color: Color(0xFFCBD5E1)),
               SizedBox(height: 12),
               Text(
-                "No advertisements yet",
+                'no_ads_yet'.tr,
                 style: TextStyle(
                   fontSize: 14,
                   color: Color(0xFF64748B),
@@ -6460,7 +6643,7 @@ class HomepageState extends State<Homepage> {
                   color: const Color(0xFFFFB800).withAlpha(30),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
@@ -6470,7 +6653,7 @@ class HomepageState extends State<Homepage> {
                     ),
                     SizedBox(width: 4),
                     Text(
-                      "SPONSORED",
+                      'sponsored'.tr,
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -6482,12 +6665,12 @@ class HomepageState extends State<Homepage> {
                 ),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Local Advertisements",
+                      'local_ads'.tr,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
@@ -6495,7 +6678,7 @@ class HomepageState extends State<Homepage> {
                       ),
                     ),
                     Text(
-                      "Discover deals from local businesses",
+                      'discover_deals'.tr,
                       style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                     ),
                   ],
@@ -6596,7 +6779,18 @@ class HomepageState extends State<Homepage> {
             ); // closes outer Column
           },
         ), // closes outer Builder (category derivation + chips)
-        const SizedBox(height: 12),
+        if (_isLoadingWorkers)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -6882,8 +7076,8 @@ class HomepageState extends State<Homepage> {
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               const SizedBox(height: 16),
-              const Text(
-                "Schedule Information:",
+              Text(
+                'schedule_info'.tr,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0F2E5A),
@@ -6904,8 +7098,8 @@ class HomepageState extends State<Homepage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    "Close",
+                  child: Text(
+                    'close'.tr,
                     style: TextStyle(color: Colors.white),
                   ),
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/model/seller/store_product_model.dart';
 import 'home_card_system.dart';
+import 'package:get/get.dart';
 
 // Section theme enum — kept for backwards compatibility with themed_product_card.dart imports
 enum SectionTheme {

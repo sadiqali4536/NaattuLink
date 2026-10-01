@@ -176,9 +176,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     final paymentId = _paymentIdController.text.trim();
     if (paymentId.isEmpty) {
       CherryToast.warning(
-        title: const Text('Required',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        description: const Text('Please enter your Transaction ID.'),
+        title: Text('error_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+        description: Text('please_enter_transaction_id'.tr),
       ).show(context);
       return;
     }
@@ -314,9 +313,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     } catch (e) {
       if (mounted) {
         CherryToast.error(
-          title: const Text('Error',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: const Text('Failed to submit payment ID.'),
+          title: Text('error_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text('failed_submit_payment_id'.tr),
         ).show(context);
       }
       setState(() {
@@ -346,8 +344,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     if (_qrGeneratedAt == null || _qrExpiresAt == null) {
       CherryToast.error(
         title:
-            const Text('Error', style: TextStyle(fontWeight: FontWeight.bold)),
-        description: const Text('Payment session has expired or is invalid.'),
+            Text('error_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+        description: Text('payment_session_expired'.tr),
       ).show(context);
       return;
     }
@@ -375,9 +373,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       }
 
       CherryToast.error(
-        title: const Text('Invalid Receipt',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        description: Text(errorMsg),
+        title: Text('invalid_receipt'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+        description: Text(errorMsg.tr),
       ).show(context);
       return;
     }
@@ -395,9 +392,9 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
 
     CherryToast.success(
       title:
-          const Text('Success', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text('success_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
       description:
-          const Text('Payment verified! All data extracted successfully.'),
+          Text('payment_verified_success'.tr),
     ).show(context);
   }
 
@@ -407,9 +404,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
           _qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
         CherryToast.error(
-          title: const Text('Error',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: const Text('QR Code not ready yet.'),
+          title: Text('error_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text('qr_code_not_ready'.tr),
         ).show(context);
         return;
       }
@@ -434,10 +430,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
 
         if (mounted) {
           CherryToast.success(
-            title: const Text('Downloaded',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            description: const Text(
-                'QR Code saved to Downloads/NaattuLink. You can now scan it from your UPI app.'),
+            title: Text('downloaded_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+            description: Text('qr_saved_desc'.tr),
           ).show(context);
         }
       }
@@ -445,18 +439,16 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       debugPrint('PlatformException: ${e.message}');
       if (mounted) {
         CherryToast.error(
-          title: const Text('Error',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: Text('Failed to save QR: ${e.message}'),
+          title: Text('error_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text('${'failed_save_qr'.tr}${e.message}'),
         ).show(context);
       }
     } catch (e) {
       debugPrint('Download QR Error: $e');
       if (mounted) {
         CherryToast.warning(
-          title: const Text('Error',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: Text('Failed to save QR code: $e'),
+          title: Text('error_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text('${'failed_save_qr_code'.tr}$e'),
         ).show(context);
       }
     }
@@ -522,8 +514,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: const AppBackButton(),
-        title: const Text(
-          'Complete Payment',
+        title: Text(
+          'complete_payment'.tr,
           style: TextStyle(
             color: Color(0xFF0F2E5A),
             fontSize: 20,
@@ -554,8 +546,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                     ),
                     child: Column(
                       children: [
-                        const Text(
-                          "Amount to Pay",
+                        Text(
+                          "amount_to_pay".tr,
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.black54,
@@ -585,8 +577,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                                   Icon(Icons.timer_off,
                                       color: Colors.red.shade400, size: 48),
                                   const SizedBox(height: 12),
-                                  const Text(
-                                    "This payment QR has expired.",
+                                  Text(
+                                    "payment_qr_expired".tr,
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -595,8 +587,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                                     textAlign: TextAlign.center,
                                   ),
                                   const SizedBox(height: 8),
-                                  const Text(
-                                    "Generate a new QR to continue.",
+                                  Text(
+                                    "generate_new_qr_desc".tr,
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.black54,
@@ -612,7 +604,7 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
-                                    child: const Text("Generate New QR",
+                                    child: Text("generate_new_qr".tr,
                                         style: TextStyle(color: Colors.white)),
                                   ),
                                 ],
@@ -648,7 +640,7 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                                           size: 16, color: Colors.orange),
                                       const SizedBox(width: 6),
                                       Text(
-                                        "Expires in: ${(_qrExpiresAt!.difference(DateTime.now()).inMinutes).toString().padLeft(2, '0')}:${(_qrExpiresAt!.difference(DateTime.now()).inSeconds % 60).toString().padLeft(2, '0')}",
+                                        "${'expires_in'.tr}${(_qrExpiresAt!.difference(DateTime.now()).inMinutes).toString().padLeft(2, '0')}:${(_qrExpiresAt!.difference(DateTime.now()).inSeconds % 60).toString().padLeft(2, '0')}",
                                         style: const TextStyle(
                                           color: Colors.orange,
                                           fontWeight: FontWeight.bold,
@@ -674,16 +666,16 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                               ),
                             ),
                             icon: const Icon(Icons.download, size: 20),
-                            label: const Text(
-                              "Download QR",
+                            label: Text(
+                              "download_qr".tr,
                               style: TextStyle(
                                   fontSize: 14, fontWeight: FontWeight.bold),
                             ),
                           ),
                         if (!_isExpired) const SizedBox(height: 16),
                         if (!_isExpired)
-                          const Text(
-                            "Scan QR with any UPI App",
+                          Text(
+                            "scan_qr_upi".tr,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -707,8 +699,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "How to pay?",
+                        Text(
+                          "how_to_pay".tr,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -717,15 +709,15 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                         ),
                         const SizedBox(height: 16),
                         _buildStepBadge(
-                            "1", "Tap the 'Download QR' button above"),
+                            "1", "step1_download_qr".tr),
                         _buildStepBadge(
-                            "2", "Open your UPI App (GPay, PhonePe, etc.)"),
+                            "2", "step2_open_upi".tr),
                         _buildStepBadge("3",
-                            "Tap 'Scan QR' and select 'Upload from Gallery'"),
+                            "step3_scan_qr".tr),
                         _buildStepBadge("4",
-                            "Pay ₹${widget.totalAmount.toStringAsFixed(2)} to NaattuLink"),
+                            "${'step4_pay_amount'.tr} ₹${widget.totalAmount.toStringAsFixed(2)}"),
                         _buildStepBadge("5",
-                            "Take a screenshot of the Payment Success screen"),
+                            "step5_screenshot".tr),
                       ],
                     ),
                   ),
@@ -734,8 +726,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                   const Divider(),
                   const SizedBox(height: 24),
 
-                  const Text(
-                    "After Payment is Complete",
+                  Text(
+                    "after_payment_complete".tr,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -759,8 +751,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                           });
                         },
                         icon: const Icon(Icons.refresh, color: Colors.red),
-                        label: const Text(
-                            'Scan Another Receipt or Enter Manually',
+                        label: Text(
+                            'scan_another_receipt'.tr,
                             style: TextStyle(
                                 color: Colors.red,
                                 fontWeight: FontWeight.bold)),
@@ -796,15 +788,15 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                           ),
                         ),
                         icon: const Icon(Icons.document_scanner),
-                        label: const Text(
-                          "Upload Payment Success Screenshot",
+                        label: Text(
+                          "upload_payment_screenshot".tr,
                           style: TextStyle(
                               fontSize: 15, fontWeight: FontWeight.bold),
                         ),
                       ),
                     const SizedBox(height: 24),
-                    const Text(
-                      "Or Enter Transaction ID Manually",
+                    Text(
+                      "enter_transaction_manually".tr,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -815,7 +807,7 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                     TextField(
                       controller: _paymentIdController,
                       decoration: InputDecoration(
-                        hintText: "e.g., TXN123456789",
+                        hintText: "txn_id_hint".tr,
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -848,8 +840,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                       ),
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              "Submit Payment",
+                          : Text(
+                              "submit_payment".tr,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -888,16 +880,16 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                     topRight: Radius.circular(16)),
               ),
               width: double.infinity,
-              child: const Column(
+              child: Column(
                 children: [
-                  Text('NAATTULINK',
+                  const Text('NAATTULINK',
                       style: TextStyle(
                           color: Color(0xFFF5B400),
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                           letterSpacing: 2)),
                   SizedBox(height: 4),
-                  Text('Payment Receipt Extracted',
+                  Text('payment_receipt_extracted'.tr,
                       style: TextStyle(color: Colors.white, fontSize: 14)),
                 ],
               )),
@@ -906,12 +898,12 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 28),
-                        SizedBox(width: 8),
-                        Text('Details Extracted',
+                        const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                        const SizedBox(width: 8),
+                        Text('details_extracted'.tr,
                             style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -926,31 +918,31 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0F2E5A))),
                     const SizedBox(height: 24),
-                    _buildReceiptCard('Payment Summary', [
+                    _buildReceiptCard('payment_summary'.tr, [
                       if (r.transactionIds.isNotEmpty)
                         _buildReceiptRow(
-                            'Transaction ID', r.transactionIds.first)
+                            'transaction_id'.tr, r.transactionIds.first)
                       else if (r.referenceIds.isNotEmpty)
-                        _buildReceiptRow('Reference ID', r.referenceIds.first),
+                        _buildReceiptRow('reference_id'.tr, r.referenceIds.first),
                       if (r.paymentDateTime != null)
                         _buildReceiptRow(
-                            'Date & Time',
+                            'date_and_time'.tr,
                             DateFormat('dd MMM yyyy, hh:mm a')
                                 .format(r.paymentDateTime!)),
                     ]),
                     if (r.receiverUpi != null) ...[
                       const SizedBox(height: 16),
-                      _buildReceiptCard('Paid To', [
-                        _buildReceiptRow('Receiver UPI', r.receiverUpi!),
+                      _buildReceiptCard('paid_to'.tr, [
+                        _buildReceiptRow('receiver_upi'.tr, r.receiverUpi!),
                       ]),
                     ],
                     const SizedBox(height: 16),
-                    _buildReceiptCard('Transaction Details', [
+                    _buildReceiptCard('transaction_details'.tr, [
                       _buildReceiptRow(
-                          'Status',
+                          'status_label'.tr,
                           r.hasSuccessIndicator
-                              ? '✓ Completed'
-                              : 'Pending Verification'),
+                              ? 'completed_status'.tr
+                              : 'pending_verification'.tr),
                     ]),
                   ]))
         ]));

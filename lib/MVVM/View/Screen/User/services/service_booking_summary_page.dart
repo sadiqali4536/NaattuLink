@@ -56,8 +56,8 @@ class ServiceBookingSummaryPage extends StatefulWidget {
 }
 
 class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
-  String addressTitle = "Current Location";
-  String addressSubtitle = "Fetching address...";
+  String addressTitle = 'current_location'.tr;
+  String addressSubtitle = 'fetching_address'.tr;
   bool _isLoading = false;
   bool _isFetchingLocation = true;
   double? _latitude;
@@ -173,7 +173,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
 
               addressSubtitle = fullAddress.isNotEmpty
                   ? fullAddress
-                  : "Address details not available";
+                  : 'address_details_not_available'.tr;
               _latitude = pAddr['latitude']?.toDouble();
               _longitude = pAddr['longitude']?.toDouble();
               _receiverName = pAddr['receiverName']?.toString();
@@ -187,13 +187,13 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
       }
 
       setState(() {
-        addressTitle = "No Address Selected";
-        addressSubtitle = "Please tap edit to select your address.";
+        addressTitle = 'no_address_selected'.tr;
+        addressSubtitle = 'tap_edit_address'.tr;
       });
     } catch (e) {
       if (mounted) {
         setState(() {
-          addressSubtitle = 'Failed to get saved location';
+          addressSubtitle = 'failed_saved_location'.tr;
         });
       }
     } finally {
@@ -224,8 +224,8 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text("Select Address",
-                              style: TextStyle(
+                          Text('select_address'.tr,
+                              style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF0F2E5A))),
@@ -239,8 +239,8 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                     ListTile(
                       leading: const Icon(Icons.my_location,
                           color: Color(0xFF059669)),
-                      title: const Text("Use Current Location",
-                          style: TextStyle(
+                      title: Text('use_current_location'.tr,
+                          style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF059669))),
                       onTap: () async {
@@ -264,8 +264,8 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                           }
                           if (!snapshot.hasData ||
                               snapshot.data!.docs.isEmpty) {
-                            return const Center(
-                                child: Text("No saved addresses"));
+                            return Center(
+                                child: Text('no_saved_addresses'.tr));
                           }
                           final docs = snapshot.data!.docs.toList();
                           docs.sort((a, b) {
@@ -334,7 +334,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
 
                               if (displayAddress.isEmpty) {
                                 displayAddress =
-                                    "Address details not available";
+                                    'address_details_not_available'.tr;
                               }
 
                               return GestureDetector(
@@ -344,7 +344,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                     addressTitle = data['addressType'] ??
                                         data['name'] ??
                                         data['receiverName'] ??
-                                        "Saved Address";
+                                        'saved_address'.tr;
                                     addressSubtitle = formatted;
                                     _landmark = (data['buildingName'] ??
                                             data['landmark'])
@@ -459,7 +459,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                                                 .blue.shade200),
                                                       ),
                                                       child: Text(
-                                                        "Default",
+                                                        'default_label'.tr,
                                                         style: TextStyle(
                                                             fontSize: 11,
                                                             fontWeight:
@@ -508,7 +508,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                                     .isNotEmpty) ...[
                                               const SizedBox(height: 6),
                                               Text(
-                                                "Phone: ${(data['phone'] ?? data['receiverPhone'])}",
+                                                "${'phone_label'.tr}${(data['phone'] ?? data['receiverPhone'])}",
                                                 style: const TextStyle(
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.w600,
@@ -525,7 +525,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                                     .isNotEmpty) ...[
                                               const SizedBox(height: 2),
                                               Text(
-                                                "Alt Phone: ${(data['alternativeNumber'] ?? data['alternatePhone'])}",
+                                                "${'alt_phone_label'.tr}${(data['alternativeNumber'] ?? data['alternatePhone'])}",
                                                 style: const TextStyle(
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.w600,
@@ -587,10 +587,10 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    "Enter Address Details",
+                  Text(
+                    'enter_address_details'.tr,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0F2E5A),
@@ -600,7 +600,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                   TextField(
                     controller: houseCtrl,
                     decoration: InputDecoration(
-                      labelText: "House/Building/Flat Name",
+                      labelText: 'house_building_name'.tr,
                       labelStyle: TextStyle(color: Colors.grey.shade700),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -630,7 +630,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                       LengthLimitingTextInputFormatter(10),
                     ],
                     decoration: InputDecoration(
-                      labelText: "Phone Number",
+                      labelText: 'phone_number'.tr,
                       labelStyle: TextStyle(color: Colors.grey.shade700),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -660,7 +660,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                       LengthLimitingTextInputFormatter(10),
                     ],
                     decoration: InputDecoration(
-                      labelText: "Alternate Phone Number (Optional)",
+                      labelText: 'alt_phone_number_optional'.tr,
                       labelStyle: TextStyle(color: Colors.grey.shade700),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -693,9 +693,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                 borderRadius: BorderRadius.circular(12)),
                             side: const BorderSide(color: Color(0xFF0F2E5A)),
                           ),
-                          child: const Text(
-                            "Cancel",
-                            style: TextStyle(
+                          child: Text(
+                            'cancel_btn'.tr,
+                            style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF0F2E5A)),
@@ -708,31 +708,31 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                           onPressed: () {
                             if (houseCtrl.text.trim().isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                       content: Text(
-                                          "Please enter House/Building Name")));
+                                          'please_enter_house_name'.tr)));
                               return;
                             }
                             if (phoneCtrl.text.trim().isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                       content:
-                                          Text("Please enter Phone Number")));
+                                          Text('please_enter_phone'.tr)));
                               return;
                             }
                             if (phoneCtrl.text.trim().length < 10) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                       content: Text(
-                                          "Please enter a valid 10-digit Phone Number")));
+                                          'please_enter_valid_phone'.tr)));
                               return;
                             }
                             if (altPhoneCtrl.text.trim().isNotEmpty &&
                                 altPhoneCtrl.text.trim().length < 10) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                       content: Text(
-                                          "Please enter a valid 10-digit Alternate Phone Number")));
+                                          'please_enter_valid_alt_phone'.tr)));
                               return;
                             }
                             Navigator.pop(context, {
@@ -749,9 +749,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                 borderRadius: BorderRadius.circular(12)),
                             elevation: 0,
                           ),
-                          child: const Text(
-                            "Confirm",
-                            style: TextStyle(
+                          child: Text(
+                            'confirm_booking'.tr,
+                            style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white),
@@ -823,8 +823,8 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
           padding: EdgeInsets.only(left: 10.0),
           child: AppBackButton(),
         ),
-        title: const Text(
-          "Booking Summary",
+        title: Text(
+          'booking_summary'.tr,
           style: TextStyle(
             color: Colors.black,
             fontSize: 16,
@@ -933,9 +933,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        "Service Schedule",
-                        style: TextStyle(
+                      Text(
+                        'service_schedule_title'.tr,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
@@ -990,9 +990,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                "DATE & TIME",
-                                style: TextStyle(
+                              Text(
+                                'date_and_time'.tr,
+                                style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black54,
@@ -1011,7 +1011,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                               if (widget.selectedTimeSlot.isNotEmpty) ...[
                                 const SizedBox(height: 2),
                                 Text(
-                                  "Arrival Time: ${widget.selectedTimeSlot}",
+                                  "${'arrival_time'.tr}${widget.selectedTimeSlot}",
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: Colors.black54,
@@ -1054,9 +1054,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  "SERVICE ADDRESS",
-                                  style: TextStyle(
+                                Text(
+                                  'service_address_title'.tr,
+                                  style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black54,
@@ -1144,14 +1144,14 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                         } else {
                           if (mounted) {
                             CherryToast.error(
-                              title: const Text('Could not open map'),
+                              title: Text('could_not_open_map'.tr),
                             ).show(context);
                           }
                         }
                       } else {
                         if (mounted) {
                           CherryToast.warning(
-                            title: const Text('Location not available yet'),
+                            title: Text('location_not_available'.tr),
                           ).show(context);
                         }
                       }
@@ -1206,7 +1206,7 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                     const SizedBox(width: 6),
                                     Flexible(
                                       child: Text(
-                                        "Service area: ${_isFetchingLocation ? 'Fetching...' : (_zoneName ?? addressTitle)}",
+                                        "${'service_area'.tr}${_isFetchingLocation ? 'Fetching...' : (_zoneName ?? addressTitle)}",
                                         style: const TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
@@ -1238,9 +1238,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Payment Summary",
-                          style: TextStyle(
+                        Text(
+                          'payment_summary'.tr,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
@@ -1248,14 +1248,14 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                         ),
                         const SizedBox(height: 16),
                         _buildPaymentRow(
-                            "Service Charge", "₹${serviceCharge.toInt()}"),
+                            'service_charge'.tr, "₹${serviceCharge.toInt()}"),
                         if (tax != null && tax > 0) ...[
                           const SizedBox(height: 10),
-                          _buildPaymentRow("Tax (GST)", "₹${tax.toInt()}"),
+                          _buildPaymentRow('tax_gst'.tr, "₹${tax.toInt()}"),
                         ],
                         if (confirmationFee != null && confirmationFee > 0) ...[
                           const SizedBox(height: 10),
-                          _buildPaymentRow("Booking Confirmation Fee",
+                          _buildPaymentRow('booking_confirmation_fee'.tr,
                               "₹${confirmationFee.toInt()}"),
                         ],
                         const SizedBox(height: 16),
@@ -1265,9 +1265,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              "Total Amount",
-                              style: TextStyle(
+                            Text(
+                              'total_amount'.tr,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
@@ -1284,9 +1284,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                     color: Color(0xFF059669),
                                   ),
                                 ),
-                                const Text(
-                                  "Inclusive of all charges",
-                                  style: TextStyle(
+                                Text(
+                                  'inclusive_of_all_charges'.tr,
+                                  style: const TextStyle(
                                     fontSize: 9,
                                     color: Colors.black54,
                                   ),
@@ -1309,9 +1309,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                   color: Color(0xFF059669), size: 16),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: const Text(
-                                  "Payments are secured with 256-bit encryption. You only pay after service completion.",
-                                  style: TextStyle(
+                                child: Text(
+                                  'payment_secured_msg'.tr,
+                                  style: const TextStyle(
                                     fontSize: 10,
                                     color: Colors.black87,
                                     height: 1.4,
@@ -1329,9 +1329,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                                 color: Color(0xFF3B82F6), size: 14),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: const Text(
-                                "If the worker does not arrive or the booking is cancelled, the confirmation fee will be fully refunded.",
-                                style: TextStyle(
+                              child: Text(
+                                'refund_msg'.tr,
+                                style: const TextStyle(
                                   fontSize: 10,
                                   color: Colors.black54,
                                   height: 1.4,
@@ -1381,9 +1381,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                             color: Colors.white, size: 16),
                       ),
                       const SizedBox(width: 10),
-                      const Text(
-                        "Paid Payment Details",
-                        style: TextStyle(
+                      Text(
+                        'paid_payment_details'.tr,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
@@ -1394,9 +1394,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                   const SizedBox(height: 6),
                   Padding(
                     padding: const EdgeInsets.only(left: 34),
-                    child: const Text(
-                      "Payment Successful",
-                      style: TextStyle(
+                    child: Text(
+                      'payment_successful'.tr,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF059669),
@@ -1404,20 +1404,20 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildPaymentRow("Amount", "₹${total.toInt()}"),
+                  _buildPaymentRow('amount'.tr, "₹${total.toInt()}"),
                   const SizedBox(height: 10),
                   if (_paidUserName != null) ...[
-                    _buildPaymentRow("Paid by", _paidUserName!),
+                    _buildPaymentRow('paid_by'.tr, _paidUserName!),
                     const SizedBox(height: 10),
                   ],
                   if (_paymentTime != null) ...[
-                    _buildPaymentRow("Payment time", _paymentTime!),
+                    _buildPaymentRow('payment_time'.tr, _paymentTime!),
                     const SizedBox(height: 10),
                   ],
-                  _buildPaymentRow("Transaction ID", _paymentId!),
+                  _buildPaymentRow('transaction_id'.tr, _paymentId!),
                   if (_qrGeneratedTime != null) ...[
                     const SizedBox(height: 16),
-                    _buildPaymentRow("QR generated", _qrGeneratedTime!),
+                    _buildPaymentRow('qr_generated'.tr, _qrGeneratedTime!),
                   ],
                 ],
               ),
@@ -1565,9 +1565,8 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                             } catch (e) {
                               if (!mounted) return;
                               CherryToast.error(
-                                title: const Text("Booking Failed!"),
-                                description: Text(
-                                    "Something went wrong. Please try again."),
+                                title: Text('booking_failed'.tr),
+                                description: Text('something_went_wrong'.tr),
                               ).show(context);
                             } finally {
                               if (mounted) setState(() => _isLoading = false);
@@ -1592,9 +1591,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text(
-                                "Confirm Booking",
-                                style: TextStyle(
+                              Text(
+                                'confirm_booking'.tr,
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -1608,9 +1607,9 @@ class _ServiceBookingSummaryPageState extends State<ServiceBookingSummaryPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  "By confirming, you agree to our Terms of Service",
-                  style: TextStyle(
+                Text(
+                  'agree_terms'.tr,
+                  style: const TextStyle(
                     fontSize: 10,
                     color: Colors.black54,
                   ),

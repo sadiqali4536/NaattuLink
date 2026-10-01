@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cherry_toast/cherry_toast.dart';
+import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Bus_Worker_Dashboard/add_new_bus.dart';
 
 class BusCardWidget extends StatelessWidget {
@@ -121,9 +122,25 @@ class BusCardWidget extends StatelessWidget {
                 const Icon(Icons.location_on_outlined,
                     size: 16, color: Colors.orange),
                 const SizedBox(width: 8),
-                Text('$firstStop -> $destination',
-                    style:
-                        TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                Builder(
+                  builder: (context) {
+                    final lang = Get.locale?.languageCode ?? 'en';
+                    String getLoc(Map<String, dynamic>? loc, String fallback) {
+                      if (loc == null) return fallback;
+                      if (lang == 'ml')
+                        return loc['malayalam'] ?? loc['english'] ?? fallback;
+                      if (lang == 'hi')
+                        return loc['hindi'] ?? loc['english'] ?? fallback;
+                      return loc['english'] ?? fallback;
+                    }
+
+                    final fromStr = getLoc(rawData['fromLocation'], firstStop);
+                    final toStr = getLoc(rawData['toLocation'], destination);
+                    return Text('$fromStr -> $toStr',
+                        style: TextStyle(
+                            color: Colors.grey.shade700, fontSize: 13));
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 8),

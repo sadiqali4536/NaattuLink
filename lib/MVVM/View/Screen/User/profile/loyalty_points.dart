@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/button/custombutton.dart';
+import 'package:get/get.dart';
 
 class LoyaltyPoints extends StatelessWidget {
   const LoyaltyPoints({super.key});
@@ -23,13 +24,14 @@ class LoyaltyPoints extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => user_Dashboard()),
+                        MaterialPageRoute(
+                            builder: (context) => user_Dashboard()),
                       );
                     },
                   ),
                   const SizedBox(width: 50),
-                  const Text(
-                    "Loyality Points",
+                  Text(
+                    'loyalty_points'.tr,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -56,7 +58,7 @@ class LoyaltyPoints extends StatelessWidget {
                           top: 50,
                           left: 150,
                           child: Text(
-                            "Convertible Points !",
+                            'convertible_points'.tr,
                             style: TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold),
                             textAlign: TextAlign.left,
@@ -92,10 +94,10 @@ class LoyaltyPoints extends StatelessWidget {
               const SizedBox(height: 30),
 
               // Point History title
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(left: 8),
                 child: Text(
-                  "Point History",
+                  'point_history'.tr,
                   style: TextStyle(fontSize: 18),
                 ),
               ),
@@ -119,8 +121,8 @@ class LoyaltyPoints extends StatelessWidget {
                   height: 54,
                   width: 303,
                   child: Custombutton(
-                    text: const Text(
-                      "Convert to Booking",
+                    text: Text(
+                      'convert_booking'.tr,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,

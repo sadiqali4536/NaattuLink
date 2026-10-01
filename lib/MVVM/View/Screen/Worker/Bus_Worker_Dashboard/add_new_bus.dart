@@ -5,6 +5,9 @@ import 'package:cherry_toast/cherry_toast.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:naattulink/MVVM/utils/widget/location_autocomplete_field.dart';
+import 'package:naattulink/MVVM/model/services/translation_service.dart';
+
 
 class AddNewBusScreen extends StatefulWidget {
   final bool isEdit;
@@ -31,6 +34,11 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
   bool _isLoading = true;
   List<String> _busTypes = ['Private Bus', 'KSRTC'];
   bool _isBusTypeLocked = false;
+  Map<String, dynamic>? _existingFromTranslations;
+  Map<String, dynamic>? _existingToTranslations;
+  String? _originalFromText;
+  String? _originalToText;
+
 
   bool _isSaving = false;
   bool _isActive = true;
@@ -42,6 +50,9 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
   final TextEditingController _regNumberController = TextEditingController();
   final TextEditingController _startPlaceController = TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
+
+  Map<String, dynamic>? _fromLocationData;
+  Map<String, dynamic>? _toLocationData;
 
   @override
   void dispose() {
@@ -75,7 +86,21 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
       _destinationController.text = data['destination'] ?? '';
       _departureTimeController.text = data['departure_time'] ?? '';
       _arrivalTimeController.text = data['arrival_time'] ?? '';
+      
+      _fromLocationData = data['fromLocation'];
+      _toLocationData = data['toLocation'];
       _isActive = data['status'] == null || data['status'] == 'ACTIVE';
+      if (data['fromLocation'] != null) {
+        _existingFromTranslations = Map<String, dynamic>.from(data['fromLocation']);
+        _startPlaceController.text = _existingFromTranslations!['english'] ?? _startPlaceController.text;
+      }
+      if (data['toLocation'] != null) {
+        _existingToTranslations = Map<String, dynamic>.from(data['toLocation']);
+        _destinationController.text = _existingToTranslations!['english'] ?? _destinationController.text;
+      }
+      _originalFromText = _startPlaceController.text;
+      _originalToText = _destinationController.text;
+
     }
     _fetchWorkerData();
   }
@@ -172,19 +197,25 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
 
                     _buildSectionTitle('ROUTE INFORMATION'),
                     const SizedBox(height: 16),
-                    _buildTextField(
-                        label: 'Start Place',
-                        hint: 'Enter start place',
-                        icon: Icons.location_on_outlined,
-                        controller: _startPlaceController,
-                        textCapitalization: TextCapitalization.characters),
+                    LocationAutocompleteField(
+                      label: 'Start Place',
+                      hint: 'Enter start place',
+                      icon: Icons.location_on_outlined,
+                      controller: _startPlaceController,
+                      initialLocationData: _fromLocationData,
+                      onLocationSelected: (loc) => setState(() => _fromLocationData = loc),
+                      onCleared: () => setState(() => _fromLocationData = null),
+                    ),
                     const SizedBox(height: 16),
-                    _buildTextField(
-                        label: 'Destination',
-                        hint: 'Enter destination',
-                        icon: Icons.location_on_outlined,
-                        controller: _destinationController,
-                        textCapitalization: TextCapitalization.characters),
+                    LocationAutocompleteField(
+                      label: 'Destination',
+                      hint: 'Enter destination',
+                      icon: Icons.location_on_outlined,
+                      controller: _destinationController,
+                      initialLocationData: _toLocationData,
+                      onLocationSelected: (loc) => setState(() => _toLocationData = loc),
+                      onCleared: () => setState(() => _toLocationData = null),
+                    ),
 
                     const SizedBox(height: 32),
                     _buildSectionTitle('SCHEDULE'),
@@ -308,6 +339,7 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
     );
   }
 
+  
   Future<void> _saveBus() async {
     if (_busNameController.text.trim().isEmpty ||
         _regNumberController.text.trim().isEmpty ||
@@ -356,11 +388,12 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
         "updated_at": FieldValue.serverTimestamp(),
       };
 
-      // Always use the manually selected district
+      if (_fromLocationData != null) busData['fromLocation'] = _fromLocationData;
+      if (_toLocationData != null) busData['toLocation'] = _toLocationData;
+
       final String finalDistrict = _selectedDistrict!;
       busData['district'] = finalDistrict;
 
-      // Just save district to parent
       await FirebaseFirestore.instance
           .collection('transports')
           .doc(user.uid)
@@ -369,7 +402,6 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
       }, SetOptions(merge: true));
 
       if (widget.isEdit && widget.isMainBus) {
-        // Main bus uses different keys
         busData["reg_number"] = _regNumberController.text.trim();
         busData["first_stop"] = _startPlaceController.text.trim();
         await FirebaseFirestore.instance
@@ -425,7 +457,7 @@ class _AddNewBusScreenState extends State<AddNewBusScreen> {
     }
   }
 
-  Widget _buildSectionTitle(String title) {
+Widget _buildSectionTitle(String title) {
     return Text(
       title,
       style: const TextStyle(

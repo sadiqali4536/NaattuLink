@@ -26,7 +26,7 @@ Future<void> addToCart({
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please log in to add items to cart.')),
+      SnackBar(content: Text('Please log in to add items to cart.')),
     );
     return;
   }

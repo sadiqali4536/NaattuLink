@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
+import 'package:get/get.dart';
 
 class EditProfile extends StatefulWidget {
   String username;
@@ -99,8 +100,7 @@ class _EditProfileState extends State<EditProfile> {
                       color: Colors.red, size: 36),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  "Delete Account",
+                Text('delete_account'.tr,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -108,8 +108,7 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  "Are you sure you want to completely delete your account? This action cannot be undone and you will lose all your data.",
+                Text('delete_account_warn'.tr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
@@ -152,11 +151,11 @@ class _EditProfileState extends State<EditProfile> {
                           Navigator.pop(context); // Close dialog
                           // TODO: Implement actual account deletion logic here
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Account deletion requested.')),
+                            SnackBar(
+                                content: Text('account_deletion_req'.tr)),
                           );
                         },
-                        child: const Text("Delete",
+                        child: Text('delete_btn'.tr,
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -219,8 +218,7 @@ class _EditProfileState extends State<EditProfile> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Choose Avatar',
+                            Text('choose_avatar'.tr,
                               style: TextStyle(
                                 color: Color(0xFF0F2E5A),
                                 fontWeight: FontWeight.bold,
@@ -292,8 +290,7 @@ class _EditProfileState extends State<EditProfile> {
                               borderRadius: BorderRadius.circular(28),
                             ),
                           ),
-                          child: const Text(
-                            'Save Changes',
+                          child: Text('save_changes'.tr,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -342,8 +339,7 @@ class _EditProfileState extends State<EditProfile> {
                               onPressed: () => Navigator.pop(context),
                             ),
                             const SizedBox(width: 8),
-                            const Text(
-                              'Edit Profile',
+                            Text('edit_profile'.tr,
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,

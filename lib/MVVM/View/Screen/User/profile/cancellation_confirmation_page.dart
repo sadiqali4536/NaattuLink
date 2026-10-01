@@ -40,8 +40,7 @@ class CancellationConfirmationPage extends StatelessWidget {
                 repeat: false,
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Cancellation Request\nSuccessful',
+              Text('cancel_req_success'.tr,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 24,
@@ -78,8 +77,7 @@ class CancellationConfirmationPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Cancellation Details',
+                    Text('cancellation_details'.tr,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -120,8 +118,7 @@ class CancellationConfirmationPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(25),
                     ),
                   ),
-                  child: const Text(
-                    'Back to Home',
+                  child: Text('back_home'.tr,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

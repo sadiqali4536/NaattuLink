@@ -117,7 +117,7 @@ class OrderSuccessPage extends StatelessWidget {
                             onTap: () {
                               Clipboard.setData(ClipboardData(text: orderId));
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text('Order ID copied to clipboard'),
                                   duration: Duration(seconds: 2),
                                 ),

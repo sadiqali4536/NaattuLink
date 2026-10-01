@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/online_services/online_services_page.dart';
+import 'package:get/get.dart';
 
 class InternetCafePage extends StatefulWidget {
   const InternetCafePage({Key? key}) : super(key: key);
@@ -11,12 +12,12 @@ class InternetCafePage extends StatefulWidget {
 }
 
 class _InternetCafePageState extends State<InternetCafePage> {
-  void _navigateToListing(BuildContext context, String title) {
+  void _navigateToListing(BuildContext context, String dbKey, String uiKey) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) =>
-            OnlineServicesPage(serviceType: title, pageTitle: title),
+            OnlineServicesPage(serviceType: dbKey, pageTitle: uiKey.tr),
       ),
     );
   }
@@ -34,9 +35,9 @@ class _InternetCafePageState extends State<InternetCafePage> {
             child: AppBackButton(),
           ),
           centerTitle: true,
-          title: const Text(
-            "Online Services",
-            style: TextStyle(
+          title: Text(
+            "online_services".tr,
+            style: const TextStyle(
               color: Color(0xFF0F2E5A),
               fontWeight: FontWeight.bold,
               fontSize: 18,
@@ -58,24 +59,24 @@ class _InternetCafePageState extends State<InternetCafePage> {
                 children: [
                   _buildCategoryCard(
                     context,
-                    title: "Online Cafe",
-                    subtitle: "Online registration, passport, application",
+                    title: 'online_cafe_title'.tr,
+                    subtitle: 'online_cafe_subtitle'.tr,
                     iconData: Icons.computer_outlined,
-                    onTap: () => _navigateToListing(context, "Online Cafe"),
+                    onTap: () => _navigateToListing(context, "Online Cafe", "online_cafe_title"),
                   ),
                   _buildCategoryCard(
                     context,
-                    title: "Akshaya Center",
-                    subtitle: "Govt services, PAN &\nAadhar services",
+                    title: 'akshaya_center_title'.tr,
+                    subtitle: 'akshaya_center_subtitle'.tr,
                     iconData: Icons.account_balance_outlined,
-                    onTap: () => _navigateToListing(context, "Akshaya Center"),
+                    onTap: () => _navigateToListing(context, "Akshaya Center", "akshaya_center_title"),
                   ),
                   _buildCategoryCard(
                     context,
-                    title: "DTP",
-                    subtitle: "Printing, scanning &\ntyping services",
+                    title: 'dtp_title'.tr,
+                    subtitle: 'dtp_subtitle'.tr,
                     iconData: Icons.print_outlined,
-                    onTap: () => _navigateToListing(context, "DTP Center"),
+                    onTap: () => _navigateToListing(context, "DTP Center", "dtp_title"),
                   ),
                 ],
               ),

@@ -13,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:naattulink/MVVM/utils/service_functions/distance_service.dart';
 import 'package:naattulink/MVVM/utils/service_functions/location_service.dart';
 import 'package:naattulink/MVVM/utils/formatters/distance_formatter.dart';
+import 'package:get/get.dart';
 
 // ─────────────────────────────────────────────────
 // Model
@@ -610,8 +611,7 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
         child: AppBackButton(),
       ),
       centerTitle: true,
-      title: const Text(
-        "Auto & Taxi",
+      title: Text('auto_taxi'.tr,
         style: TextStyle(
           color: Color(0xFF0F2E5A),
           fontWeight: FontWeight.bold,
@@ -822,8 +822,7 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
                   color: const Color(0xFF059669),
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  'Live',
+                Text('live_label'.tr,
                   style: const TextStyle(
                     color: Color(0xFF059669),
                     fontWeight: FontWeight.bold,
@@ -848,16 +847,14 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
             Icon(Icons.search_off_rounded,
                 size: 64, color: Colors.grey.shade300),
             const SizedBox(height: 12),
-            const Text(
-              "No vehicles found in this area",
+            Text('no_vehicles_found'.tr,
               style: TextStyle(
                   color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),
             GestureDetector(
               onTap: _showRadiusSheet,
-              child: const Text(
-                "Expand search radius",
+              child: Text('expand_radius'.tr,
                 style: TextStyle(
                     color: Color(0xFF0F2E5A),
                     fontWeight: FontWeight.bold,
@@ -890,8 +887,8 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
     final dist = item.distanceFrom(_userLat, _userLng);
     final eta = item.etaMinutes(_userLat, _userLng);
     final distStr = dist < 1
-        ? '${(dist * 1000).round()} m away'
-        : '${dist.toStringAsFixed(1)} km away';
+        ? 'm_away'.trParams({'dist': (dist * 1000).round().toString()})
+        : 'km_away'.trParams({'dist': dist.toStringAsFixed(1)});
 
     Color statusBg;
     Color statusText;
@@ -1070,7 +1067,7 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
                 const Icon(Icons.access_time,
                     size: 14, color: Color(0xFF64748B)),
                 const SizedBox(width: 4),
-                Text('ETA ~$eta min',
+                Text('eta_mins'.trParams({'eta': eta.toString()}),
                     style: const TextStyle(
                         color: Color(0xFF64748B), fontSize: 12)),
                 Expanded(
@@ -1107,7 +1104,7 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
                                   AgencyPackagesPage(agency: item))),
                       icon: const Icon(Icons.playlist_add_check,
                           color: Color(0xFF0F2E5A), size: 16),
-                      label: const Text("View Packages",
+                      label: Text('view_packages'.tr,
                           style: TextStyle(
                               color: Color(0xFF0F2E5A),
                               fontWeight: FontWeight.bold,
@@ -1133,8 +1130,8 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
                       onPressed: () => _makeCall(item.phone),
                       icon: const Icon(Icons.phone_in_talk,
                           color: Colors.white, size: 16),
-                      label: const Text("Call Now",
-                          style: TextStyle(
+                      label: Text('call_now_btn'.tr,
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 12)),
@@ -1199,12 +1196,12 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         const radii = [2.0, 5.0, 10.0, 20.0, 99.0];
-        const labels = [
-          'Within 2 km',
-          'Within 5 km',
-          'Within 10 km',
-          'Within 20 km',
-          'Entire City'
+        final labels = [
+          'within_km'.trParams({'dist': '2'}),
+          'within_km'.trParams({'dist': '5'}),
+          'within_km'.trParams({'dist': '10'}),
+          'within_km'.trParams({'dist': '20'}),
+          'entire_city'.tr
         ];
         return Container(
           padding: const EdgeInsets.all(20),
@@ -1212,7 +1209,7 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Search Radius",
+              Text('search_radius'.tr,
                   style: TextStyle(
                       color: Color(0xFF0F2E5A),
                       fontWeight: FontWeight.bold,
@@ -1253,11 +1250,10 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Auto & Taxi Guide",
+        title: Text('auto_taxi_guide'.tr,
             style: TextStyle(
                 color: Color(0xFF0F2E5A), fontWeight: FontWeight.bold)),
-        content: const Text(
-          "Vehicles are ranked by proximity, rating, and availability. "
+        content: Text('vehicles_ranked_info'.tr +
           "Use filters to find Women Drivers, Electric vehicles, or AC-only cabs. "
           "Switch to Map view to see vehicles live on a radar. "
           "Use the radar button to change your search radius.",
@@ -1266,7 +1262,7 @@ class _AutoTaxiPageState extends State<AutoTaxiPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Got it",
+            child: Text('got_it'.tr,
                 style: TextStyle(color: Color(0xFF0F2E5A))),
           ),
         ],

@@ -14,6 +14,8 @@ import 'package:naattulink/MVVM/Viewmodel/themes_bloc.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/common_controller.dart';
 import 'package:naattulink/firebase_options.dart';
 import 'package:naattulink/MVVM/model/services/notification_service.dart';
+import 'package:naattulink/localization/app_translations.dart';
+import 'package:naattulink/controllers/language_controller.dart';
 import 'package:naattulink/MVVM/View/Screen/User/services/service_details_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/education_categories_page.dart';
@@ -44,7 +46,7 @@ class MyHttpOverrides extends HttpOverrides {
 late Size mq;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   if (Platform.isAndroid) {
     final GoogleMapsFlutterPlatform mapsImplementation =
         GoogleMapsFlutterPlatform.instance;
@@ -71,6 +73,10 @@ void main() async {
 
   // Register RecommendationController globally
   Get.put(RecommendationController(), permanent: true);
+
+  // Register LanguageController globally
+  Get.put(LanguageController(), permanent: true);
+
   runApp(MyApp());
 }
 
@@ -89,6 +95,9 @@ class MyApp extends StatelessWidget {
           theme: ThemeData.light(),
           darkTheme: ThemeData.dark(),
           themeMode: state.themeMode,
+          translations: AppTranslations(),
+          locale: Get.find<LanguageController>().locale.value,
+          fallbackLocale: const Locale('en'),
           home: SplashScreen(),
           getPages: [
             GetPage(
@@ -108,16 +117,27 @@ class MyApp extends StatelessWidget {
               },
             ),
             GetPage(name: '/auto-taxi', page: () => const AutoTaxiPage()),
-            GetPage(name: '/education', page: () => const EducationCategoriesPage()),
-            GetPage(name: '/public-services', page: () => const PublicServicesCategoriesPage()),
-            GetPage(name: '/transportation', page: () => const TransportationCategoriesPage()),
+            GetPage(
+                name: '/education',
+                page: () => const EducationCategoriesPage()),
+            GetPage(
+                name: '/public-services',
+                page: () => const PublicServicesCategoriesPage()),
+            GetPage(
+                name: '/transportation',
+                page: () => const TransportationCategoriesPage()),
             GetPage(name: '/shops', page: () => const ShopsCategoriesPage()),
-            GetPage(name: '/healthcare', page: () => const HealthcareCategoriesPage()),
+            GetPage(
+                name: '/healthcare',
+                page: () => const HealthcareCategoriesPage()),
             GetPage(name: '/helpline', page: () => const HelplinePage()),
             GetPage(name: '/tuition', page: () => const TuitionPage()),
-            GetPage(name: '/generic-listing', page: () => const GenericListingPage(title: "Listing")),
+            GetPage(
+                name: '/generic-listing',
+                page: () => const GenericListingPage(title: "Listing")),
             GetPage(name: '/food', page: () => const FoodPage()),
-            GetPage(name: '/internet-cafe', page: () => const InternetCafePage()),
+            GetPage(
+                name: '/internet-cafe', page: () => const InternetCafePage()),
             GetPage(name: '/pickup', page: () => const PickupPage()),
             GetPage(name: '/truck-jcb', page: () => const JcbsPage()),
           ],

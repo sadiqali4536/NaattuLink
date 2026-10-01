@@ -39,8 +39,8 @@ class ConfirmedBookingDetails extends StatelessWidget {
         leading: AppBackButton(
           onPressed: () => Get.offAll(() => const user_Dashboard()),
         ),
-        title: const Text(
-          'Booking Summary',
+        title: Text(
+          'booking_summary'.tr,
           style: TextStyle(
               color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
         ),
@@ -67,8 +67,8 @@ class ConfirmedBookingDetails extends StatelessWidget {
               child: const Icon(Icons.check, color: Colors.white, size: 40),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Booking Confirmed!',
+            Text(
+              'booking_confirmed'.tr,
               style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -142,7 +142,7 @@ class ConfirmedBookingDetails extends StatelessWidget {
                                       color: const Color(0xFF059669),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: const Text('Top Rated',
+                                    child: Text('top_rated'.tr,
                                         style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 10,
@@ -216,8 +216,8 @@ class ConfirmedBookingDetails extends StatelessWidget {
                             onPressed: () {},
                             icon: const Icon(Icons.chat_bubble_outline,
                                 size: 16, color: Color(0xFF0F2E5A)),
-                            label: const Text(
-                              'Message',
+                            label: Text(
+                              'message_btn'.tr,
                               style: TextStyle(
                                   color: Color(0xFF0F2E5A),
                                   fontSize: 13,
@@ -261,12 +261,12 @@ class ConfirmedBookingDetails extends StatelessWidget {
                           blurRadius: 8,
                           offset: const Offset(0, 2))
                     ]),
-                child: const Column(
+                child: Column(
                   children: [
                     Icon(Icons.hourglass_empty, color: Colors.orange, size: 40),
                     SizedBox(height: 12),
                     Text(
-                      'Waiting for Worker',
+                      'waiting_worker'.tr,
                       style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -293,15 +293,14 @@ class ConfirmedBookingDetails extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('Insured & Verified Service',
+                      children: [
+                        Text('insured_verified_service'.tr,
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                                 color: Colors.black87)),
                         SizedBox(height: 2),
-                        Text(
-                            'All professionals undergo rigorous background checks.',
+                        Text('professionals_bg_check'.tr,
                             style:
                                 TextStyle(fontSize: 10, color: Colors.black54)),
                       ],
@@ -392,7 +391,7 @@ class ConfirmedBookingDetails extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24)),
                     padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: const Text('Back to Home',
+                child: Text('back_home'.tr,
                     style: TextStyle(
                         color: Colors.black87,
                         fontWeight: FontWeight.bold,
@@ -412,7 +411,7 @@ class ConfirmedBookingDetails extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24)),
                     padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: const Text('Cancel Booking',
+                child: Text('cancel_booking'.tr,
                     style: TextStyle(
                         color: Color(0xFFDC2626),
                         fontWeight: FontWeight.bold,

@@ -72,11 +72,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               body: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasError) {
-          return const Scaffold(
-              body: Center(child: Text('Error loading order details')));
+          return Scaffold(body: Center(child: Text('error_loading_order'.tr)));
         }
         if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Scaffold(body: Center(child: Text('Order not found')));
+          return Scaffold(body: Center(child: Text('order_not_found'.tr)));
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -106,8 +105,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               backgroundColor: Colors.white,
               elevation: 0,
               leading: const AppBackButton(),
-              title: const Text(
-                'Order Details',
+              title: Text(
+                'order_details'.tr,
                 style: TextStyle(
                     color: Colors.black87,
                     fontWeight: FontWeight.bold,
@@ -118,7 +117,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                 TextButton(
                   onPressed: () =>
                       _showHelpBottomSheet(context, data, rawStatus),
-                  child: const Text('Help',
+                  child: Text('help_label'.tr,
                       style: TextStyle(
                           color: Color(0xFF0F2E5A),
                           fontWeight: FontWeight.bold,
@@ -155,7 +154,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Order ID',
+                                    Text('order_id'.tr,
                                         style: TextStyle(
                                             color: Colors.black54,
                                             fontSize: 12)),
@@ -169,7 +168,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                             .toString()
                                             .isNotEmpty) ...[
                                       const SizedBox(height: 8),
-                                      const Text('Transaction ID',
+                                      Text('transaction_id'.tr,
                                           style: TextStyle(
                                               color: Colors.black54,
                                               fontSize: 12)),
@@ -184,7 +183,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    const Text('Total Price',
+                                    Text('total_price'.tr,
                                         style: TextStyle(
                                             color: Colors.black54,
                                             fontSize: 12)),
@@ -288,8 +287,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                             const SizedBox(height: 24),
 
                             // Timeline
-                            const Text(
-                              'Order Tracking',
+                            Text(
+                              'order_tracking'.tr,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -461,8 +460,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                                               MainAxisAlignment
                                                                   .spaceBetween,
                                                           children: [
-                                                            const Text(
-                                                              'RECEIPT',
+                                                            Text(
+                                                              'receipt_caps'.tr,
                                                               style: TextStyle(
                                                                 letterSpacing:
                                                                     2,
@@ -619,9 +618,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                                         ),
                                                         const SizedBox(
                                                             height: 16),
-                                                        const Center(
+                                                        Center(
                                                           child: Text(
-                                                            'Thank you for your order!',
+                                                            'thank_you_order'
+                                                                .tr,
                                                             style: TextStyle(
                                                               fontStyle:
                                                                   FontStyle
@@ -648,24 +648,30 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                                     MainAxisAlignment
                                                         .spaceBetween,
                                                 children: [
-                                                  Row(
-                                                    children: [
-                                                      const Icon(
-                                                          Icons.receipt_long,
-                                                          color: Color(
-                                                              0xFF0F2E5A)),
-                                                      const SizedBox(width: 12),
-                                                      const Text(
-                                                        'View Payment Receipt',
-                                                        style: TextStyle(
-                                                          color:
-                                                              Color(0xFF0F2E5A),
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 16,
+                                                  Expanded(
+                                                    child: Row(
+                                                      children: [
+                                                        const Icon(
+                                                            Icons.receipt_long,
+                                                            color: Color(
+                                                                0xFF0F2E5A)),
+                                                        const SizedBox(width: 12),
+                                                        Expanded(
+                                                          child: Text(
+                                                            'view_payment_receipt'
+                                                                .tr,
+                                                            style: const TextStyle(
+                                                              color:
+                                                                  Color(0xFF0F2E5A),
+                                                              fontWeight:
+                                                                  FontWeight.bold,
+                                                              fontSize: 16,
+                                                            ),
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
                                                         ),
-                                                      ),
-                                                    ],
+                                                      ],
+                                                    ),
                                                   ),
                                                   const Icon(
                                                       Icons.arrow_forward_ios,
@@ -709,17 +715,17 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Text(
-                  'Help',
+                  'help_label'.tr,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.phone_outlined),
-                title: const Text('Change my phone number'),
+                title: Text('change_my_phone'.tr),
                 onTap: () {
                   Get.back();
                   _showChangePhoneDialog(context, data);
@@ -728,10 +734,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               if (!isDelivered)
                 ListTile(
                   leading: const Icon(Icons.location_on_outlined),
-                  title: const Text('Change delivery address'),
-                  subtitle: isDispatched
-                      ? const Text('Order already dispatched')
-                      : null,
+                  title: Text('change_delivery_address_low'.tr),
+                  subtitle:
+                      isDispatched ? Text('order_already_dispatched'.tr) : null,
                   enabled: !isDispatched,
                   onTap: () {
                     Get.back();
@@ -741,10 +746,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               if (!isDelivered)
                 ListTile(
                   leading: const Icon(Icons.cancel_outlined),
-                  title: const Text('Cancel my order'),
-                  subtitle: !canCancel
-                      ? const Text('Order already dispatched')
-                      : null,
+                  title: Text('cancel_my_order'.tr),
+                  subtitle:
+                      !canCancel ? Text('order_already_dispatched'.tr) : null,
                   enabled: canCancel,
                   onTap: () {
                     Get.back();
@@ -769,7 +773,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Cancel your order?'),
+        title: Text('cancel_your_order_q'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -798,7 +802,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           TextButton(
             onPressed: () => Get.back(),
             child:
-                const Text('Cancel', style: TextStyle(color: Colors.black54)),
+                Text('cancel_btn'.tr, style: TextStyle(color: Colors.black54)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -807,8 +811,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   bookingId: widget.bookingId, orderData: data));
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Cancel Order',
-                style: TextStyle(color: Colors.white)),
+            child:
+                Text('cancel_order'.tr, style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -827,12 +831,12 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Change Phone Number'),
+        title: Text('change_phone_number'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Current Number',
+            Text('current_number'.tr,
                 style: TextStyle(color: Colors.black54, fontSize: 12)),
             Text(currentPhone.isEmpty ? 'N/A' : currentPhone,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -849,7 +853,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           TextButton(
             onPressed: () => Get.back(),
             child:
-                const Text('Cancel', style: TextStyle(color: Colors.black54)),
+                Text('cancel_btn'.tr, style: TextStyle(color: Colors.black54)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -872,7 +876,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               backgroundColor: const Color(0xFF0F2E5A),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Change Number'),
+            child: Text('change_number'.tr),
           ),
         ],
       ),
@@ -892,12 +896,12 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Change Delivery Address'),
+        title: Text('change_delivery_address'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Current Address',
+            Text('current_address'.tr,
                 style: TextStyle(color: Colors.black54, fontSize: 12)),
             Text(currentAddress.isEmpty ? 'N/A' : currentAddress,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -915,7 +919,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           TextButton(
             onPressed: () => Get.back(),
             child:
-                const Text('Cancel', style: TextStyle(color: Colors.black54)),
+                Text('cancel_btn'.tr, style: TextStyle(color: Colors.black54)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -960,7 +964,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               backgroundColor: const Color(0xFF0F2E5A),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Change Address'),
+            child: Text('change_address'.tr),
           ),
         ],
       ),
@@ -1081,9 +1085,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      'Track Your Order',
+                      'track_your_order'.tr,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -1092,7 +1096,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Your order has been dispatched. Track your shipment for updates.',
+                      'order_dispatched_msg'.tr,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.black54,
@@ -1124,9 +1128,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   Text(
-                    'Track Your Order',
+                    'track_your_order'.tr,
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   SizedBox(width: 8),

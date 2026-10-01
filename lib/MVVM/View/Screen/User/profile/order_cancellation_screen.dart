@@ -181,8 +181,7 @@ class _OrderCancellationScreenState extends State<OrderCancellationScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: const AppBackButton(),
-        title: const Text(
-          'Request Cancellation',
+        title: Text('request_cancellation'.tr,
           style: TextStyle(
               color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
         ),
@@ -259,8 +258,7 @@ class _OrderCancellationScreenState extends State<OrderCancellationScreen> {
             const SizedBox(height: 24),
 
             // Reasons
-            const Text(
-              'Reason For Cancellation',
+            Text('reason_cancellation'.tr,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -311,8 +309,7 @@ class _OrderCancellationScreenState extends State<OrderCancellationScreen> {
 
             if (_selectedReason == 'My reason is not listed here') ...[
               const SizedBox(height: 24),
-              const Text(
-                'Comments*',
+              Text('comments_req'.tr,
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
@@ -371,8 +368,7 @@ class _OrderCancellationScreenState extends State<OrderCancellationScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text(
-                            'Submit Request',
+                        : Text('submit_request'.tr,
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold),
                           ),

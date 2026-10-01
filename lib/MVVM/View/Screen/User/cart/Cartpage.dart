@@ -21,21 +21,87 @@ class _CartPageState extends State<CartPage> {
   bool _isDialogShown = false;
   bool _isPriceDetailsExpanded = true;
   final TextEditingController _promoController = TextEditingController();
-
-  int _limit = 10;
   final ScrollController _scrollController = ScrollController();
+
+  bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDocument;
+  final int _pageSize = 10;
+  List<DocumentSnapshot> _cartDocs = [];
+  List<Map<String, dynamic>> _cartData = [];
 
   @override
   void initState() {
     super.initState();
+    _loadInitialCart();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent * 0.9) {
-        setState(() {
-          _limit += 10;
-        });
+          _scrollController.position.maxScrollExtent * 0.8) {
+        _loadMoreCart();
       }
     });
+  }
+
+  Future<void> _loadInitialCart() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    setState(() {
+      _isLoading = true;
+      _cartDocs.clear();
+      _cartData.clear();
+      _lastDocument = null;
+      _hasMore = true;
+    });
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('carts')
+          .doc(user.uid)
+          .collection('items')
+          .limit(_pageSize)
+          .get();
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+        _cartDocs = snapshot.docs;
+        _cartData = snapshot.docs.map((d) => d.data() as Map<String, dynamic>).toList();
+        if (snapshot.docs.length < _pageSize) _hasMore = false;
+      } else {
+        _hasMore = false;
+      }
+    } catch (e) {
+      debugPrint("Error loading cart: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadMoreCart() async {
+    if (_isLoadingMore || !_hasMore || _lastDocument == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    setState(() => _isLoadingMore = true);
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('carts')
+          .doc(user.uid)
+          .collection('items')
+          .startAfterDocument(_lastDocument!)
+          .limit(_pageSize)
+          .get();
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+        final newDocs = snapshot.docs.where((doc) => !_cartDocs.any((d) => d.id == doc.id)).toList();
+        _cartDocs.addAll(newDocs);
+        _cartData.addAll(newDocs.map((d) => d.data() as Map<String, dynamic>));
+        if (snapshot.docs.length < _pageSize) _hasMore = false;
+      } else {
+        _hasMore = false;
+      }
+    } catch (e) {
+      debugPrint("Error loading more cart: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingMore = false);
+    }
   }
 
   @override
@@ -60,10 +126,10 @@ class _CartPageState extends State<CartPage> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Row(
-          children: const [
+          children: [
             CircularProgressIndicator(color: _navy),
             SizedBox(width: 20),
-            Text("Booking your services...",
+            Text('booking_services'.tr,
                 style: TextStyle(fontWeight: FontWeight.w600)),
           ],
         ),
@@ -85,9 +151,9 @@ class _CartPageState extends State<CartPage> {
     if (user == null) return;
 
     if (cartDocs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         backgroundColor: Colors.redAccent,
-        content: Text("🛒 Cart is empty. Add services before booking."),
+        content: Text('cart_empty_toast'.tr),
       ));
       return;
     }
@@ -184,11 +250,28 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
+  Future<void> _updateQuantity(DocumentReference docRef, int newQuantity) async {
+    await docRef.update({'quantity': newQuantity});
+    setState(() {
+      final index = _cartDocs.indexWhere((d) => d.reference == docRef);
+      if (index != -1) {
+        _cartData[index]['quantity'] = newQuantity;
+      }
+    });
+  }
+
   Future<void> _removeItem(DocumentReference docRef) async {
     await docRef.delete();
+    setState(() {
+      final index = _cartDocs.indexWhere((d) => d.reference == docRef);
+      if (index != -1) {
+        _cartDocs.removeAt(index);
+        _cartData.removeAt(index);
+      }
+    });
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Item removed from cart"),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('item_removed'.tr),
         backgroundColor: Colors.black87,
         duration: Duration(seconds: 2),
       ));
@@ -212,35 +295,23 @@ class _CartPageState extends State<CartPage> {
     return Scaffold(
       backgroundColor: _lightBg,
       appBar: _buildAppBar(),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('carts')
-            .doc(user.uid)
-            .collection('items')
-            .limit(_limit)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: Builder(
+        builder: (context) {
+          if (_isLoading && _cartDocs.isEmpty) {
             return const Center(child: CircularProgressIndicator(color: _navy));
           }
 
-          final cartDocs = snapshot.data?.docs ?? [];
-
-          if (cartDocs.isEmpty) {
+          if (_cartDocs.isEmpty) {
             return _buildEmptyCart();
           }
 
           // Totals
           double totalPrice = 0;
           double totalOriginal = 0;
-          double cancelledTotal =
-              0; // Removed usage, keeping for parameter compatibility
+          double cancelledTotal = 0;
 
-          for (int i = 0; i < cartDocs.length; i++) {
-            final data = cartDocs[i].data() as Map<String, dynamic>;
+          for (int i = 0; i < _cartData.length; i++) {
+            final data = _cartData[i];
             int qty = data['quantity'] ?? 1;
             double price = (double.tryParse(data["offerPrice"]?.toString() ??
                         data["price"]?.toString() ??
@@ -268,10 +339,10 @@ class _CartPageState extends State<CartPage> {
                       ListView.builder(
                         physics: const NeverScrollableScrollPhysics(),
                         shrinkWrap: true,
-                        itemCount: cartDocs.length,
+                        itemCount: _cartDocs.length,
                         itemBuilder: (context, index) {
-                          final doc = cartDocs[index];
-                          final data = doc.data() as Map<String, dynamic>;
+                          final doc = _cartDocs[index];
+                          final data = _cartData[index];
                           final item = CartModel(
                             service_id:
                                 data['productId'] ?? data['service_id'] ?? '',
@@ -299,6 +370,17 @@ class _CartPageState extends State<CartPage> {
                               isCancelled: isCancelled, quantity: quantity);
                         },
                       ),
+                      if (_isLoadingMore)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(color: _navy, strokeWidth: 2),
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       const SizedBox.shrink(),
                     ],
@@ -306,16 +388,16 @@ class _CartPageState extends State<CartPage> {
                 ),
               ),
               _buildPriceDetails(
-                itemCount: cartDocs.length,
+                itemCount: _cartDocs.length,
                 totalPrice: totalPrice,
                 totalOriginal: totalOriginal,
                 cancelledTotal: cancelledTotal,
               ),
               _buildCheckoutBar(
-                itemCount: cartDocs.length,
+                itemCount: _cartDocs.length,
                 totalPrice: totalPrice,
                 onCheckout: () {
-                  final cartItems = cartDocs
+                  final cartItems = _cartDocs
                       .map((doc) => CartItemModel.fromMap(
                           doc.data() as Map<String, dynamic>, doc.id))
                       .toList();
@@ -417,8 +499,8 @@ class _CartPageState extends State<CartPage> {
             const SizedBox(height: 16),
 
             // Title
-            const Text(
-              "Your cart is empty",
+            Text(
+              'cart_is_empty'.tr,
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
@@ -463,11 +545,11 @@ class _CartPageState extends State<CartPage> {
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.search, color: Colors.black87, size: 22),
                     SizedBox(width: 12),
                     Text(
-                      "Browse Services",
+                      'browse_services'.tr,
                       style: TextStyle(
                         color: Colors.black87,
                         fontSize: 16,
@@ -506,7 +588,7 @@ class _CartPageState extends State<CartPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    "Or continue shopping from",
+                    'continue_shopping'.tr,
                     style: TextStyle(
                         fontSize: 13, color: Colors.blueGrey.shade400),
                   ),
@@ -769,7 +851,7 @@ class _CartPageState extends State<CartPage> {
                           color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text("CANCELLED",
+                        child: Text('cancelled'.tr,
                             style: TextStyle(
                                 color: Colors.red,
                                 fontSize: 9,
@@ -803,8 +885,8 @@ class _CartPageState extends State<CartPage> {
                   ],
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  "Professional Service",
+                Text(
+                  'professional_service'.tr,
                   style: TextStyle(fontSize: 12, color: Colors.black45),
                 ),
                 const SizedBox(height: 12),
@@ -832,7 +914,7 @@ class _CartPageState extends State<CartPage> {
                           InkWell(
                             onTap: () {
                               if (quantity > 1) {
-                                docRef.update({'quantity': quantity - 1});
+                                _updateQuantity(docRef, quantity - 1);
                               } else {
                                 _removeItem(docRef);
                               }
@@ -853,7 +935,7 @@ class _CartPageState extends State<CartPage> {
                           ),
                           InkWell(
                             onTap: () {
-                              docRef.update({'quantity': quantity + 1});
+                              _updateQuantity(docRef, quantity + 1);
                             },
                             child: const Padding(
                               padding: EdgeInsets.symmetric(
@@ -905,9 +987,9 @@ class _CartPageState extends State<CartPage> {
             decoration: const BoxDecoration(
               border: Border(left: BorderSide(color: Color(0xFFDDE3EE))),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                "Apply",
+                'apply_btn'.tr,
                 style: TextStyle(
                   color: _navy,
                   fontWeight: FontWeight.bold,
@@ -949,9 +1031,9 @@ class _CartPageState extends State<CartPage> {
               children: [
                 const Icon(Icons.receipt_long_outlined, color: _navy, size: 20),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    "Price Details",
+                    'price_details'.tr,
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -980,7 +1062,7 @@ class _CartPageState extends State<CartPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text("Total Amount",
+                Text('total_amount'.tr,
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -1090,9 +1172,9 @@ class _CartPageState extends State<CartPage> {
                 ),
               ),
               child: Row(
-                children: const [
+                children: [
                   Text(
-                    "Proceed to Checkout",
+                    'proceed_checkout'.tr,
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   SizedBox(width: 6),

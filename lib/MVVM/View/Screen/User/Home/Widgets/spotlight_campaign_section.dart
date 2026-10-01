@@ -177,8 +177,8 @@ class _SpotlightCampaignSectionState extends State<SpotlightCampaignSection>
                   children: [
                     Text(
                       widget.isOnlineStore
-                          ? "Brands in Spotlight"
-                          : "Spotlight Campaigns",
+                          ? 'brands_in_spotlight'.tr
+                          : 'spotlight_campaigns'.tr,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -611,14 +611,14 @@ class _SpotlightCampaignSectionState extends State<SpotlightCampaignSection>
         }
       } else {
         if (context.mounted)
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Product not found.')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Product not found.')));
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
       if (context.mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to load product.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to load product.')));
     }
   }
 
@@ -640,8 +640,8 @@ class _SpotlightCampaignSectionState extends State<SpotlightCampaignSection>
         final status = (data['status'] ?? '').toString().toLowerCase();
         if (status == 'inactive') {
           if (context.mounted)
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Service is no longer available.')));
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Service is no longer available.')));
           return;
         }
 
@@ -690,14 +690,14 @@ class _SpotlightCampaignSectionState extends State<SpotlightCampaignSection>
         }
       } else {
         if (context.mounted)
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Service not found.')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Service not found.')));
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
       if (context.mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to load service.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to load service.')));
     }
   }
 
@@ -708,14 +708,14 @@ class _SpotlightCampaignSectionState extends State<SpotlightCampaignSection>
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Could not open link.')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Could not open link.')));
         }
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Invalid link.')));
+            .showSnackBar(SnackBar(content: Text('Invalid link.')));
       }
     }
   }
@@ -731,13 +731,13 @@ class _SpotlightCampaignSectionState extends State<SpotlightCampaignSection>
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Could not open WhatsApp.')));
+              SnackBar(content: Text('Could not open WhatsApp.')));
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid WhatsApp number.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Invalid WhatsApp number.')));
       }
     }
   }

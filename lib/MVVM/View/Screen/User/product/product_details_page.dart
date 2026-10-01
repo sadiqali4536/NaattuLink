@@ -320,8 +320,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               ),
                             ] else if (displayStock <= 0) ...[
                               const SizedBox(height: 8),
-                              const Text(
-                                "Out of Stock",
+                              Text(
+                                'out_of_stock'.tr,
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.red,
@@ -337,7 +337,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       // Variants
                       if (widget.product.hasVariants) ...[
                         if (widget.product.variants.isNotEmpty) ...[
-                          const Text("Select Variant",
+                          Text('select_variant'.tr,
                               style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -423,7 +423,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           const SizedBox(height: 24),
                         ] else if (widget
                             .product.variantAttributes.isNotEmpty) ...[
-                          const Text("Select Option",
+                          Text('select_option'.tr,
                               style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -470,7 +470,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       ],
 
                       // Delivery details Section
-                      const Text("Delivery details",
+                      Text('delivery_details'.tr,
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -504,7 +504,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                       const Icon(Icons.home_outlined,
                                           size: 20, color: Color(0xFF2956D3)),
                                       const SizedBox(width: 8),
-                                      const Text("HOME ",
+                                      Text('home_caps'.tr,
                                           style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 13,
@@ -607,12 +607,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                                 color: Color(0xFF1E293B)),
                                           ),
                                           const SizedBox(height: 4),
-                                          Text("Verified Seller",
+                                          Text('verified_seller'.tr,
                                               style: TextStyle(
                                                   fontSize: 11,
                                                   color: Colors.grey[600])),
                                           const SizedBox(height: 4),
-                                          const Text("See other sellers",
+                                          Text('see_other_sellers'.tr,
                                               style: TextStyle(
                                                   fontSize: 13,
                                                   color: Color(0xFF2956D3),
@@ -825,7 +825,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                                 borderRadius:
                                                     BorderRadius.circular(12)),
                                           ),
-                                          label: const Text("Write a Review",
+                                          label: Text('write_review'.tr,
                                               style: TextStyle(
                                                   color: Color(0xFF2956D3),
                                                   fontSize: 16,
@@ -906,7 +906,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                     //     TextButton(
                                     //       onPressed:
                                     //           () {}, // Pagination logic can be added here
-                                    //       child: const Text("See All Reviews"),
+                                    //       child: Text('see_all_reviews'.tr),
                                     //     )
                                   ],
                                 );
@@ -923,10 +923,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Padding(
+                              Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
-                                  "Similar Products",
+                                  'similar_products'.tr,
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -1173,7 +1173,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 : Colors.grey.shade200,
                             size: 20),
                         const SizedBox(width: 8),
-                        Text("Buy Now",
+                        Text('buy_now'.tr,
                             style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1409,13 +1409,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    const Text("What do you think?",
+                    Text('what_do_you_think'.tr,
                         style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1E293B))),
                     const SizedBox(height: 6),
-                    const Text("Please give your rating and write a review",
+                    Text('give_rating_msg'.tr,
                         style:
                             TextStyle(fontSize: 14, color: Color(0xFF64748B))),
                     const SizedBox(height: 24),
@@ -1481,9 +1481,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         onPressed: () async {
                           if (selectedRating == 0) {
                             CherryToast.error(
-                              title: const Text("info"),
-                              description:
-                                  const Text("Please provide a rating"),
+                              title: Text('info_label'.tr),
+                              description: Text('provide_rating'.tr),
                               toastPosition: Position.top,
                             ).show(context);
                             return;
@@ -1513,21 +1512,19 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             await reviewRef.set(review.toMap());
                             Get.back();
                             CherryToast.success(
-                              title: const Text("Success"),
-                              description:
-                                  const Text("Review submitted successfully"),
+                              title: Text('success_label'.tr),
+                              description: Text('review_success'.tr),
                               toastPosition: Position.top,
                             ).show(context);
                           } catch (e) {
                             CherryToast.error(
-                              title: const Text("Error"),
-                              description:
-                                  const Text("Failed to submit review"),
+                              title: Text('error_label'.tr),
+                              description: Text('review_fail'.tr),
                               toastPosition: Position.top,
                             ).show(context);
                           }
                         },
-                        child: const Text("Submit Review",
+                        child: Text('submit_review'.tr,
                             style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

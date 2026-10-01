@@ -3,6 +3,7 @@ import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'auto_taxi_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
+import 'package:get/get.dart';
 
 class VehicleDetailsPage extends StatelessWidget {
   final AutoTaxiListing listing;
@@ -130,7 +131,7 @@ class VehicleDetailsPage extends StatelessWidget {
             icon: const Icon(Icons.share_outlined, color: Color(0xFF0F2E5A)),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text("Sharing driver details..."),
                   backgroundColor: Color(0xFF0F2E5A),
                 ),

@@ -177,8 +177,10 @@ class _HealthcarePageState extends State<HealthcarePage> {
         await locationController.fetchLocation();
       }
 
-      final snapshot =
-          await FirebaseFirestore.instance.collection('healthcare').limit(20).get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('healthcare')
+          .limit(20)
+          .get();
 
       if (snapshot.docs.isNotEmpty) {
         _lastDocument = snapshot.docs.last;
@@ -205,11 +207,11 @@ class _HealthcarePageState extends State<HealthcarePage> {
 
   Future<void> _loadMoreListings() async {
     if (_isFetchingMore || !_hasMore || _lastDocument == null) return;
-    
+
     setState(() {
       _isFetchingMore = true;
     });
-    
+
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('healthcare')
@@ -224,9 +226,9 @@ class _HealthcarePageState extends State<HealthcarePage> {
         });
         return;
       }
-      
+
       _lastDocument = snapshot.docs.last;
-      
+
       final fetchedListings = await _processSnapshot(snapshot);
 
       if (mounted) {
@@ -255,27 +257,24 @@ class _HealthcarePageState extends State<HealthcarePage> {
       final data = doc.data() as Map<String, dynamic>;
 
       final addressStr = data['address']?.toString() ?? '';
-      final firebaseType =
-          (data['profession'] ?? data['healthcare_type'] ?? '')
-              .toString()
-              .trim()
-              .toLowerCase();
+      final firebaseType = (data['profession'] ?? data['healthcare_type'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
       final categoryStr =
           (data['category'] ?? '').toString().trim().toLowerCase();
-      final statusStr =
-          (data['status'] ?? '').toString().trim().toLowerCase();
+      final statusStr = (data['status'] ?? '').toString().trim().toLowerCase();
 
       final selectedType = selectedHealthcareType.trim().toLowerCase();
 
       final locationMatch = isLocationMatch(userLocationStr, addressStr);
       final typeMatch = firebaseType == selectedType;
-      final categoryMatch =
-          categoryStr == 'healthcare' || categoryStr.isEmpty;
-      final statusMatch = statusStr == 'active' || 
-                          statusStr == 'approved' || 
-                          statusStr == 'available' || 
-                          statusStr == 'pending' || 
-                          selectedType == 'emergency services';
+      final categoryMatch = categoryStr == 'healthcare' || categoryStr.isEmpty;
+      final statusMatch = statusStr == 'active' ||
+          statusStr == 'approved' ||
+          statusStr == 'available' ||
+          statusStr == 'pending' ||
+          selectedType == 'emergency services';
 
       final shouldShow = typeMatch && categoryMatch && statusMatch;
 
@@ -334,8 +333,7 @@ class _HealthcarePageState extends State<HealthcarePage> {
 
       String statusText = (data['status']?.toString() ?? "Pending");
       statusText = statusText.isNotEmpty
-          ? statusText[0].toUpperCase() +
-              statusText.substring(1).toLowerCase()
+          ? statusText[0].toUpperCase() + statusText.substring(1).toLowerCase()
           : "Pending";
 
       String phoneStr = data['phone']?.toString().isNotEmpty == true
@@ -514,15 +512,16 @@ class _HealthcarePageState extends State<HealthcarePage> {
                 const Icon(Icons.location_off_rounded,
                     size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
-                const Text('Location unavailable',
-                    style: TextStyle(fontSize: 16, color: Color(0xFF64748B))),
+                Text('location_unavailable'.tr,
+                    style: const TextStyle(
+                        fontSize: 16, color: Color(0xFF64748B))),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () => locCtrl.fetchLocation(forceRefresh: true),
                   icon:
                       const Icon(Icons.refresh, color: Colors.white, size: 16),
-                  label: const Text("Retry",
-                      style: TextStyle(color: Colors.white)),
+                  label: Text('retry_btn'.tr,
+                      style: const TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0F2E5A)),
                 )
@@ -583,7 +582,7 @@ class _HealthcarePageState extends State<HealthcarePage> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Your location: $locationName',
+              'your_location'.trParams({'location': locationName}),
               style: const TextStyle(
                 color: Color(0xFF64748B),
                 fontSize: 12,
@@ -626,8 +625,9 @@ class _HealthcarePageState extends State<HealthcarePage> {
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: widget.healthcareType == "Emergency Services"
-                      ? "Search emergency services..."
-                      : "Search ${widget.pageTitle.toLowerCase()}, specialities...",
+                      ? 'search_emergency'.tr
+                      : 'search_hint'
+                          .trParams({'title': widget.pageTitle.toLowerCase()}),
                   hintStyle:
                       const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                   prefixIcon: const Icon(Icons.search,
@@ -640,6 +640,21 @@ class _HealthcarePageState extends State<HealthcarePage> {
         ],
       ),
     );
+  }
+
+  String _getFilterTranslation(String filter) {
+    switch (filter) {
+      case 'Nearest':
+        return 'filter_nearest'.tr;
+      case 'My Location':
+        return 'filter_my_location'.tr;
+      case 'Highest Rated':
+        return 'filter_highest_rated'.tr;
+      case 'Available Now':
+        return 'filter_available_now'.tr;
+      default:
+        return filter;
+    }
   }
 
   Widget _buildSmartFilterChips() {
@@ -670,7 +685,7 @@ class _HealthcarePageState extends State<HealthcarePage> {
                         : const Color(0xFFE2E8F0)),
               ),
               child: Text(
-                f,
+                _getFilterTranslation(f),
                 style: TextStyle(
                   color: active ? Colors.white : const Color(0xFF64748B),
                   fontWeight: FontWeight.bold,
@@ -692,7 +707,12 @@ class _HealthcarePageState extends State<HealthcarePage> {
         children: [
           Expanded(
             child: Text(
-              "$count ${count == 1 ? _getSingular(widget.pageTitle) : widget.pageTitle.toLowerCase()} found",
+              'items_found'.trParams({
+                'count': count.toString(),
+                'title': count == 1
+                    ? _getSingular(widget.pageTitle)
+                    : widget.pageTitle.toLowerCase(),
+              }),
               style: const TextStyle(
                 color: Color(0xFF64748B),
                 fontSize: 12,
@@ -716,7 +736,8 @@ class _HealthcarePageState extends State<HealthcarePage> {
                 size: 64, color: Colors.grey.shade300),
             const SizedBox(height: 12),
             Text(
-              "No ${widget.pageTitle.toLowerCase()} found in this area",
+              'no_items_found'
+                  .trParams({'title': widget.pageTitle.toLowerCase()}),
               style: const TextStyle(
                   color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
             ),
@@ -745,8 +766,8 @@ class _HealthcarePageState extends State<HealthcarePage> {
   Widget _buildListingCard(ClinicListing item, double userLat, double userLng) {
     final dist = item.distanceFrom(userLat, userLng);
     String distStr = dist < 1
-        ? '${(dist * 1000).round()} m away'
-        : '${dist.toStringAsFixed(1)} km away';
+        ? 'm_away'.trParams({'dist': (dist * 1000).round().toString()})
+        : 'km_away'.trParams({'dist': dist.toStringAsFixed(1)});
 
     Color statusBg;
     Color statusText;
@@ -990,8 +1011,8 @@ class _HealthcarePageState extends State<HealthcarePage> {
                       onPressed: () => _makeCall(item.phone),
                       icon: const Icon(Icons.phone_in_talk,
                           color: Colors.white, size: 16),
-                      label: const Text("Call Clinic",
-                          style: TextStyle(
+                      label: Text('call_btn'.tr,
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 12)),

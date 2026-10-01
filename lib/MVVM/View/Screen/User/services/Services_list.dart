@@ -5,6 +5,7 @@ import 'package:naattulink/MVVM/utils/widget/button/Scrollable/scrollable_horizo
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/shimmer_skeleton.dart';
 import 'package:naattulink/MVVM/utils/service_functions/workercardlist.dart';
+import 'package:get/get.dart';
 
 class ServicesList extends StatefulWidget {
   const ServicesList({super.key});

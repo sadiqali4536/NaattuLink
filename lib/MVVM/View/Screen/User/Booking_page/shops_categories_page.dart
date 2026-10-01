@@ -3,13 +3,13 @@ import 'package:naattulink/MVVM/View/Screen/User/Booking_page/food_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
-
+import 'package:get/get.dart';
 
 class ShopsCategoriesPage extends StatelessWidget {
   const ShopsCategoriesPage({Key? key}) : super(key: key);
 
-  void _navigateToListing(BuildContext context, String title) {
-    if (title == "Restaurant") {
+  void _navigateToListing(BuildContext context, String dbKey, String uiKey) {
+    if (dbKey == "Restaurant") {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -20,7 +20,7 @@ class ShopsCategoriesPage extends StatelessWidget {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => GenericListingPage(title: title),
+          builder: (_) => GenericListingPage(title: uiKey.tr),
         ),
       );
     }
@@ -29,8 +29,8 @@ class ShopsCategoriesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PremiumAppBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
+        child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -39,8 +39,8 @@ class ShopsCategoriesPage extends StatelessWidget {
           child: AppBackButton(),
         ),
         centerTitle: true,
-        title: const Text(
-          "Shops",
+        title: Text(
+          'shops_title'.tr,
           style: TextStyle(
             color: Color(0xFF0F2E5A),
             fontWeight: FontWeight.bold,
@@ -59,98 +59,111 @@ class ShopsCategoriesPage extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: 0.85, 
+              childAspectRatio: 0.85,
               children: [
                 _buildCategoryCard(
                   context,
-                  title: "Restaurant",
-                  subtitle: "Dine-in, takeaway &\ndelivery",
+                  title: 'shop_restaurant'.tr,
+                  subtitle: 'shop_restaurant_desc'.tr,
                   iconData: Icons.restaurant_outlined,
-                  onTap: () => _navigateToListing(context, "Restaurant"),
+                  onTap: () => _navigateToListing(
+                      context, "Restaurant", "shop_restaurant"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Bakery",
-                  subtitle: "Cakes, pastries &\nbreads",
+                  title: 'shop_bakery'.tr,
+                  subtitle: 'shop_bakery_desc'.tr,
                   iconData: Icons.cake_outlined,
-                  onTap: () => _navigateToListing(context, "Bakery"),
+                  onTap: () =>
+                      _navigateToListing(context, "Bakery", "shop_bakery"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Grocery",
-                  subtitle: "Daily essentials &\nprovisions",
+                  title: 'shop_grocery'.tr,
+                  subtitle: 'shop_grocery_desc'.tr,
                   iconData: Icons.local_grocery_store_outlined,
-                  onTap: () => _navigateToListing(context, "Grocery"),
+                  onTap: () =>
+                      _navigateToListing(context, "Grocery", "shop_grocery"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Supermarket",
-                  subtitle: "All your shopping in\none place",
+                  title: 'shop_supermarket'.tr,
+                  subtitle: 'shop_supermarket_desc'.tr,
                   iconData: Icons.store_outlined,
-                  onTap: () => _navigateToListing(context, "Supermarket"),
+                  onTap: () => _navigateToListing(
+                      context, "Supermarket", "shop_supermarket"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Online Store",
-                  subtitle: "Shop online for\nhome delivery",
+                  title: 'shop_online_store'.tr,
+                  subtitle: 'shop_online_store_desc'.tr,
                   iconData: Icons.shopping_cart_outlined,
-                  onTap: () => _navigateToListing(context, "Online Store"),
+                  onTap: () => _navigateToListing(
+                      context, "Online Store", "shop_online_store"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Fruits & Vegetables",
-                  subtitle: "Fresh farm\nproduce",
+                  title: 'shop_fruits_veg'.tr,
+                  subtitle: 'shop_fruits_veg_desc'.tr,
                   iconData: Icons.eco_outlined,
-                  onTap: () => _navigateToListing(context, "Fruits & Vegetables"),
+                  onTap: () => _navigateToListing(
+                      context, "Fruits & Vegetables", "shop_fruits_veg"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Meat & Fish",
-                  subtitle: "Fresh meat, poultry &\nseafood",
+                  title: 'shop_meat_fish'.tr,
+                  subtitle: 'shop_meat_fish_desc'.tr,
                   iconData: Icons.set_meal_outlined,
-                  onTap: () => _navigateToListing(context, "Meat & Fish"),
+                  onTap: () => _navigateToListing(
+                      context, "Meat & Fish", "shop_meat_fish"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Stationery",
-                  subtitle: "Office & school\nsupplies",
+                  title: 'shop_stationery'.tr,
+                  subtitle: 'shop_stationery_desc'.tr,
                   iconData: Icons.menu_book_outlined,
-                  onTap: () => _navigateToListing(context, "Stationery"),
+                  onTap: () => _navigateToListing(
+                      context, "Stationery", "shop_stationery"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Mobile Shop",
-                  subtitle: "Smartphones &\naccessories",
+                  title: 'shop_mobile'.tr,
+                  subtitle: 'shop_mobile_desc'.tr,
                   iconData: Icons.phone_android_outlined,
-                  onTap: () => _navigateToListing(context, "Mobile Shop"),
+                  onTap: () =>
+                      _navigateToListing(context, "Mobile Shop", "shop_mobile"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Electronics",
-                  subtitle: "Home appliances &\ngadgets",
+                  title: 'shop_electronics'.tr,
+                  subtitle: 'shop_electronics_desc'.tr,
                   iconData: Icons.electrical_services_outlined,
-                  onTap: () => _navigateToListing(context, "Electronics"),
+                  onTap: () => _navigateToListing(
+                      context, "Electronics", "shop_electronics"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Fashion",
-                  subtitle: "Clothing &\napparel",
+                  title: 'shop_fashion'.tr,
+                  subtitle: 'shop_fashion_desc'.tr,
                   iconData: Icons.checkroom_outlined,
-                  onTap: () => _navigateToListing(context, "Fashion"),
+                  onTap: () =>
+                      _navigateToListing(context, "Fashion", "shop_fashion"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Footwear",
-                  subtitle: "Shoes, sandals &\nmore",
+                  title: 'shop_footwear'.tr,
+                  subtitle: 'shop_footwear_desc'.tr,
                   iconData: Icons.dry_cleaning_outlined,
-                  onTap: () => _navigateToListing(context, "Footwear"),
+                  onTap: () =>
+                      _navigateToListing(context, "Footwear", "shop_footwear"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Jewellery",
-                  subtitle: "Gold, silver &\nornaments",
+                  title: 'shop_jewellery'.tr,
+                  subtitle: 'shop_jewellery_desc'.tr,
                   iconData: Icons.diamond_outlined,
-                  onTap: () => _navigateToListing(context, "Jewellery"),
+                  onTap: () => _navigateToListing(
+                      context, "Jewellery", "shop_jewellery"),
                 ),
               ],
             ),

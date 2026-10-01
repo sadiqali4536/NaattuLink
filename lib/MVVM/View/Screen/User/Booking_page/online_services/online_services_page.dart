@@ -582,6 +582,21 @@ class _OnlineServicesPageState extends State<OnlineServicesPage> {
     );
   }
 
+  String _getFilterTranslation(String filter) {
+    switch (filter) {
+      case 'Nearest':
+        return 'filter_nearest'.tr;
+      case 'My Location':
+        return 'filter_my_location'.tr;
+      case 'Highest Rated':
+        return 'filter_highest_rated'.tr;
+      case 'Available Now':
+        return 'filter_available_now'.tr;
+      default:
+        return filter;
+    }
+  }
+
   Widget _buildSmartFilterChips() {
     const filters = [
       'Nearest',
@@ -610,7 +625,7 @@ class _OnlineServicesPageState extends State<OnlineServicesPage> {
                         : const Color(0xFFE2E8F0)),
               ),
               child: Text(
-                f,
+                _getFilterTranslation(f),
                 style: TextStyle(
                   color: active ? Colors.white : const Color(0xFF64748B),
                   fontWeight: FontWeight.bold,
@@ -632,7 +647,10 @@ class _OnlineServicesPageState extends State<OnlineServicesPage> {
         children: [
           Expanded(
             child: Text(
-              "$count ${widget.pageTitle.toLowerCase()} found",
+              'items_found'.trParams({
+                'count': count.toString(),
+                'title': widget.pageTitle.toLowerCase(),
+              }),
               style: const TextStyle(
                 color: Color(0xFF64748B),
                 fontSize: 12,
@@ -656,7 +674,9 @@ class _OnlineServicesPageState extends State<OnlineServicesPage> {
                 size: 64, color: Colors.grey.shade300),
             const SizedBox(height: 12),
             Text(
-              "No ${widget.pageTitle.toLowerCase()} found in this area",
+              'no_items_found'.trParams({
+                'title': widget.pageTitle.toLowerCase(),
+              }),
               style: const TextStyle(
                   color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
             ),
@@ -850,7 +870,7 @@ class _OnlineServicesPageState extends State<OnlineServicesPage> {
                       onPressed: () => _makeCall(item.phone),
                       icon: const Icon(Icons.phone_in_talk,
                           color: Colors.white, size: 16),
-                      label: const Text("Call Center",
+                      label: Text('call_btn'.tr,
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,

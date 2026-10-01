@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get_utils/src/extensions/internacionalization.dart';
 import 'package:intl/intl.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/View/Screen/User/services/service_booking_summary_page.dart';
@@ -77,8 +78,8 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
             },
           ),
         ),
-        title: const Text(
-          "Schedule Service",
+        title: Text(
+          'schedule_service'.tr,
           style: TextStyle(
             color: Colors.black,
             fontSize: 16,
@@ -109,8 +110,8 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Choose Service Type",
+        Text(
+          'choose_service_type'.tr,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -119,15 +120,15 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
         ),
         const SizedBox(height: 16),
         _buildServiceTypeCard(
-          title: "Urgent",
-          subtitle: "Need a worker soon?",
+          title: 'urgent'.tr,
+          subtitle: 'need_worker_soon'.tr,
           icon: Icons.flash_on,
           primaryColor: primaryColor,
         ),
         const SizedBox(height: 16),
         _buildServiceTypeCard(
-          title: "Scheduled",
-          subtitle: "Choose a specific date for your service.",
+          title: 'scheduled'.tr,
+          subtitle: 'choose_specific_date'.tr,
           icon: Icons.calendar_month,
           primaryColor: primaryColor,
         ),
@@ -224,7 +225,7 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
   }
 
   Widget _buildStep2(Color primaryColor) {
-    if (_selectedServiceType == "Urgent") {
+    if (_selectedServiceType == 'urgent'.tr) {
       return _buildUrgentFlow(primaryColor);
     } else {
       return _buildScheduledFlow(primaryColor);
@@ -242,16 +243,16 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
     ];
 
     String getFriendlyLabel(DateTime date, int index) {
-      if (index == 0) return "Tomorrow";
-      if (index == 1) return "Day After Tomorrow";
+      if (index == 0) return 'tomorrow'.tr;
+      if (index == 1) return 'day_after_tomorrow'.tr;
       return DateFormat('EEE, MMM d').format(date);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Select Service Date",
+        Text(
+          'select_service_date'.tr,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -323,8 +324,8 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
           }),
         ),
         const SizedBox(height: 32),
-        const Text(
-          "Choose Arrival Time",
+        Text(
+          'choose_arrival_time'.tr,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -335,11 +336,11 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
         Row(
           children: [
             Expanded(
-              child: _buildTimeOption("Morning", primaryColor),
+              child: _buildTimeOption('morning'.tr, primaryColor),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildTimeOption("Afternoon", primaryColor),
+              child: _buildTimeOption('afternoon'.tr, primaryColor),
             ),
           ],
         ),
@@ -390,18 +391,18 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Select Service Date",
-          style: TextStyle(
+        Text(
+          'select_service_date'.tr,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
-          "Pick a convenient date for your booking.",
-          style: TextStyle(
+        Text(
+          'pick_convenient_date'.tr,
+          style: const TextStyle(
             fontSize: 13,
             color: Colors.black54,
           ),
@@ -415,14 +416,14 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: Colors.blue.shade200),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.blue, size: 20),
-              SizedBox(width: 10),
+              const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  "Scheduled services require at least 2 days advance notice.",
-                  style: TextStyle(
+                  'advance_notice_warning'.tr,
+                  style: const TextStyle(
                     fontSize: 13,
                     color: Colors.blue,
                     fontWeight: FontWeight.w500,
@@ -477,7 +478,7 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
     if (_currentStep == 1) {
       isEnabled = _selectedServiceType != null;
     } else if (_currentStep == 2) {
-      if (_selectedServiceType == "Urgent") {
+      if (_selectedServiceType == 'urgent'.tr) {
         isEnabled = _selectedDate != null && _selectedTimeSlot != null;
       } else {
         isEnabled = _selectedDate != null;
@@ -507,7 +508,7 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
                       _currentStep = 2;
                     });
                   } else {
-                    if (_selectedServiceType != "Urgent" &&
+                    if (_selectedServiceType != 'urgent'.tr &&
                         _selectedDate != null) {
                       final now = DateTime.now();
                       final today = DateTime(now.year, now.month, now.day);
@@ -517,9 +518,9 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
                           _selectedDate!.month, _selectedDate!.day);
                       if (selected.isBefore(minimumDate)) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text(
-                                "Selected date must be at least two days from today."),
+                                'date_must_be_two_days'.tr),
                             backgroundColor: Colors.redAccent,
                           ),
                         );
@@ -539,7 +540,7 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
                           selectedDate: _selectedDate!,
                           serviceType: _selectedServiceType,
                           // Pass empty string for scheduled to satisfy non-nullable String
-                          selectedTimeSlot: _selectedServiceType == "Urgent"
+                          selectedTimeSlot: _selectedServiceType == 'urgent'.tr
                               ? _selectedTimeSlot!
                               : "",
                           serviceId: widget.serviceId,
@@ -562,8 +563,8 @@ class _ServiceSchedulePageState extends State<ServiceSchedulePage> {
               borderRadius: BorderRadius.circular(25),
             ),
           ),
-          child: const Text(
-            "Continue",
+          child: Text(
+            'continue_btn'.tr,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,

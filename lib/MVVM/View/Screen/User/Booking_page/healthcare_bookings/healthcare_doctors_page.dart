@@ -4,6 +4,7 @@ import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'healthcare_page.dart';
+import 'package:get/get.dart';
 
 class HealthcareDoctorsPage extends StatefulWidget {
   final ClinicListing clinic;
@@ -199,9 +200,9 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
         title: Text(
           _selectedConsultation == null
               ? (widget.clinic.profession.toLowerCase() == 'laboratory'
-                  ? "Available Tests"
-                  : "Consultations")
-              : "Available Doctors",
+                  ? 'hc_available_tests'.tr
+                  : 'hc_consultations'.tr)
+              : 'hc_available_doctors'.tr,
           style: const TextStyle(
             color: Color(0xFF0F2E5A),
             fontWeight: FontWeight.bold,
@@ -221,9 +222,9 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
               decoration: InputDecoration(
                 hintText: _selectedConsultation == null
                     ? (widget.clinic.profession.toLowerCase() == 'laboratory'
-                        ? "Search tests..."
-                        : "Search consultations...")
-                    : "Search doctors or specialization...",
+                        ? 'search_tests'.tr
+                        : 'search_consultations'.tr)
+                    : 'search_doctors_specialization'.tr,
                 hintStyle:
                     const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
                 prefixIcon: const Icon(Icons.search,
@@ -263,8 +264,8 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
             const SizedBox(height: 12),
             Text(
               widget.clinic.speciality.toLowerCase() == 'laboratory'
-                  ? "No tests found."
-                  : "No consultations found.",
+                  ? 'no_tests_found'.tr
+                  : 'no_consultations_found'.tr,
               style: const TextStyle(
                 color: Color(0xFF94A3B8),
                 fontWeight: FontWeight.w600,
@@ -418,7 +419,8 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        "$doctorCount Available Doctor${doctorCount == 1 ? '' : 's'}",
+                                        'doctor_count_available'.trParams(
+                                            {'count': doctorCount.toString()}),
                                         style: const TextStyle(
                                           color: Color(0xFF059669),
                                           fontSize: 10,
@@ -449,9 +451,9 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
                                     const EdgeInsets.symmetric(vertical: 8.0),
                                 child: Row(
                                   children: [
-                                    const Text(
-                                      "Includes:",
-                                      style: TextStyle(
+                                    Text(
+                                      'includes_label'.tr,
+                                      style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                         color: Color(0xFF0F2E5A),
@@ -518,8 +520,8 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
                       onPressed: () => _makeCall(context, widget.clinic.phone),
                       icon: const Icon(Icons.phone_in_talk,
                           color: Colors.white, size: 16),
-                      label: const Text(
-                        "Call",
+                      label: Text(
+                        'call_btn'.tr,
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -553,8 +555,8 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
             Icon(Icons.person_off_outlined,
                 size: 64, color: Colors.grey.shade300),
             const SizedBox(height: 12),
-            const Text(
-              "No doctors available right now.",
+            Text(
+              'no_doctors_available'.tr,
               style: TextStyle(
                 color: Color(0xFF94A3B8),
                 fontWeight: FontWeight.w600,
@@ -578,11 +580,11 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
         final endTime = doc['end_time'] ?? '';
         final timing = (startTime.isNotEmpty && endTime.isNotEmpty)
             ? "$startTime - $endTime"
-            : "No specific timing";
+            : 'no_specific_timing'.tr;
 
         List<dynamic> daysList = doc['days'] ?? [];
         String daysStr = daysList.join(", ");
-        if (daysStr.isEmpty) daysStr = "Available days not specified";
+        if (daysStr.isEmpty) daysStr = 'available_days_not_specified'.tr;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 18),
@@ -756,8 +758,8 @@ class _HealthcareDoctorsPageState extends State<HealthcareDoctorsPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    "Book Appointment",
+                  child: Text(
+                    'book_appointment_btn'.tr,
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

@@ -3,6 +3,7 @@ import 'package:naattulink/MVVM/View/Screen/User/Booking_page/helpline_page.dart
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
+import 'package:get/get.dart';
 
 
 class PublicServicesCategoriesPage extends StatelessWidget {

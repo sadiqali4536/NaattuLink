@@ -12,6 +12,7 @@ import 'package:naattulink/MVVM/utils/widget/containner/custom_image_banner2.dar
 import 'package:naattulink/MVVM/utils/widget/containner/custom_image_banner.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
 import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
+import 'package:get/get.dart';
 
 class ProfilePage extends StatefulWidget {
   String? username;
@@ -98,7 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Confirm Deletion'),
+          title: Text('confirm_deletion'.tr),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -126,7 +127,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Delete'),
+              child: Text('delete_btn'.tr),
             ),
           ],
         );
@@ -148,10 +149,10 @@ class _ProfilePageState extends State<ProfilePage> {
               child: const AppBackButton(),
             ),
             const SizedBox(height: 8),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(left: 180),
               child: Text(
-                "Profile",
+                'profile'.tr,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
@@ -204,12 +205,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(Icons.emergency_outlined,
                           color: Colors.white, size: 14),
                       SizedBox(width: 4),
                       Text(
-                        "Emergency Services",
+                        'emergency_services'.tr,
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -266,12 +267,12 @@ class _ProfilePageState extends State<ProfilePage> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Row(
+                                Row(
                                   children: [
                                     SizedBox(width: 15),
                                     Icon(Icons.notifications),
                                     SizedBox(width: 10),
-                                    Text("Notification"),
+                                    Text('notification'.tr),
                                   ],
                                 ),
                                 Padding(
@@ -324,10 +325,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                             ),
                                           ),
                                           const SizedBox(height: 6),
-                                          const Padding(
+                                          Padding(
                                             padding: EdgeInsets.all(16.0),
                                             child: Text(
-                                              "Are you sure to delete your account ?",
+                                              'sure_delete_account'.tr,
                                               style: TextStyle(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.bold,
@@ -360,8 +361,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                                     ),
                                                     child: TextButton(
                                                       onPressed: _deleteAccount,
-                                                      child: const Text(
-                                                        "Yes",
+                                                      child: Text(
+                                                        'yes_btn'.tr,
                                                         style: TextStyle(
                                                             fontSize: 20,
                                                             color:
@@ -387,8 +388,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                                       onPressed: () {
                                                         Navigator.pop(context);
                                                       },
-                                                      child: const Text(
-                                                        "NO",
+                                                      child: Text(
+                                                        'no_btn'.tr,
                                                         style: TextStyle(
                                                             fontSize: 20,
                                                             color:
@@ -418,14 +419,14 @@ class _ProfilePageState extends State<ProfilePage> {
                                       const Color.fromARGB(255, 232, 232, 232),
                                 ),
                               ),
-                              child: const Row(
+                              child: Row(
                                 children: [
                                   SizedBox(width: 15),
                                   Image(
                                       image: AssetImage(
                                           "assets/icons/delete_user.png")),
                                   SizedBox(width: 10),
-                                  Text("Delete Account"),
+                                  Text('delete_account'.tr),
                                 ],
                               ),
                             ),

@@ -15,6 +15,7 @@ import 'vehicles_auto_taxi_bookings/vehicle_details_page.dart';
 import 'vehicles_auto_taxi_bookings/agency_packages_page.dart';
 import 'vehicles_auto_taxi_bookings/auto_taxi_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
 
 // ─────────────────────────────────────────────────
 // Model
@@ -642,9 +643,9 @@ class _JcbsPageState extends State<JcbsPage>
         child: AppBackButton(),
       ),
       centerTitle: true,
-      title: const Text(
-        "JCB ",
-        style: TextStyle(
+      title: Text(
+        'jcb_title'.tr,
+        style: const TextStyle(
           color: Color(0xFF0F2E5A),
           fontWeight: FontWeight.bold,
           fontSize: 18,
@@ -922,8 +923,8 @@ class _JcbsPageState extends State<JcbsPage>
     final dist = item.distanceFrom(_userLat, _userLng);
     final eta = item.etaMinutes(_userLat, _userLng);
     final distStr = dist < 1
-        ? '${(dist * 1000).round()} m away'
-        : '${dist.toStringAsFixed(1)} km away';
+        ? 'm_away'.trParams({'dist': (dist * 1000).round().toString()})
+        : 'km_away'.trParams({'dist': dist.toStringAsFixed(1)});
 
     Color statusBg;
     Color statusText;
@@ -1100,7 +1101,7 @@ class _JcbsPageState extends State<JcbsPage>
                 const Icon(Icons.access_time,
                     size: 14, color: Color(0xFF64748B)),
                 const SizedBox(width: 4),
-                Text('ETA ~$eta min',
+                Text('eta_mins'.trParams({'eta': eta.toString()}),
                     style: const TextStyle(
                         color: Color(0xFF64748B), fontSize: 12)),
                 Expanded(
@@ -1165,8 +1166,8 @@ class _JcbsPageState extends State<JcbsPage>
                                   )))),
                       icon: const Icon(Icons.playlist_add_check,
                           color: Color(0xFF0F2E5A), size: 16),
-                      label: const Text("View Packages",
-                          style: TextStyle(
+                      label: Text('view_packages'.tr,
+                          style: const TextStyle(
                               color: Color(0xFF0F2E5A),
                               fontWeight: FontWeight.bold,
                               fontSize: 12)),
@@ -1191,8 +1192,8 @@ class _JcbsPageState extends State<JcbsPage>
                       onPressed: () => _makeCall(item.phone),
                       icon: const Icon(Icons.phone_in_talk,
                           color: Colors.white, size: 16),
-                      label: const Text("Call Now",
-                          style: TextStyle(
+                      label: Text('call_now_btn'.tr,
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 12)),
@@ -1260,12 +1261,12 @@ class _JcbsPageState extends State<JcbsPage>
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         const radii = [2.0, 5.0, 10.0, 20.0, 99.0];
-        const labels = [
-          'Within 2 km',
-          'Within 5 km',
-          'Within 10 km',
-          'Within 20 km',
-          'Entire City'
+        final labels = [
+          'within_km'.trParams({'dist': '2'}),
+          'within_km'.trParams({'dist': '5'}),
+          'within_km'.trParams({'dist': '10'}),
+          'within_km'.trParams({'dist': '20'}),
+          'entire_city'.tr
         ];
         return Container(
           padding: const EdgeInsets.all(20),
@@ -1273,8 +1274,8 @@ class _JcbsPageState extends State<JcbsPage>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Search Radius",
-                  style: TextStyle(
+              Text('search_radius'.tr,
+                  style: const TextStyle(
                       color: Color(0xFF0F2E5A),
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
@@ -1314,8 +1315,8 @@ class _JcbsPageState extends State<JcbsPage>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("JCB & JCB Guide",
-            style: TextStyle(
+        title: Text('jcb_guide_title'.tr,
+            style: const TextStyle(
                 color: Color(0xFF0F2E5A), fontWeight: FontWeight.bold)),
         content: const Text(
           "Vehicles are ranked by proximity, rating, and availability. "
@@ -1327,8 +1328,8 @@ class _JcbsPageState extends State<JcbsPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Got it",
-                style: TextStyle(color: Color(0xFF0F2E5A))),
+            child: Text('got_it'.tr,
+                style: const TextStyle(color: Color(0xFF0F2E5A))),
           ),
         ],
       ),

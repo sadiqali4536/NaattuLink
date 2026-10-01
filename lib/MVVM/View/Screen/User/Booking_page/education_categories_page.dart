@@ -3,6 +3,7 @@ import 'package:naattulink/MVVM/View/Screen/User/Booking_page/tuition_page.dart'
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
+import 'package:get/get.dart';
 
 
 class EducationCategoriesPage extends StatelessWidget {
@@ -35,8 +36,7 @@ class EducationCategoriesPage extends StatelessWidget {
           child: AppBackButton(),
         ),
         centerTitle: true,
-        title: const Text(
-          "Education",
+        title: Text('education'.tr,
           style: TextStyle(
             color: Color(0xFF0F2E5A),
             fontWeight: FontWeight.bold,

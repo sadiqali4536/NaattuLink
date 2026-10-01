@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'healthcare_page.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
+import 'package:get/get.dart';
 
 class HealthcareCategoriesPage extends StatelessWidget {
   const HealthcareCategoriesPage({Key? key}) : super(key: key);
 
-  void _navigateToListing(BuildContext context, String title) {
+  void _navigateToListing(BuildContext context, String dbKey, String uiKey) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => HealthcarePage(
-          healthcareType: title,
-          pageTitle: title,
+          healthcareType: dbKey,
+          pageTitle: uiKey.tr,
         ),
       ),
     );
@@ -31,9 +32,9 @@ class HealthcareCategoriesPage extends StatelessWidget {
           child: AppBackButton(),
         ),
         centerTitle: true,
-        title: const Text(
-          "Healthcare",
-          style: TextStyle(
+        title: Text(
+          'healthcare_title'.tr,
+          style: const TextStyle(
             color: Color(0xFF0F2E5A),
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -56,50 +57,54 @@ class HealthcareCategoriesPage extends StatelessWidget {
               children: [
                 _buildCategoryCard(
                   context,
-                  title: "Hospital",
-                  subtitle: "Find nearby hospitals &\ntrauma centers",
+                  title: 'hc_hospital'.tr,
+                  subtitle: 'hc_hospital_desc'.tr,
                   iconData: Icons.local_hospital_outlined,
                   iconColor: const Color(0xFF0F2E5A),
                   iconBgColor: const Color(0xFFEEF2FF),
                   imagePath: 'assets/image/hospital.png',
-                  onTap: () => _navigateToListing(context, "Hospital"),
+                  onTap: () =>
+                      _navigateToListing(context, "Hospital", "hc_hospital"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Clinic",
-                  subtitle: "Specialized doctors &\nfamily clinics",
+                  title: 'hc_clinic'.tr,
+                  subtitle: 'hc_clinic_desc'.tr,
                   iconData: Icons.medical_services_outlined,
                   iconColor: const Color(0xFF0F2E5A),
                   imagePath: 'assets/image/clinick.png',
                   iconBgColor: const Color(0xFFEEF2FF),
-                  onTap: () => _navigateToListing(context, "Clinic"),
+                  onTap: () =>
+                      _navigateToListing(context, "Clinic", "hc_clinic"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Pharmacy",
-                  subtitle: "24/7 medicines &\nhealthcare supplies",
+                  title: 'hc_pharmacy'.tr,
+                  subtitle: 'hc_pharmacy_desc'.tr,
                   iconData: Icons.local_pharmacy_outlined,
                   iconColor: const Color(0xFF0F2E5A),
                   iconBgColor: const Color(0xFFEEF2FF),
                   imagePath: 'assets/image/pharmacy.png',
-                  onTap: () => _navigateToListing(context, "Pharmacy"),
+                  onTap: () =>
+                      _navigateToListing(context, "Pharmacy", "hc_pharmacy"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Laboratory",
-                  subtitle: "Blood tests & quick lab\nreports",
+                  title: 'hc_laboratory'.tr,
+                  subtitle: 'hc_laboratory_desc'.tr,
                   iconData: Icons.science_outlined,
                   iconColor: const Color(0xFF0F2E5A),
                   iconBgColor: const Color(0xFFEEF2FF),
                   imagePath: 'assets/image/laboratory.png',
-                  onTap: () => _navigateToListing(context, "Laboratory"),
+                  onTap: () => _navigateToListing(
+                      context, "Laboratory", "hc_laboratory"),
                 ),
               ],
             ),
             const SizedBox(height: 30),
-            const Text(
-              "Emergency & Specialized",
-              style: TextStyle(
+            Text(
+              'hc_emergency_section'.tr,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF0F2E5A),
@@ -211,9 +216,9 @@ class HealthcareCategoriesPage extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const HealthcarePage(
+            builder: (context) => HealthcarePage(
               healthcareType: "Emergency Services",
-              pageTitle: "Emergency Services",
+              pageTitle: 'hc_emergency'.tr,
             ),
           ),
         );
@@ -260,19 +265,19 @@ class HealthcareCategoriesPage extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
-                    "Emergency Services",
-                    style: TextStyle(
+                    'hc_emergency'.tr,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.red,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    "24/7 immediate assistance",
-                    style: TextStyle(
+                    'hc_emergency_desc'.tr,
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.redAccent,
                     ),

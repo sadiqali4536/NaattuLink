@@ -64,7 +64,7 @@ class ServiceDetailsPage extends StatelessWidget {
     } catch (_) {
       if (context.mounted) {
         CherryToast.error(
-          title: const Text('Could not open Google Maps.'),
+          title: Text('google_maps_error'.tr),
         ).show(context);
       }
     }
@@ -224,13 +224,13 @@ class ServiceDetailsPage extends StatelessWidget {
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
-                                        children: const [
+                                        children: [
                                           Icon(Icons.check_circle,
                                               color: Color(0xFF059669),
                                               size: 12),
                                           SizedBox(width: 4),
                                           Text(
-                                            "Verified",
+                                            'verified'.tr,
                                             style: TextStyle(
                                               color: Color(0xFF059669),
                                               fontWeight: FontWeight.bold,
@@ -306,8 +306,8 @@ class ServiceDetailsPage extends StatelessWidget {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                const Text(
-                                                  'View Location',
+                                                Text(
+                                                  'view_location'.tr,
                                                   style: TextStyle(
                                                     color: Color(0xFF0F2E5A),
                                                     fontWeight: FontWeight.bold,
@@ -344,7 +344,7 @@ class ServiceDetailsPage extends StatelessWidget {
 
                           // Why Choose This Service Section
                           Text(
-                            "Why Choose This Service",
+                            'why_choose_service'.tr,
                             style: TextStyle(
                               color: primaryColor,
                               fontWeight: FontWeight.bold,
@@ -354,20 +354,20 @@ class ServiceDetailsPage extends StatelessWidget {
                           const SizedBox(height: 12),
                           _buildBenefitRow(
                             icon: Icons.verified_user,
-                            title: "Background Checked",
-                            subtitle: "Verified by local authorities",
+                            title: 'background_checked'.tr,
+                            subtitle: 'verified_by_authorities'.tr,
                           ),
                           const SizedBox(height: 10),
                           _buildBenefitRow(
                             icon: Icons.payments_outlined,
-                            title: "Transparent Pricing",
-                            subtitle: "No hidden charges",
+                            title: 'transparent_pricing'.tr,
+                            subtitle: 'no_hidden_charges'.tr,
                           ),
                           const SizedBox(height: 10),
                           _buildBenefitRow(
                             icon: Icons.sentiment_satisfied_alt,
-                            title: "Satisfaction Guaranteed",
-                            subtitle: "Warranty on all works",
+                            title: 'satisfaction_guaranteed'.tr,
+                            subtitle: 'warranty_on_works'.tr,
                           ),
                           const SizedBox(height: 24),
 
@@ -388,7 +388,7 @@ class ServiceDetailsPage extends StatelessWidget {
                                         color: primaryColor, size: 18),
                                     const SizedBox(width: 8),
                                     Text(
-                                      "Pricing Details",
+                                      'pricing_details'.tr,
                                       style: TextStyle(
                                         color: primaryColor,
                                         fontWeight: FontWeight.bold,
@@ -407,7 +407,7 @@ class ServiceDetailsPage extends StatelessWidget {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      "Fixed Service Charge",
+                                      'fixed_service_charge'.tr,
                                       style: TextStyle(
                                         color: primaryColor.withOpacity(0.8),
                                         fontWeight: FontWeight.w500,
@@ -435,7 +435,7 @@ class ServiceDetailsPage extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  "Customer Reviews",
+                                  'customer_reviews'.tr,
                                   style: TextStyle(
                                     color: primaryColor,
                                     fontWeight: FontWeight.bold,
@@ -536,7 +536,7 @@ class ServiceDetailsPage extends StatelessWidget {
                           // People also booked Section
                           if (related.isNotEmpty) ...[
                             Text(
-                              "People also booked",
+                              'people_also_booked'.tr,
                               style: TextStyle(
                                 color: primaryColor,
                                 fontWeight: FontWeight.bold,
@@ -702,7 +702,7 @@ class ServiceDetailsPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Starting from",
+                          'starting_from'.tr,
                           style: TextStyle(color: textGrey, fontSize: 11),
                         ),
                         const SizedBox(height: 2),

@@ -5,22 +5,23 @@ import 'package:naattulink/MVVM/View/Screen/User/Booking_page/jcbs_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/utils/widget/containner/premium_app_background.dart';
+import 'package:get/get.dart';
 
 class TransportationCategoriesPage extends StatelessWidget {
   const TransportationCategoriesPage({Key? key}) : super(key: key);
 
-  void _navigateToListing(BuildContext context, String title) {
-    if (title == "Auto Taxi") {
+  void _navigateToListing(BuildContext context, String dbKey, String uiKey) {
+    if (dbKey == "Auto Taxi") {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const AutoTaxiPage()),
       );
-    } else if (title == "Pickup") {
+    } else if (dbKey == "Pickup") {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const PickupPage()),
       );
-    } else if (title == "JCB") {
+    } else if (dbKey == "JCB") {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const JcbsPage()),
@@ -28,7 +29,7 @@ class TransportationCategoriesPage extends StatelessWidget {
     } else {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => GenericListingPage(title: title)),
+        MaterialPageRoute(builder: (_) => GenericListingPage(title: uiKey.tr)),
       );
     }
   }
@@ -46,8 +47,8 @@ class TransportationCategoriesPage extends StatelessWidget {
           child: AppBackButton(),
         ),
         centerTitle: true,
-        title: const Text(
-          "Transportation",
+        title: Text(
+          'transportation_title'.tr,
           style: TextStyle(
             color: Color(0xFF0F2E5A),
             fontWeight: FontWeight.bold,
@@ -70,31 +71,35 @@ class TransportationCategoriesPage extends StatelessWidget {
               children: [
                 _buildCategoryCard(
                   context,
-                  title: "Auto Taxi",
-                  subtitle: "Quick rides &\nlocal drops",
+                  title: 'transport_auto_taxi'.tr,
+                  subtitle: 'transport_auto_taxi_desc'.tr,
                   iconData: Icons.local_taxi_outlined,
-                  onTap: () => _navigateToListing(context, "Auto Taxi"),
+                  onTap: () => _navigateToListing(
+                      context, "Auto Taxi", "transport_auto_taxi"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Pickup",
-                  subtitle: "Goods transport &\nlogistics",
+                  title: 'transport_pickup'.tr,
+                  subtitle: 'transport_pickup_desc'.tr,
                   iconData: Icons.local_shipping_outlined,
-                  onTap: () => _navigateToListing(context, "Pickup"),
+                  onTap: () =>
+                      _navigateToListing(context, "Pickup", "transport_pickup"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "JCB",
-                  subtitle: "Earthmoving &\nheavy machinery",
+                  title: 'transport_jcb'.tr,
+                  subtitle: 'transport_jcb_desc'.tr,
                   imageAsset: "assets/icons/jcb.png",
-                  onTap: () => _navigateToListing(context, "JCB"),
+                  onTap: () =>
+                      _navigateToListing(context, "JCB", "transport_jcb"),
                 ),
                 _buildCategoryCard(
                   context,
-                  title: "Car Rental",
-                  subtitle: "Self-drive &\nchauffeur cars",
+                  title: 'transport_car_rental'.tr,
+                  subtitle: 'transport_car_rental_desc'.tr,
                   iconData: Icons.car_rental_outlined,
-                  onTap: () => _navigateToListing(context, "Car Rental"),
+                  onTap: () => _navigateToListing(
+                      context, "Car Rental", "transport_car_rental"),
                 ),
               ],
             ),
