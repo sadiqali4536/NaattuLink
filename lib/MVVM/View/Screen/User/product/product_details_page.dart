@@ -190,6 +190,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   ? CachedNetworkImage(
                                       imageUrl: img,
                                       fit: BoxFit.contain,
+                                      placeholder: (context, url) =>
+                                          const Center(
+                                              child:
+                                                  CircularProgressIndicator()),
                                       errorWidget: (c, e, s) =>
                                           _errorIcon(bgLight, primaryColor),
                                     )
@@ -311,7 +315,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             if (displayStock > 0 && displayStock <= 5) ...[
                               const SizedBox(height: 8),
                               Text(
-                                "Only $displayStock left in stock",
+                                "${'only'.tr} $displayStock ${'left_in_stock'.tr}",
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Colors.orange,
@@ -544,8 +548,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                           children: [
                                             Text(
                                               displayStock > 0
-                                                  ? "Deliverable at your location"
-                                                  : "Not deliverable at your location",
+                                                  ? 'deliverable_at_location'.tr
+                                                  : 'not_deliverable_at_location'
+                                                      .tr,
                                               style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 14,
@@ -558,7 +563,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                                 true) ...[
                                               const SizedBox(height: 4),
                                               Text(
-                                                "Delivery by ${widget.product.estimatedDeliveryTime}",
+                                                "${'delivery_by'.tr} ${widget.product.estimatedDeliveryTime}",
                                                 style: const TextStyle(
                                                     fontSize: 12,
                                                     color: Color(0xFF64748B)),
@@ -570,7 +575,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                                     0) ...[
                                               const SizedBox(height: 4),
                                               Text(
-                                                "Delivery Charge: ₹${widget.product.deliveryCharge!.toInt()}",
+                                                "${'delivery_charge'.tr}: ₹${widget.product.deliveryCharge!.toInt()}",
                                                 style: const TextStyle(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.w500,
@@ -601,7 +606,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            "Fulfilled by ${widget.product.brand.isNotEmpty ? widget.product.brand : 'Seller'}",
+                                            "${'fulfilled_by'.tr} ${widget.product.brand.isNotEmpty ? widget.product.brand : 'Seller'}",
                                             style: const TextStyle(
                                                 fontSize: 13,
                                                 color: Color(0xFF1E293B)),
@@ -639,21 +644,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               widget.product.returnPolicy?.isNotEmpty == true
                                   ? (RegExp(r'^\d+$').hasMatch(
                                           widget.product.returnPolicy!)
-                                      ? "${widget.product.returnPolicy!} Days\nReturn"
+                                      ? "${widget.product.returnPolicy!} ${'days'.tr}\n${'return'.tr}"
                                       : widget.product.returnPolicy!)
-                                  : "No\nReturn"),
+                                  : "${'no'.tr}\n${'return'.tr}"),
                           if (widget.product.isCashOnDelivery ?? true)
                             _buildFeatureIcon(Icons.currency_rupee_outlined,
-                                "Cash on\nDelivery"),
-                          _buildFeatureIcon(
-                              Icons.support_agent_outlined, "24/7\nSupport"),
+                                "${'cash_on'.tr}\n${'delivery'.tr}"),
+                          _buildFeatureIcon(Icons.support_agent_outlined,
+                              "24/7\n${'support'.tr}"),
                           if (widget.product.paymentOptions
                                   .contains('Online Payment') ||
                               widget.product.paymentOptions.contains('UPI') ||
                               widget.product.paymentOptions.contains('Card') ||
                               widget.product.isOnlinePayment)
                             _buildFeatureIcon(Icons.verified_user_outlined,
-                                "Secure\nPayment"),
+                                "${'secure'.tr}\n${'payment'.tr}"),
                         ],
                       ),
 
@@ -679,7 +684,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         if (allSpecs.isEmpty) return const SizedBox();
 
                         return _buildExpandableSection(
-                          title: "Product highlights",
+                          title: 'product_highlights'.tr,
                           initiallyExpanded: true,
                           child: GridView.builder(
                             shrinkWrap: true,
@@ -721,8 +726,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       // Description
                       if (widget.product.description.isNotEmpty)
                         _buildExpandableSection(
-                          title: "All details",
-                          subtitle: "Features, description and more",
+                          title: 'all_details'.tr,
+                          subtitle: 'features_description_more'.tr,
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(widget.product.description,
@@ -735,9 +740,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
                       // Ratings & Reviews
                       _buildExpandableSection(
-                        title: "Ratings and reviews",
+                        title: 'ratings_and_reviews'.tr,
                         subtitle: widget.product.totalReviews == 0
-                            ? "No ratings for this product yet"
+                            ? 'no_ratings_yet'.tr
                             : null,
                         child: Column(
                           children: [
@@ -767,7 +772,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                                   size: 20))),
                                       const SizedBox(height: 4),
                                       Text(
-                                          "${widget.product.totalRatings} Ratings, ${widget.product.totalReviews} Reviews",
+                                          "${widget.product.totalRatings} ${'ratings'.tr}, ${widget.product.totalReviews} ${'reviews'.tr}",
                                           style: TextStyle(color: textGrey)),
                                     ],
                                   ),
@@ -1086,7 +1091,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           }
                         : null,
                     style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16, horizontal: 8),
                         side: BorderSide(
                             color: displayStock > 0
                                 ? const Color(0xFF2956D3)
@@ -1105,14 +1111,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 ? const Color(0xFF2956D3)
                                 : Colors.grey.shade600,
                             size: 20),
-                        const SizedBox(width: 8),
-                        Text(isInCart ? "Go to cart" : "Add to cart",
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: displayStock > 0
-                                    ? const Color(0xFF2956D3)
-                                    : Colors.grey.shade600)),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                              isInCart ? 'go_to_cart'.tr : 'add_to_cart'.tr,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: displayStock > 0
+                                      ? const Color(0xFF2956D3)
+                                      : Colors.grey.shade600)),
+                        ),
                       ],
                     ),
                   ),
@@ -1158,7 +1168,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           }
                         : null,
                     style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16, horizontal: 8),
                         backgroundColor: displayStock > 0
                             ? const Color(0xFF2956D3)
                             : Colors.grey.shade400,
@@ -1167,19 +1178,19 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.bolt,
-                            color: displayStock > 0
-                                ? Colors.white
-                                : Colors.grey.shade200,
-                            size: 20),
-                        const SizedBox(width: 8),
-                        Text('buy_now'.tr,
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: displayStock > 0
-                                    ? Colors.white
-                                    : Colors.grey.shade200)),
+                        Icon(Icons.bolt, color: Colors.white, size: 20),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                              displayStock > 0
+                                  ? 'buy_now'.tr
+                                  : 'out_of_stock'.tr,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ),
                       ],
                     ),
                   ),
@@ -1293,23 +1304,54 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: (product.coverImage.isNotEmpty)
-                        ? CachedNetworkImage(
-                            imageUrl: product.coverImage,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey.shade100,
-                              child:
-                                  const Icon(Icons.image, color: Colors.grey),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12)),
+                        child: (product.coverImage.isNotEmpty)
+                            ? CachedNetworkImage(
+                                imageUrl: product.coverImage,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                placeholder: (context, url) => const Center(
+                                    child: CircularProgressIndicator()),
+                                errorWidget: (context, url, error) => Container(
+                                  color: Colors.grey.shade100,
+                                  child: const Icon(Icons.image,
+                                      color: Colors.grey),
+                                ),
+                              )
+                            : Container(
+                                width: double.infinity,
+                                height: double.infinity,
+                                color: Colors.grey.shade100,
+                                child: const Icon(Icons.image,
+                                    color: Colors.grey)),
+                      ),
+                      if (product.stockQuantity <= 0)
+                        Positioned(
+                          bottom: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                          )
-                        : Container(
-                            color: Colors.grey.shade100,
-                            child: const Icon(Icons.image, color: Colors.grey)),
+                            child: Text(
+                              'out_of_stock'.tr,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 Padding(

@@ -100,10 +100,11 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                 const SizedBox(width: 14),
                 const Icon(Icons.search, color: Color(0xFF9AA5B4), size: 20),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    "Search products, brands...",
-                    style: TextStyle(color: Color(0xFF9AA5B4), fontSize: 14),
+                    'search_products_brands'.tr,
+                    style:
+                        const TextStyle(color: Color(0xFF9AA5B4), fontSize: 14),
                   ),
                 ),
               ],
@@ -186,7 +187,17 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
                   child: Text(
-                    title,
+                    title == 'Explore Similar Trends'
+                        ? 'explore_similar_trends'.tr
+                        : title == 'Search Results'
+                            ? 'search_results'.tr
+                            : title == 'More From This Category'
+                                ? 'more_from_this_category'.tr
+                                : title == 'Popular Near You'
+                                    ? 'popular_near_you'.tr
+                                    : title == 'You May Also Like'
+                                        ? 'you_may_also_like'.tr
+                                        : title,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -224,7 +235,8 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                                   ? product.categoryName
                                   : product.subcategoryName;
                               if (cat.isEmpty) cat = product.productName;
-                              Get.to(() => PopularNearbyScreen(category: cat, clickedProduct: product));
+                              Get.to(() => PopularNearbyScreen(
+                                  category: cat, clickedProduct: product));
                             } else {
                               Get.to(
                                   () => ProductDetailsPage(product: product));
@@ -274,11 +286,20 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                         ['All', '50% or more', '50% or less'].map((filter) {
                       final isSelected =
                           controller.selectedDiscountFilter.value == filter;
+
+                      String displayLabel = filter;
+                      if (filter == 'All')
+                        displayLabel = 'all_filter'.tr;
+                      else if (filter == '50% or more')
+                        displayLabel = '50_percent_or_more'.tr;
+                      else if (filter == '50% or less')
+                        displayLabel = '50_percent_or_less'.tr;
+
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
                         child: ChoiceChip(
                           label: Text(
-                            filter,
+                            displayLabel,
                             style: TextStyle(
                               color: isSelected ? Colors.white : Colors.black87,
                               fontWeight: isSelected
@@ -322,12 +343,12 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                     padding: const EdgeInsets.all(40.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.search_off, size: 64, color: Colors.grey),
                         SizedBox(height: 16),
                         Text(
-                          'No products found',
-                          style: TextStyle(
+                          'no_products_found'.tr,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1E293B),
@@ -335,8 +356,8 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Try another search or category.',
-                          style: TextStyle(
+                          'try_another_search_or_category'.tr,
+                          style: const TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
                           ),
@@ -366,11 +387,14 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                 ...buildGridSection(
                   'Popular Near You',
                   controller.nearbyItems.where((p) {
-                    final selectedCatLower = controller.selectedCategory.value.trim().toLowerCase();
+                    final selectedCatLower =
+                        controller.selectedCategory.value.trim().toLowerCase();
                     if (selectedCatLower == 'all') return true;
                     final productCatLower = p.categoryName.trim().toLowerCase();
-                    final productSubCatLower = p.subcategoryName.trim().toLowerCase();
-                    return productCatLower != selectedCatLower && productSubCatLower != selectedCatLower;
+                    final productSubCatLower =
+                        p.subcategoryName.trim().toLowerCase();
+                    return productCatLower != selectedCatLower &&
+                        productSubCatLower != selectedCatLower;
                   }).toList(),
                   controller.isNearbyLoading.value,
                 ),
@@ -393,12 +417,12 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                     );
                   }
                   if (!controller.hasMore.value && displayList.isNotEmpty) {
-                    return const Padding(
+                    return Padding(
                       padding: EdgeInsets.all(24.0),
                       child: Center(
                         child: Text(
-                          "You've reached the end",
-                          style: TextStyle(color: Colors.grey),
+                          'youve_reached_the_end'.tr,
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ),
                     );

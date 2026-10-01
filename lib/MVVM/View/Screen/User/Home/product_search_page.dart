@@ -87,7 +87,6 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
           ),
           Expanded(
             child: Container(
-              height: 44,
               decoration: BoxDecoration(
                 color: const Color(0xFFF0F3F8),
                 borderRadius: BorderRadius.circular(22),
@@ -103,13 +102,13 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                       autofocus: true,
                       style: const TextStyle(
                           fontSize: 14, color: Color(0xFF1E293B)),
-                      decoration: const InputDecoration(
-                        hintText: 'Search products, brands...',
-                        hintStyle:
-                            TextStyle(color: Color(0xFF9AA5B4), fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'search_products_brands'.tr,
+                        hintStyle: const TextStyle(
+                            color: Color(0xFF9AA5B4), fontSize: 14),
                         border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onChanged: (val) => controller.searchQuery.value = val,
                       onSubmitted: (val) {
@@ -220,7 +219,7 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Obx(() => Text(
-                  '${controller.searchResults.length} results for "${controller.searchQuery.value.trim()}"',
+                  '${controller.searchResults.length} ${'results_for'.tr} "${controller.searchQuery.value.trim()}"',
                   style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFF64748B),
@@ -335,19 +334,19 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Selling Fast',
-                    style: TextStyle(
+                    'selling_fast'.tr,
+                    style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87),
                   ),
                   Text(
-                    'Shop now',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    'shop_now'.tr,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -385,7 +384,14 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
               itemBuilder: (context, index) {
                 final doc = products[index];
                 final data = doc.data() as Map<String, dynamic>;
-                return _buildSellingFastCard(data, doc.id);
+                return GestureDetector(
+                  onTap: () {
+                    Get.to(() => ProductDetailsPage(
+                          product: StoreProductModel.fromMap(data, doc.id),
+                        ));
+                  },
+                  child: _buildSellingFastCard(data, doc.id),
+                );
               },
             );
           }),
@@ -515,7 +521,7 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      '${price > discountPrice && price > 0 ? ((price - discountPrice) / price * 100).round() : 0}% OFF',
+                      '${price > discountPrice && price > 0 ? ((price - discountPrice) / price * 100).round() : 0}% ${'off'.tr}',
                       style: TextStyle(
                         fontSize: 8,
                         fontWeight: FontWeight.bold,
@@ -542,11 +548,11 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'SPONSORED SUGGESTION',
-              style: TextStyle(
+              'sponsored_suggestion'.tr,
+              style: const TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey,
@@ -667,7 +673,7 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            'WOW! ₹${(product.hasDiscount ? product.discountPrice : product.price).toInt()}',
+                            '${'wow'.tr}! ₹${(product.hasDiscount ? product.discountPrice : product.price).toInt()}',
                             style: const TextStyle(
                                 color: Color(0xFFC62828),
                                 fontSize: 14,
@@ -691,8 +697,8 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                               ? (product.estimatedDeliveryTime?.isNotEmpty ==
                                       true
                                   ? product.estimatedDeliveryTime!
-                                  : 'Delivery Available')
-                              : 'Delivery Available',
+                                  : 'delivery_available'.tr)
+                              : 'delivery_available'.tr,
                           style: const TextStyle(
                               color: Color(0xFF1565C0),
                               fontSize: 9,
@@ -902,8 +908,8 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                   ),
                   if (inStock && stock <= 5 && stock > 0) ...[
                     const SizedBox(height: 2),
-                    const Text('Only few left',
-                        style: TextStyle(
+                    Text('only_few_left'.tr,
+                        style: const TextStyle(
                             color: Color(0xFFC62828),
                             fontSize: 9,
                             fontWeight: FontWeight.bold)),
@@ -1030,9 +1036,9 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                               color: Colors.black87,
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Text(
-                              'Out of Stock',
-                              style: TextStyle(
+                            child: Text(
+                              'out_of_stock'.tr,
+                              style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold),
@@ -1136,9 +1142,9 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                     ),
                     if (inStock && stock <= 5 && stock > 0) ...[
                       const SizedBox(height: 4),
-                      const Text(
-                        'Only few left',
-                        style: TextStyle(
+                      Text(
+                        'only_few_left'.tr,
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFFC62828), // A nice dark red
@@ -1169,11 +1175,11 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
                   child: Text(
-                    'Recent Searches',
-                    style: TextStyle(
+                    'recent_searches'.tr,
+                    style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E293B)),
@@ -1244,11 +1250,11 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
 
           // ── Recommended Stores For You ──
           if (controller.allActiveProducts.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 20, 16, 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
               child: Text(
-                'Recommended Stores For You',
-                style: TextStyle(
+                'recommended_stores_for_you'.tr,
+                style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1E293B)),
@@ -1444,19 +1450,19 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
               ),
             ),
             const SizedBox(height: 32),
-            const Text(
-              'Sorry, no results found!',
-              style: TextStyle(
+            Text(
+              'sorry_no_results_found'.tr,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Please check your spelling or search again with a\ndifferent word',
+            Text(
+              'check_spelling_or_search_again'.tr,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: Colors.black87,
                 height: 1.3,
@@ -1478,9 +1484,10 @@ class _ProductSearchPageState extends State<ProductSearchPage> {
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                'Search Again',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              child: Text(
+                'search_again'.tr,
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
             ),
           ],

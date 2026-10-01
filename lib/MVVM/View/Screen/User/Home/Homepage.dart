@@ -4014,18 +4014,40 @@ class HomepageState extends State<Homepage> {
                       onTap: () => listToUse.isNotEmpty
                           ? _openProductFromBanner(context, pId(i, listToUse))
                           : null,
-                      child: _buildFlashSaleCard(
-                        product.productName,
-                        "₹${product.sellingPrice.round()}",
-                        product.hasDiscount
-                            ? "₹${product.originalPrice.round()}"
-                            : "",
-                        isFlash
-                            ? "Sale"
-                            : "${product.discountPercentage.round()}% OFF",
-                        product.coverImage.isNotEmpty
-                            ? product.coverImage
-                            : "assets/image/add_image.png",
+                      child: Stack(
+                        children: [
+                          _buildFlashSaleCard(
+                            product.productName,
+                            "₹${product.sellingPrice.round()}",
+                            product.hasDiscount
+                                ? "₹${product.originalPrice.round()}"
+                                : "",
+                            isFlash
+                                ? "Sale"
+                                : "${product.discountPercentage.round()}% OFF",
+                            product.coverImage.isNotEmpty
+                                ? product.coverImage
+                                : "assets/image/add_image.png",
+                          ),
+                          if (product.stockQuantity <= 0)
+                            Positioned(
+                              top: 8,
+                              left: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text('out_of_stock'.tr,
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white)),
+                              ),
+                            ),
+                        ],
                       ),
                     );
                   },
@@ -4109,6 +4131,7 @@ class HomepageState extends State<Homepage> {
                                     "Product",
                                 imageUrl,
                                 actionText,
+                                product.stockQuantity <= 0,
                               ),
                             );
                           },
@@ -5299,16 +5322,38 @@ class HomepageState extends State<Homepage> {
                           onTap: () => products.isNotEmpty
                               ? _openProductFromBanner(context, pId(index))
                               : null,
-                          child: _buildSuggestedCard(
-                            product.productName,
-                            "₹${product.sellingPrice.round()}",
-                            product.hasDiscount
-                                ? "₹${product.originalPrice.round()}"
-                                : "",
-                            "${product.discountPercentage.round()}% OFF",
-                            product.coverImage.isNotEmpty
-                                ? product.coverImage
-                                : "assets/image/add_image.png",
+                          child: Stack(
+                            children: [
+                              _buildSuggestedCard(
+                                product.productName,
+                                "₹${product.sellingPrice.round()}",
+                                product.hasDiscount
+                                    ? "₹${product.originalPrice.round()}"
+                                    : "",
+                                "${product.discountPercentage.round()}% OFF",
+                                product.coverImage.isNotEmpty
+                                    ? product.coverImage
+                                    : "assets/image/add_image.png",
+                              ),
+                              if (product.stockQuantity <= 0)
+                                Positioned(
+                                  top: 8,
+                                  left: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text('out_of_stock'.tr,
+                                        style: const TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white)),
+                                  ),
+                                ),
+                            ],
                           ),
                         );
                       },
@@ -5343,8 +5388,9 @@ class HomepageState extends State<Homepage> {
   Widget _buildLookingForCard(
     String title,
     String imageAsset,
-    String actionText,
-  ) {
+    String actionText, [
+    bool isOutOfStock = false,
+  ]) {
     return Container(
       width: 110,
       margin: const EdgeInsets.only(right: 12),
@@ -5360,55 +5406,81 @@ class HomepageState extends State<Homepage> {
         ],
       ),
       padding: const EdgeInsets.all(8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Stack(
         children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: (imageAsset.startsWith('http') ||
-                      imageAsset.startsWith('https'))
-                  ? Image.network(
-                      imageAsset,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.shopping_bag_outlined,
-                        color: Colors.grey,
-                        size: 30,
-                      ),
-                    )
-                  : Image.asset(
-                      imageAsset,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.shopping_bag_outlined,
-                        color: Colors.purple,
-                        size: 30,
-                      ),
-                    ),
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: (imageAsset.startsWith('http') ||
+                          imageAsset.startsWith('https'))
+                      ? Image.network(
+                          imageAsset,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                            Icons.shopping_bag_outlined,
+                            color: Colors.grey,
+                            size: 30,
+                          ),
+                        )
+                      : Image.asset(
+                          imageAsset,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                            Icons.shopping_bag_outlined,
+                            color: Colors.purple,
+                            size: 30,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                actionText,
+                style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF7C3AED),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
+          if (isOutOfStock)
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'out_of_stock'.tr,
+                  style: const TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            actionText,
-            style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF7C3AED),
-            ),
-          ),
         ],
       ),
     );
