@@ -8,6 +8,8 @@ import 'package:naattulink/MVVM/model/seller/store_product_model.dart';
 import 'package:naattulink/MVVM/model/seller/product_variant.dart';
 import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
 import 'package:naattulink/core/imagekit/imagekit_config.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class SellerProductsScreen extends StatefulWidget {
   const SellerProductsScreen({super.key});
@@ -598,11 +600,11 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                     GestureDetector(
                       onTap: () {
                         Clipboard.setData(ClipboardData(text: product.productPublicId!));
-                        Get.snackbar(
-                          'Copied',
-                          'Product ID copied to clipboard',
-                          snackPosition: SnackPosition.BOTTOM,
-                        );
+                        CherryToast.info(
+  title: Text('Copied', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Product ID copied to clipboard'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                       },
                       child: const Icon(Icons.copy, size: 16, color: Color(0xFF0EA5E9)),
                     ),
@@ -1033,15 +1035,11 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                                               "Failed to delete image $fileId: $e");
                                           if (Get.isDialogOpen ?? false)
                                             Get.back();
-                                          Get.snackbar('Error Deleting Image',
-                                              e.toString(),
-                                              backgroundColor: Colors.red,
-                                              colorText: Colors.white,
-                                              snackPosition:
-                                                  SnackPosition.BOTTOM,
-                                              duration:
-                                                  const Duration(seconds: 10),
-                                              margin: const EdgeInsets.all(16));
+                                          CherryToast.error(
+  title: Text('Error Deleting Image', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text(e.toString()),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                                           return; // Abort product deletion
                                         }
                                       }
@@ -1061,21 +1059,19 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                                   _fetchCounts();
                                   _fetchProducts();
 
-                                  Get.snackbar(
-                                      'Success', 'Product deleted successfully',
-                                      backgroundColor: Colors.green,
-                                      colorText: Colors.white,
-                                      snackPosition: SnackPosition.TOP,
-                                      margin: const EdgeInsets.all(16));
+                                  CherryToast.success(
+  title: Text('Success', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Product deleted successfully'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                                 } catch (e) {
                                   // Close loading dialog if open
                                   if (Get.isDialogOpen ?? false) Get.back();
-                                  Get.snackbar(
-                                      'Error', 'Failed to delete product',
-                                      backgroundColor: Colors.red,
-                                      colorText: Colors.white,
-                                      snackPosition: SnackPosition.BOTTOM,
-                                      margin: const EdgeInsets.all(16));
+                                  CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Failed to delete product'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                                 }
                               }
                             }
@@ -1375,11 +1371,17 @@ class _QuickEditDialogState extends State<QuickEditDialog> {
           .update(updateData);
 
       Get.back();
-      Get.snackbar('Success', 'Product updated successfully',
-          backgroundColor: Colors.green, colorText: Colors.white);
+      CherryToast.success(
+  title: Text('Success', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Product updated successfully'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update product',
-          backgroundColor: Colors.red, colorText: Colors.white);
+      CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Failed to update product'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
     } finally {
       if (mounted) setState(() => isUpdating = false);
     }

@@ -11,6 +11,8 @@ import 'package:naattulink/MVVM/View/Screen/Worker/Healthcare_Worker_Dashboard/h
 import 'package:naattulink/MVVM/model/services/app_location_service.dart';
 import 'package:naattulink/MVVM/View/Screen/location/select_location_map_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class HealthcareWorkerRegistrationPage extends StatefulWidget {
   const HealthcareWorkerRegistrationPage({super.key});
@@ -72,13 +74,19 @@ class _HealthcareWorkerRegistrationPageState
   }
 
   void _toastSuccess(String msg) {
-    Get.snackbar("Success", msg,
-        backgroundColor: Colors.green, colorText: Colors.white);
+    CherryToast.success(
+  title: Text("Success", style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text(msg),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
   }
 
   void _toastError(String msg) {
-    Get.snackbar("Error", msg,
-        backgroundColor: Colors.red, colorText: Colors.white);
+    CherryToast.error(
+  title: Text("Error", style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text(msg),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
   }
 
   Future<void> _selectTime(BuildContext context, bool isOpen) async {

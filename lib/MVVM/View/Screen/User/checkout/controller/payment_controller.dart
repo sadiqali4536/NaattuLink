@@ -10,6 +10,8 @@ import 'package:naattulink/MVVM/model/user/cart_item_model.dart';
 import 'package:naattulink/MVVM/model/models/app_location_model.dart';
 import 'package:naattulink/MVVM/View/Screen/User/checkout/order_success_page.dart';
 import 'package:naattulink/MVVM/utils/stock_manager.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 enum PaymentMethod { upi, cashOnDelivery }
 
@@ -39,8 +41,11 @@ class PaymentController extends GetxController {
           sellerId: sellerId, productId: productId);
 
       if (upiId == null || upiId.isEmpty) {
-        Get.snackbar('Error', 'UPI payment is currently unavailable.',
-            backgroundColor: Colors.redAccent, colorText: Colors.white);
+        CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('UPI payment is currently unavailable.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
         return;
       }
 
@@ -59,25 +64,38 @@ class PaymentController extends GetxController {
 
       if (response.status == UpiPaymentStatus.SUCCESS) {
         upiPaymentState.value = UpiPaymentState.paymentInitiated;
-        Get.snackbar('Processing',
-            'Payment intent completed. Please verify and submit the transaction ID.',
-            backgroundColor: Colors.blueAccent, colorText: Colors.white);
+        CherryToast.info(
+  title: Text('Processing', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Payment intent completed. Please verify and submit the transaction ID.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
       } else if (response.status == UpiPaymentStatus.NO_UPI_APP) {
-        Get.snackbar(
-            'No UPI App', 'No compatible UPI application found on this device.',
-            backgroundColor: Colors.orange, colorText: Colors.white);
+        CherryToast.info(
+  title: Text('No UPI App', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('No compatible UPI application found on this device.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
       } else if (response.status == UpiPaymentStatus.CANCELLED) {
-        Get.snackbar('Cancelled', 'UPI payment was cancelled.',
-            backgroundColor: Colors.orange, colorText: Colors.white);
+        CherryToast.info(
+  title: Text('Cancelled', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('UPI payment was cancelled.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
       } else {
-        Get.snackbar('Payment Failed', 'Transaction failed. Please try again.',
-            backgroundColor: Colors.redAccent, colorText: Colors.white);
+        CherryToast.error(
+  title: Text('Payment Failed', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Transaction failed. Please try again.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
         debugPrint(
             'UPI Failed: ${response.responseCode} / ${response.rawResponse}');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Unable to initiate the selected payment.',
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Unable to initiate the selected payment.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
     }
   }
 
@@ -136,15 +154,21 @@ class PaymentController extends GetxController {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      Get.snackbar('Error', 'Your session has expired. Please login again.',
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Your session has expired. Please login again.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
       return;
     }
 
     if (selectedPaymentMethod.value == PaymentMethod.upi) {
       if (transactionId.value.trim().isEmpty) {
-        Get.snackbar('Error', 'Please enter the UPI Transaction ID / UTR.',
-            backgroundColor: Colors.redAccent, colorText: Colors.white);
+        CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Please enter the UPI Transaction ID / UTR.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
         return;
       }
     }
@@ -304,8 +328,11 @@ class PaymentController extends GetxController {
           () => OrderSuccessPage(orderId: generatedOrderId ?? 'UNKNOWN'));
     } catch (e) {
       debugPrint("Error confirming order: $e");
-      Get.snackbar('Error', 'Unable to place your order. Please try again.',
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Unable to place your order. Please try again.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
     } finally {
       isPlacingOrder.value = false;
     }

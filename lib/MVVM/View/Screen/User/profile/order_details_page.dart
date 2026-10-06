@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:naattulink/MVVM/View/Screen/User/profile/order_cancellation_screen.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class OrderDetailsPage extends StatefulWidget {
   final String bookingId;
@@ -859,8 +861,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             onPressed: () async {
               final newPhone = phoneController.text.trim();
               if (newPhone.length < 10) {
-                Get.snackbar('Error', 'Please enter a valid phone number',
-                    backgroundColor: Colors.red, colorText: Colors.white);
+                CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Please enter a valid phone number'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                 return;
               }
               Get.back();
@@ -869,8 +874,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   .collection('bookings')
                   .doc(widget.bookingId)
                   .update({'deliveryAddress': deliveryAddress});
-              Get.snackbar('Success', 'Phone number updated successfully',
-                  backgroundColor: Colors.green, colorText: Colors.white);
+              CherryToast.success(
+  title: Text('Success', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Phone number updated successfully'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0F2E5A),
@@ -925,8 +933,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             onPressed: () async {
               final newAddress = addressController.text.trim();
               if (newAddress.isEmpty) {
-                Get.snackbar('Error', 'Please enter a valid address',
-                    backgroundColor: Colors.red, colorText: Colors.white);
+                CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Please enter a valid address'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                 return;
               }
               // Re-check status before updating
@@ -943,11 +954,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                     currentStatus == 'completed' ||
                     currentStatus == 'cancelled') {
                   Get.back();
-                  Get.snackbar('Cannot Update',
-                      'This order has already been $currentStatus, so the delivery address can no longer be changed.',
-                      backgroundColor: Colors.orange,
-                      colorText: Colors.white,
-                      duration: const Duration(seconds: 4));
+                  CherryToast.error(
+  title: Text('Cannot Update', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('This order has already been $currentStatus, so the delivery address can no longer be changed.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                   return;
                 }
               }
@@ -957,8 +968,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                   .collection('bookings')
                   .doc(widget.bookingId)
                   .update({'deliveryAddress': deliveryAddress});
-              Get.snackbar('Success', 'Delivery address updated successfully',
-                  backgroundColor: Colors.green, colorText: Colors.white);
+              CherryToast.success(
+  title: Text('Success', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Delivery address updated successfully'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0F2E5A),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class WorkerVerificationWaitingScreen extends StatelessWidget {
   const WorkerVerificationWaitingScreen({super.key});
@@ -201,11 +203,11 @@ class WorkerVerificationWaitingScreen extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: () {
                   // TODO: Implement Contact Support Action
-                  Get.snackbar(
-                    "Contact Support",
-                    "Support functionality will be available soon.",
-                    snackPosition: SnackPosition.BOTTOM,
-                  );
+                  CherryToast.info(
+  title: Text("Contact Support", style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text("Support functionality will be available soon."),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                 },
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Colors.grey, width: 1),

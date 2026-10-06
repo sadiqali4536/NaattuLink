@@ -16,6 +16,8 @@ import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
 import 'package:naattulink/core/imagekit/imagekit_config.dart';
 
 import 'package:uuid/uuid.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class AddProductController extends GetxController {
   static AddProductController get to => Get.find();
@@ -886,17 +888,19 @@ class AddProductController extends GetxController {
       categories.assignAll(allCategories);
 
       if (fetchedCategories.isEmpty) {
-        Get.snackbar('Debug', 'Collection exists but has 0 documents',
-            snackPosition: SnackPosition.BOTTOM,
-            duration: const Duration(seconds: 5));
+        CherryToast.info(
+  title: Text('Debug', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Collection exists but has 0 documents'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
       }
     } catch (e) {
       debugPrint("Error fetching categories: $e");
-      Get.snackbar('Error', 'Failed to fetch categories: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 10),
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
+      CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Failed to fetch categories: $e'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
     }
   }
 }

@@ -288,9 +288,9 @@ class _PaymentPageState extends State<PaymentPage> {
           _qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
         CherryToast.error(
-          title: const Text('Error',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: const Text('QR Code not ready yet.'),
+          title: Text('error_label'.tr,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text('qr_code_not_ready'.tr),
         ).show(context);
         return;
       }
@@ -305,27 +305,26 @@ class _PaymentPageState extends State<PaymentPage> {
         });
         if (mounted) {
           CherryToast.success(
-            title: const Text('Downloaded',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            description: const Text(
-                'QR Code saved to Downloads/NaattuLink. Scan it from your UPI app.'),
+            title: Text('downloaded_label'.tr,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            description: Text('qr_saved_desc'.tr),
           ).show(context);
         }
       }
     } on PlatformException catch (e) {
       if (mounted) {
         CherryToast.error(
-          title: const Text('Error',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: Text('Failed to save QR: ${e.message}'),
+          title: Text('error_label'.tr,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text('${'failed_save_qr'.tr}${e.message}'),
         ).show(context);
       }
     } catch (e) {
       if (mounted) {
         CherryToast.warning(
-          title: const Text('Error',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: Text('Failed to save QR code: $e'),
+          title: Text('error_label'.tr,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text('${'failed_save_qr_code'.tr}$e'),
         ).show(context);
       }
     }
@@ -347,9 +346,9 @@ class _PaymentPageState extends State<PaymentPage> {
 
     if (_qrGeneratedAt == null || _qrExpiresAt == null) {
       CherryToast.error(
-        title:
-            const Text('Error', style: TextStyle(fontWeight: FontWeight.bold)),
-        description: const Text('Payment session has expired or is invalid.'),
+        title: Text('error_label'.tr,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        description: Text('payment_session_expired'.tr),
       ).show(context);
       return;
     }
@@ -368,11 +367,10 @@ class _PaymentPageState extends State<PaymentPage> {
         _validatedPaymentResult = validationResult;
       });
 
-      String errorMsg =
-          'This receipt appears to be invalid or incomplete. Please upload the correct payment screenshot.';
+      String errorMsg = 'invalid_receipt_desc'.tr;
       if (validationResult.reasons
           .contains(PaymentValidationReason.amountMismatch)) {
-        errorMsg = 'The amount on the receipt does not match the order total.';
+        errorMsg = 'amount_mismatch_desc'.tr;
       } else if (validationResult.reasons
           .contains(PaymentValidationReason.paymentBeforeQrCreation)) {
         errorMsg =
@@ -380,8 +378,8 @@ class _PaymentPageState extends State<PaymentPage> {
       }
 
       CherryToast.error(
-        title: const Text('Invalid Receipt',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('invalid_receipt'.tr,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         description: Text(errorMsg),
       ).show(context);
       return;
@@ -399,9 +397,9 @@ class _PaymentPageState extends State<PaymentPage> {
     }
 
     CherryToast.success(
-      title:
-          const Text('Success', style: TextStyle(fontWeight: FontWeight.bold)),
-      description: const Text('Payment verified! Please confirm to proceed.'),
+      title: Text('success_label'.tr,
+          style: const TextStyle(fontWeight: FontWeight.bold)),
+      description: Text('payment_verified_success'.tr),
     ).show(context);
   }
 
@@ -416,18 +414,18 @@ class _PaymentPageState extends State<PaymentPage> {
     final txnId = _transactionIdController.text.trim();
     if (txnId.isEmpty) {
       CherryToast.warning(
-        title: const Text('Required',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        description: const Text('Please enter your Transaction ID.'),
+        title: Text('required_label'.tr,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        description: Text('please_enter_transaction_id'.tr),
       ).show(context);
       return;
     }
 
     if (_paymentAttemptId == null || _qrGeneratedAt == null) {
       CherryToast.error(
-        title:
-            const Text('Error', style: TextStyle(fontWeight: FontWeight.bold)),
-        description: const Text('No active payment session.'),
+        title: Text('error_label'.tr,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        description: Text('no_active_payment_session'.tr),
       ).show(context);
       return;
     }
@@ -462,9 +460,9 @@ class _PaymentPageState extends State<PaymentPage> {
 
       if (existingPayment.exists) {
         CherryToast.error(
-          title: const Text('Duplicate Transaction',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description: const Text('This transaction ID has already been used.'),
+          title: Text('duplicate_transaction'.tr,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text('transaction_id_used'.tr),
         ).show(context);
         setState(() => _isSubmitting = false);
         return;
@@ -552,10 +550,9 @@ class _PaymentPageState extends State<PaymentPage> {
     } catch (e) {
       if (mounted) {
         CherryToast.error(
-          title: const Text('Error',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          description:
-              const Text('Failed to submit payment. Please try again.'),
+          title: Text('error_label'.tr,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text('something_went_wrong'.tr),
         ).show(context);
       }
     } finally {
@@ -574,8 +571,8 @@ class _PaymentPageState extends State<PaymentPage> {
           backgroundColor: Colors.white,
           elevation: 0,
           leading: const AppBackButton(),
-          title: const Text('Payments',
-              style: TextStyle(
+          title: Text('payments'.tr,
+              style: const TextStyle(
                   color: Color(0xFF0F2E5A),
                   fontSize: 20,
                   fontWeight: FontWeight.bold)),
@@ -624,9 +621,9 @@ class _PaymentPageState extends State<PaymentPage> {
                   }
                 : null,
           ),
-          title: const Text(
-            'Payments',
-            style: TextStyle(
+          title: Text(
+            'payments'.tr,
+            style: const TextStyle(
               color: Color(0xFF0F2E5A),
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -650,9 +647,9 @@ class _PaymentPageState extends State<PaymentPage> {
                 // ── Payment method selection ──
                 if (_platformUpi == null) ...[
                   if (isCodAvailable || isOnlineAvailable) ...[
-                    const Text(
-                      'Select Payment Method',
-                      style: TextStyle(
+                    Text(
+                      'select_payment_method'.tr,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF0F2E5A),
@@ -662,7 +659,7 @@ class _PaymentPageState extends State<PaymentPage> {
                   ],
                   if (isCodAvailable) ...[
                     _buildPaymentOption(
-                      title: 'Cash on Delivery',
+                      title: 'cash_on_delivery'.tr,
                       method: PaymentMethod.cashOnDelivery,
                       icon: Icons.local_shipping,
                     ),
@@ -670,15 +667,15 @@ class _PaymentPageState extends State<PaymentPage> {
                   ],
                   if (isOnlineAvailable) ...[
                     _buildPaymentOption(
-                      title: 'Online Payment (UPI)',
+                      title: 'online_payment_upi'.tr,
                       method: PaymentMethod.upi,
                       icon: Icons.currency_rupee,
                     ),
                   ],
                   if (!isCodAvailable && !isOnlineAvailable)
-                    const Text(
-                      'No payment methods available for the selected items.',
-                      style: TextStyle(color: Colors.red),
+                    Text(
+                      'no_payment_methods'.tr,
+                      style: const TextStyle(color: Colors.red),
                     ),
                 ],
 
@@ -715,9 +712,9 @@ class _PaymentPageState extends State<PaymentPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Total Amount',
-            style: TextStyle(
+          Text(
+            'total_amount'.tr,
+            style: const TextStyle(
               fontSize: 16,
               color: Color(0xFF64748B),
               fontWeight: FontWeight.w500,
@@ -807,7 +804,7 @@ class _PaymentPageState extends State<PaymentPage> {
         child: ElevatedButton.icon(
           onPressed: _fetchUpiAndGenerateQr,
           icon: const Icon(Icons.qr_code),
-          label: const Text('Generate Payment QR'),
+          label: Text('generate_payment_qr'.tr),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF0F2E5A),
             foregroundColor: Colors.white,
@@ -838,9 +835,9 @@ class _PaymentPageState extends State<PaymentPage> {
           ),
           child: Column(
             children: [
-              const Text(
-                'Scan to Pay',
-                style: TextStyle(
+              Text(
+                'scan_to_pay'.tr,
+                style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF0F2E5A)),
@@ -862,7 +859,7 @@ class _PaymentPageState extends State<PaymentPage> {
                 ElevatedButton.icon(
                   onPressed: _fetchUpiAndGenerateQr,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Generate QR'),
+                  label: Text('generate_new_qr'.tr),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0F2E5A),
                     foregroundColor: Colors.white,
@@ -884,13 +881,13 @@ class _PaymentPageState extends State<PaymentPage> {
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.download, size: 20),
-                  label: const Text('Download QR',
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  label: Text('download_qr'.tr,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 8),
-                const Text('Scan QR with any UPI App',
-                    style: TextStyle(
+                Text('scan_qr_upi'.tr,
+                    style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF0F2E5A))),
@@ -913,20 +910,17 @@ class _PaymentPageState extends State<PaymentPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('How to pay?',
-                  style: TextStyle(
+              Text('how_to_pay'.tr,
+                  style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0F2E5A))),
               const SizedBox(height: 16),
-              _buildStepBadge('1', "Tap 'Download QR' button above"),
-              _buildStepBadge('2', 'Open your UPI App (GPay, PhonePe, etc.)'),
-              _buildStepBadge(
-                  '3', "Tap 'Scan QR' and select 'Upload from Gallery'"),
-              _buildStepBadge('4',
-                  'Pay ₹${widget.totalAmount.toStringAsFixed(2)} to NaattuLink'),
-              _buildStepBadge(
-                  '5', 'Take a screenshot of the Payment Success screen'),
+              _buildStepBadge('1', 'step1_download_qr'.tr),
+              _buildStepBadge('2', 'step2_open_upi'.tr),
+              _buildStepBadge('3', 'step3_scan_qr'.tr),
+              _buildStepBadge('4', 'step4_pay_amount'.tr),
+              _buildStepBadge('5', 'step5_screenshot'.tr),
             ],
           ),
         ),
@@ -936,8 +930,8 @@ class _PaymentPageState extends State<PaymentPage> {
         const SizedBox(height: 24),
 
         // After payment section
-        const Text('After Payment is Complete',
-            style: TextStyle(
+        Text('after_payment_complete'.tr,
+            style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87)),
@@ -958,20 +952,20 @@ class _PaymentPageState extends State<PaymentPage> {
                 });
               },
               icon: const Icon(Icons.refresh, color: Colors.red),
-              label: const Text('Scan Another Receipt or Enter Manually',
-                  style: TextStyle(
+              label: Text('scan_another_receipt'.tr,
+                  style: const TextStyle(
                       color: Colors.red, fontWeight: FontWeight.bold)),
             ),
           ),
         ] else ...[
           if (_isExtractingOcr)
-            const Center(
+            Center(
               child: Column(
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 12),
-                  Text('Extracting Transaction Details...',
-                      style: TextStyle(
+                  Text('extracting_receipt_data'.tr,
+                      style: const TextStyle(
                           color: Colors.black54, fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -990,12 +984,13 @@ class _PaymentPageState extends State<PaymentPage> {
                 ),
               ),
               icon: const Icon(Icons.document_scanner),
-              label: const Text('Upload Payment Success Screenshot',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              label: Text('upload_payment_screenshot'.tr,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.bold)),
             ),
           const SizedBox(height: 24),
-          const Text('Or Enter Transaction ID Manually',
-              style: TextStyle(
+          Text('enter_transaction_manually'.tr,
+              style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.black54)),
@@ -1003,7 +998,7 @@ class _PaymentPageState extends State<PaymentPage> {
           TextField(
             controller: _transactionIdController,
             decoration: InputDecoration(
-              hintText: 'e.g., TXN123456789',
+              hintText: 'txn_id_hint'.tr,
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
@@ -1043,8 +1038,8 @@ class _PaymentPageState extends State<PaymentPage> {
             ),
             child: _isSubmitting
                 ? const CircularProgressIndicator(color: Colors.white)
-                : const Text('Submit Payment',
-                    style: TextStyle(
+                : Text('submit_payment'.tr,
+                    style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white)),
@@ -1107,8 +1102,8 @@ class _PaymentPageState extends State<PaymentPage> {
         children: [
           Icon(Icons.timer_off, color: Colors.red.shade400, size: 48),
           const SizedBox(height: 12),
-          const Text('This payment QR has expired.',
-              style: TextStyle(
+          Text('payment_session_expired'.tr,
+              style: const TextStyle(
                   fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
               textAlign: TextAlign.center),
           const SizedBox(height: 8),
@@ -1122,8 +1117,8 @@ class _PaymentPageState extends State<PaymentPage> {
                 backgroundColor: const Color(0xFF0F2E5A),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12))),
-            child: const Text('Generate New QR',
-                style: TextStyle(color: Colors.white)),
+            child: Text('generate_new_qr'.tr,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1204,13 +1199,13 @@ class _PaymentPageState extends State<PaymentPage> {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.check_circle, color: Colors.green, size: 28),
                         SizedBox(width: 8),
-                        Text('Payment Completed',
-                            style: TextStyle(
+                        Text('payment_completed'.tr,
+                            style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green)),
@@ -1223,7 +1218,7 @@ class _PaymentPageState extends State<PaymentPage> {
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0F2E5A))),
                     const SizedBox(height: 24),
-                    _buildReceiptCard('Payment Summary', [
+                    _buildReceiptCard('payment_summary'.tr, [
                       if (r.transactionIds.isNotEmpty)
                         _buildReceiptRow(
                             'Transaction ID', r.transactionIds.first)
@@ -1362,9 +1357,9 @@ class _PaymentPageState extends State<PaymentPage> {
                   child: CircularProgressIndicator(
                       color: Colors.white, strokeWidth: 2),
                 )
-              : const Text(
-                  'Place Order',
-                  style: TextStyle(
+              : Text(
+                  'place_order'.tr,
+                  style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.white),

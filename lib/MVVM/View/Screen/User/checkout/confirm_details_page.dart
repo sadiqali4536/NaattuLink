@@ -194,7 +194,7 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
           if (mounted) {
             CherryToast.warning(
               title: Text(
-                  'This quantity is out of stock. Only $maxStock available.',
+                  'out_of_stock_warning'.trParams({'qty': maxStock.toString()}),
                   style: const TextStyle(color: Colors.black)),
               animationType: AnimationType.fromTop,
               toastPosition: Position.top,
@@ -257,15 +257,23 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
   Future<void> _confirmOrder() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      Get.snackbar('Error', 'Please log in to continue.',
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      CherryToast.error(
+        title: Text('error_label'.tr,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        description: Text('Please log in to continue.'.tr),
+        animationType: AnimationType.fromTop,
+      ).show(Get.context!);
       return;
     }
 
     final loc = _deliveryAddress.value;
     if (loc == null) {
-      Get.snackbar('Error', 'Please select a delivery address.',
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      CherryToast.error(
+        title: Text('error_label'.tr,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        description: Text('Please select a delivery address.'.tr),
+        animationType: AnimationType.fromTop,
+      ).show(Get.context!);
       return;
     }
 
@@ -315,9 +323,9 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: const AppBackButton(),
-        title: const Text(
-          'Confirm Details',
-          style: TextStyle(
+        title: Text(
+          'confirm_details'.tr,
+          style: const TextStyle(
             color: Color(0xFF0F2E5A),
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -364,9 +372,9 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Delivery Address',
-                style: TextStyle(
+              Text(
+                'delivery_details'.tr,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0F2E5A),
@@ -381,7 +389,9 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Obx(() => Text(
-                    _deliveryAddress.value == null ? 'Add Address' : 'Change',
+                    _deliveryAddress.value == null
+                        ? 'add_address'.tr
+                        : 'change_btn'.tr,
                     style: const TextStyle(fontWeight: FontWeight.bold))),
               ),
             ],
@@ -390,9 +400,9 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
           Obx(() {
             final loc = _deliveryAddress.value;
             if (loc == null) {
-              return const Text(
-                'No address selected',
-                style: TextStyle(color: Colors.redAccent, fontSize: 14),
+              return Text(
+                'no_address_selected'.tr,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 14),
               );
             }
             return Row(
@@ -589,7 +599,7 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
                         _liveStockCounts[item.id]! > 0) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Available stock: ${_liveStockCounts[item.id]}',
+                        '${'available_stock'.tr}: ${_liveStockCounts[item.id]}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.orange,
@@ -628,7 +638,7 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '$discountPercentage% OFF',
+                              '$discountPercentage% ${'off'.tr}',
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -643,7 +653,7 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
                     Align(
                       alignment: Alignment.bottomRight,
                       child: Text(
-                        'Total: ₹${(item.offerPrice * item.quantity).toStringAsFixed(0)}',
+                        '${'total_amount'.tr}: ₹${(item.offerPrice * item.quantity).toStringAsFixed(0)}',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -686,9 +696,9 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Price Details',
-            style: TextStyle(
+          Text(
+            'price_details'.tr,
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Color(0xFF0F2E5A),
@@ -698,7 +708,7 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('MRP', style: TextStyle(color: Color(0xFF64748B))),
+              Text('mrp'.tr, style: const TextStyle(color: Color(0xFF64748B))),
               Text('₹${totalMRP.toStringAsFixed(0)}',
                   style: const TextStyle(
                       fontWeight: FontWeight.w500, color: Color(0xFF0F2E5A))),
@@ -709,8 +719,8 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Platform Fee',
-                    style: TextStyle(color: Color(0xFF64748B))),
+                Text('platform_fee'.tr,
+                    style: const TextStyle(color: Color(0xFF64748B))),
                 Text('₹${platformFee.toStringAsFixed(0)}',
                     style: const TextStyle(
                         fontWeight: FontWeight.w500, color: Color(0xFF0F2E5A))),
@@ -721,8 +731,8 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Discount Price',
-                  style: TextStyle(color: Color(0xFF64748B))),
+              Text('discount_price'.tr,
+                  style: const TextStyle(color: Color(0xFF64748B))),
               Text('- ₹${discount.toStringAsFixed(0)}',
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, color: Colors.green)),
@@ -735,9 +745,9 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total Amount',
-                style: TextStyle(
+              Text(
+                'total_amount'.tr,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0F2E5A),
@@ -785,7 +795,7 @@ class _ConfirmDetailsPageState extends State<ConfirmDetailsPage> {
               ),
             ),
             child: Text(
-              hasAddress ? 'Confirm Order' : 'Add Address to Continue',
+              hasAddress ? 'confirm_booking'.tr : 'add_address_to_continue'.tr,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,

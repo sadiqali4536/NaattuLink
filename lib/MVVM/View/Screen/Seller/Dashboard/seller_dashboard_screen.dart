@@ -14,6 +14,8 @@ import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_history_orde
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/order_details_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_all_recent_orders_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_refund_pending_orders_screen.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class SellerDashboardScreen extends StatelessWidget {
   const SellerDashboardScreen({super.key});
@@ -316,11 +318,11 @@ class SellerDashboardScreen extends StatelessWidget {
                               Clipboard.setData(ClipboardData(
                                   text: controller
                                       .currentSeller!.sellerPublicId!));
-                              Get.snackbar(
-                                'Success',
-                                'Seller ID copied',
-                                snackPosition: SnackPosition.BOTTOM,
-                              );
+                              CherryToast.success(
+  title: Text('Success', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Seller ID copied'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                             },
                             child: const Icon(Icons.copy,
                                 size: 12, color: Color(0xFF0EA5E9)),

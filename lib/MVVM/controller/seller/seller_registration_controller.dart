@@ -11,6 +11,8 @@ import 'package:naattulink/MVVM/model/seller/subscription_plan_model.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:naattulink/MVVM/utils/service_functions/auth_lookup_service.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class SellerRegistrationController extends GetxController {
   static SellerRegistrationController get to => Get.find();
@@ -56,9 +58,11 @@ class SellerRegistrationController extends GetxController {
 
       categories.assignAll(fetchedCategories);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to fetch categories: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 5));
+      CherryToast.error(
+  title: Text('Error', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Failed to fetch categories: $e'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
       categories.assignAll(['Other']);
     }
   }

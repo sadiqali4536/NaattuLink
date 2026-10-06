@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:naattulink/MVVM/controller/seller/seller_dashboard_controller.dart';
 import 'package:intl/intl.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/edit_store_profile_screen.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class SellerStoreProfileScreen extends StatelessWidget {
   const SellerStoreProfileScreen({super.key});
@@ -116,11 +118,11 @@ class SellerStoreProfileScreen extends StatelessWidget {
                         onTap: () {
                           Clipboard.setData(
                               ClipboardData(text: seller.sellerPublicId!));
-                          Get.snackbar(
-                            'Success',
-                            'Seller ID copied',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
+                          CherryToast.success(
+  title: Text('Success', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Seller ID copied'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(

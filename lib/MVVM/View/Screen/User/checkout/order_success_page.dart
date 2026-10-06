@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class OrderSuccessPage extends StatelessWidget {
   final String orderId;
@@ -18,9 +20,9 @@ class OrderSuccessPage extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false, // Prevent back button by default
-        title: const Text(
-          'Order Status',
-          style: TextStyle(
+        title: Text(
+          'order_status_label'.tr,
+          style: const TextStyle(
             color: Color(0xFF0F2E5A),
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -49,9 +51,9 @@ class OrderSuccessPage extends StatelessWidget {
 
                 //const SizedBox(height: 5),
 
-                const Text(
-                  'Order Placed!',
-                  style: TextStyle(
+                Text(
+                  'order_placed_title'.tr,
+                  style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF0F2E5A),
@@ -60,10 +62,10 @@ class OrderSuccessPage extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-                const Text(
-                  'Your order has been placed successfully.',
+                Text(
+                  'order_placed_success'.tr,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Color(0xFF64748B),
                   ),
@@ -91,9 +93,9 @@ class OrderSuccessPage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      const Text(
-                        'Order ID',
-                        style: TextStyle(
+                      Text(
+                        'order_id'.tr,
+                        style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF64748B),
                         ),
@@ -116,12 +118,13 @@ class OrderSuccessPage extends StatelessWidget {
                           GestureDetector(
                             onTap: () {
                               Clipboard.setData(ClipboardData(text: orderId));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Order ID copied to clipboard'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
+                              CherryToast.success(
+                                title: Text('order_id_copied'.tr,
+                                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                                animationType: AnimationType.fromTop,
+                                toastPosition: Position.top,
+                                toastDuration: const Duration(seconds: 2),
+                              ).show(context);
                             },
                             child: const Icon(
                               Icons.copy_outlined,
@@ -151,9 +154,9 @@ class OrderSuccessPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      'Continue Shopping',
-                      style: TextStyle(
+                    child: Text(
+                      'continue_shopping_btn'.tr,
+                      style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,

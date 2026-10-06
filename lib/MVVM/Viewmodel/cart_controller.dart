@@ -196,7 +196,11 @@ class CartController extends GetxController {
     if (itemIndex >= 0) {
       final item = cartItems[itemIndex];
       if (item.quantity >= maxStock && maxStock > 0) {
-        Get.snackbar('Stock Limit', 'Cannot exceed available stock limit.');
+        CherryToast.warning(
+  title: Text('Stock Limit', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Cannot exceed available stock limit.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
         return;
       }
 

@@ -2,6 +2,8 @@ import 'package:get/get.dart';
 import 'package:naattulink/MVVM/model/seller/subscription_plan_model.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/transaction_id_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 
 class PaymentOptionsController extends GetxController {
   final SubscriptionPlanModel plan;
@@ -21,8 +23,11 @@ class PaymentOptionsController extends GetxController {
 
   Future<void> proceedToPayment() async {
     if (selectedPaymentMethod.value.isEmpty) {
-      Get.snackbar('Selection Required', 'Please select a payment method.',
-          snackPosition: SnackPosition.BOTTOM);
+      CherryToast.warning(
+  title: Text('Selection Required', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Please select a payment method.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
       return;
     }
 
@@ -38,9 +43,11 @@ class PaymentOptionsController extends GetxController {
         await launchUrl(upiUri, mode: LaunchMode.externalApplication);
       } catch (e) {
         // If no UPI apps are found or it fails
-        Get.snackbar('Notice',
-            'Could not open UPI apps automatically. Proceeding to manual verification.',
-            snackPosition: SnackPosition.TOP);
+        CherryToast.warning(
+  title: Text('Notice', style: const TextStyle(fontWeight: FontWeight.bold)),
+  description: Text('Could not open UPI apps automatically. Proceeding to manual verification.'),
+  animationType: AnimationType.fromTop,
+).show(Get.context!);
       }
 
       // Wait for 3 seconds to simulate time taken in payment app
