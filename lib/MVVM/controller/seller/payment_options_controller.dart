@@ -1,3 +1,6 @@
+import 'dart:ui';
+
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/model/seller/subscription_plan_model.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/transaction_id_screen.dart';
@@ -24,10 +27,11 @@ class PaymentOptionsController extends GetxController {
   Future<void> proceedToPayment() async {
     if (selectedPaymentMethod.value.isEmpty) {
       CherryToast.warning(
-  title: Text('Selection Required', style: const TextStyle(fontWeight: FontWeight.bold)),
-  description: Text('Please select a payment method.'),
-  animationType: AnimationType.fromTop,
-).show(Get.context!);
+        title: Text('Selection Required',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        description: Text('Please select a payment method.'),
+        animationType: AnimationType.fromTop,
+      ).show(Get.context!);
       return;
     }
 
@@ -44,10 +48,12 @@ class PaymentOptionsController extends GetxController {
       } catch (e) {
         // If no UPI apps are found or it fails
         CherryToast.warning(
-  title: Text('Notice', style: const TextStyle(fontWeight: FontWeight.bold)),
-  description: Text('Could not open UPI apps automatically. Proceeding to manual verification.'),
-  animationType: AnimationType.fromTop,
-).show(Get.context!);
+          title: Text('Notice',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          description: Text(
+              'Could not open UPI apps automatically. Proceeding to manual verification.'),
+          animationType: AnimationType.fromTop,
+        ).show(Get.context!);
       }
 
       // Wait for 3 seconds to simulate time taken in payment app

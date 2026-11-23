@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/helpline_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/generic_listing_page.dart';
 import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
@@ -29,6 +30,7 @@ class PublicServicesCategoriesPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
       appBar: AppBar(
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: const Padding(

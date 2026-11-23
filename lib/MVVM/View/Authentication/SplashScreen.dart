@@ -6,6 +6,9 @@ import 'package:naattulink/MVVM/View/Authentication/controller/common_controller
 import 'package:naattulink/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:naattulink/MVVM/View/Authentication/onboarding/onboarding_screen.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:naattulink/MVVM/model/services/app_config_service.dart';
+import 'package:naattulink/MVVM/View/Authentication/force_update_screen.dart';
+import 'package:naattulink/MVVM/View/Authentication/maintenance_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -33,6 +36,20 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     try {
+      await AppConfigService.to.initialize();
+
+      if (AppConfigService.to.isMaintenanceMode.value) {
+        Get.offAll(() => const MaintenanceScreen());
+        return;
+      }
+
+      if (AppConfigService.to.isForceUpdateRequired.value) {
+        Get.offAll(() => const ForceUpdateScreen());
+        return;
+      }
+      
+      bool showOptionalDialog = AppConfigService.to.isOptionalUpdateAvailable.value;
+
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         if (!CommonController.to.onboardingCompleted.value) {
@@ -40,16 +57,19 @@ class _SplashScreenState extends State<SplashScreen> {
           GetStorage().write('onboarding', 'true');
         }
         await AuthController.to.routeAuthenticatedUser(user);
+        if (showOptionalDialog) _showOptionalUpdateDialog();
         return;
       }
 
       final isCompleted = CommonController.to.onboardingCompleted.value;
       if (!isCompleted) {
         Get.offAll(() => const OnboardingScreen());
+        if (showOptionalDialog) _showOptionalUpdateDialog();
         return;
       }
 
       Get.offAll(() => const LoginAndSigning());
+      if (showOptionalDialog) _showOptionalUpdateDialog();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -57,6 +77,25 @@ class _SplashScreenState extends State<SplashScreen> {
         });
       }
     }
+  }
+
+  void _showOptionalUpdateDialog() {
+    Future.delayed(const Duration(seconds: 2), () {
+      if (Get.isDialogOpen == true) return;
+      Get.defaultDialog(
+        title: "Update Available",
+        middleText: "A new version of NaattuLink is available. Would you like to update now?",
+        textConfirm: "Update Now",
+        textCancel: "Later",
+        confirmTextColor: Colors.white,
+        buttonColor: const Color(0xFF0C1F41),
+        cancelTextColor: const Color(0xFF0C1F41),
+        onConfirm: () {
+          Get.back();
+          AppConfigService.to.launchStore();
+        },
+      );
+    });
   }
 
   @override

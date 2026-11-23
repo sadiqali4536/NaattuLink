@@ -14,6 +14,7 @@ import 'package:naattulink/MVVM/model/seller/product_variant.dart';
 import 'package:naattulink/MVVM/model/seller/dynamic_specifications_config.dart';
 import 'package:naattulink/core/imagekit/imagekit_base_service.dart';
 import 'package:naattulink/core/imagekit/imagekit_config.dart';
+import 'package:naattulink/MVVM/controller/seller/subscription_controller.dart';
 
 import 'package:uuid/uuid.dart';
 import 'package:cherry_toast/cherry_toast.dart';
@@ -674,6 +675,12 @@ class AddProductController extends GetxController {
   // --- Submit ---
   Future<void> submitProduct(String status) async {
     if (submittingStatus.value.isNotEmpty) return;
+
+    if (!SubscriptionController.to.hasActiveStoreAccess) {
+      toastError("Subscription has expired. Please renew your subscription to add or edit products.");
+      SubscriptionController.to.promptExpiredDialog();
+      return;
+    }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {

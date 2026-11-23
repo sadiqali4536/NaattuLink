@@ -493,9 +493,9 @@ class _OnlineServicesRegistrationPageState
                 letterSpacing: 0.5),
           ),
           const SizedBox(height: 8),
-          TextFormField(
+          isPassword ? ToggleablePasswordField(controller: ctrl, hint: hint, prefixIcon: icon, validator: validator) : TextFormField(
             controller: ctrl,
-            obscureText: isPassword,
+            obscureText: false,
             keyboardType: type,
             maxLength: maxLength,
             inputFormatters: inputFormatters,
@@ -785,6 +785,63 @@ class _OnlineServicesRegistrationPageState
           ],
         ),
       ],
+    );
+  }
+}
+
+
+class ToggleablePasswordField extends StatefulWidget {
+  final TextEditingController controller;
+  final String hint;
+  final IconData? prefixIcon;
+  final String? Function(String?)? validator;
+  
+  const ToggleablePasswordField({
+    Key? key,
+    required this.controller,
+    required this.hint,
+    this.prefixIcon,
+    this.validator,
+  }) : super(key: key);
+
+  @override
+  State<ToggleablePasswordField> createState() => _ToggleablePasswordFieldState();
+}
+
+class _ToggleablePasswordFieldState extends State<ToggleablePasswordField> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: widget.controller,
+      obscureText: _obscure,
+      validator: widget.validator ??
+          (v) => v == null || v.trim().isEmpty ? 'Required field' : null,
+      decoration: InputDecoration(
+        counterText: "",
+        hintText: widget.hint,
+        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+        prefixIcon: widget.prefixIcon != null
+            ? Icon(widget.prefixIcon, color: Colors.grey[400], size: 20)
+            : null,
+        suffixIcon: IconButton(
+          icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+          onPressed: () => setState(() => _obscure = !_obscure),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey[200]!)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey[200]!)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: Color(0xFF0A235C))),
+      ),
     );
   }
 }

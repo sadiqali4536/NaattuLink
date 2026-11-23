@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:naattulink/MVVM/controller/seller/seller_dashboard_controller.dart';
 import 'package:intl/intl.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/edit_store_profile_screen.dart';
+import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/seller_subscription_details_screen.dart';
+import 'package:naattulink/MVVM/controller/seller/subscription_controller.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:cherry_toast/resources/arrays.dart';
 
@@ -168,6 +170,124 @@ class SellerStoreProfileScreen extends StatelessWidget {
                             : "No description provided.",
                         style: const TextStyle(
                             color: Color(0xFF334155), height: 1.5),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle("Subscription & Plan"),
+                    _buildInfoCard(
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.card_membership,
+                                    color: Color(0xFF0F2E5A), size: 20),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "Current Subscription",
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Obx(() {
+                                      final plan = SubscriptionController
+                                              .to
+                                              .subscriptionDetails
+                                              .value
+                                              ?.planName ??
+                                          seller.selectedPlanName ??
+                                          "Standard Store Plan";
+                                      return Text(
+                                        plan,
+                                        style: const TextStyle(
+                                          color: Color(0xFF1E293B),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Get.to(() =>
+                                      const SellerSubscriptionDetailsScreen());
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F2E5A),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text(
+                                  "Manage",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 16),
+                          Obx(() {
+                            final rem =
+                                SubscriptionController.to.remainingDays.value;
+                            final state =
+                                SubscriptionController.to.state.value;
+                            final isExpired =
+                                state == SubscriptionState.expired;
+                            return Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  isExpired
+                                      ? "Status: Expired"
+                                      : "Remaining Days",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isExpired
+                                        ? Colors.red
+                                        : Colors.grey.shade600,
+                                    fontWeight: isExpired
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                                Text(
+                                  isExpired ? "0 days" : "$rem days left",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isExpired
+                                        ? Colors.red
+                                        : Colors.green.shade700,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 20),

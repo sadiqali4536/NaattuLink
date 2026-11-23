@@ -3,6 +3,11 @@ import 'package:naattulink/MVVM/utils/widget/backbutton/app_back_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:get/get.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:naattulink/MVVM/model/services/app_config_service.dart';
+import 'package:naattulink/MVVM/utils/service_functions/auth_lookup_service.dart';
 import 'service_schedule_page.dart';
 import '../User_Dashboard/user_Dashboard.dart';
 
@@ -414,14 +419,15 @@ class ServiceDetailsPage extends StatelessWidget {
                                         fontSize: 13,
                                       ),
                                     ),
-                                    Text(
-                                      "₹$discountPrice",
-                                      style: TextStyle(
-                                        color: primaryColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                    if (AppConfigService.to.showPrices)
+                                      Text(
+                                        AppConfigService.to.isFreeModeEnabled ? "Free" : "₹$discountPrice",
+                                        style: TextStyle(
+                                          color: primaryColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ],
@@ -662,16 +668,12 @@ class ServiceDetailsPage extends StatelessWidget {
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             right: 16,
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.white.withOpacity(0.9),
-                  child: IconButton(
-                    icon: Icon(Icons.share, color: primaryColor, size: 20),
-                    onPressed: () {},
-                  ),
-                ),
-              ],
+            child: CircleAvatar(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              child: IconButton(
+                icon: Icon(Icons.share, color: primaryColor, size: 20),
+                onPressed: () {},
+              ),
             ),
           ),
 
@@ -697,25 +699,28 @@ class ServiceDetailsPage extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'starting_from'.tr,
-                          style: TextStyle(color: textGrey, fontSize: 11),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          "₹$discountPrice",
-                          style: TextStyle(
-                            color: themeGreen,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                    if (AppConfigService.to.showPrices)
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'starting_from'.tr,
+                            style: TextStyle(color: textGrey, fontSize: 11),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 2),
+                          Text(
+                            AppConfigService.to.isFreeModeEnabled ? "Free" : "₹$discountPrice",
+                            style: TextStyle(
+                              color: themeGreen,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      const SizedBox(),
                     ElevatedButton(
                       onPressed: () {
                         Navigator.push(

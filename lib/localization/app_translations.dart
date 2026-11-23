@@ -4,6 +4,7 @@ class AppTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
         'en': {
+          'queue': 'Queue',
           'choose_language': 'Choose Language',
           'select_preferred_language': 'Choose your language',
           'language_changes_immediately':
@@ -17,7 +18,7 @@ class AppTranslations extends Translations {
           'home': 'Home',
           'workers': 'Workers',
           'bus': 'Bus',
-          'local_ads': 'Local Ads',
+          'local_ads': 'Queue',
           'online_shops': 'Online Shops',
           'book_now': 'Book Now',
           'view_details': 'View Details',
@@ -570,8 +571,11 @@ class AppTranslations extends Translations {
           'order_placed_success': 'Your order has been placed successfully.',
           'order_id_copied': 'Order ID copied to clipboard',
           'continue_shopping_btn': 'Continue Shopping',
+          'coming_soon': 'Coming Soon!',
+          'this_feature_is_coming_soon': 'This feature is coming soon.',
         },
         'ml': {
+          'queue': 'ക്യൂ',
           'choose_language': 'ഭാഷ തിരഞ്ഞെടുക്കുക',
           'select_preferred_language': 'നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക',
           'language_changes_immediately':
@@ -585,7 +589,7 @@ class AppTranslations extends Translations {
           'home': 'ഹോം',
           'workers': 'ജോലിക്കാർ',
           'bus': 'ബസ്',
-          'local_ads': 'പ്രാദേശിക പരസ്യങ്ങൾ',
+          'local_ads': 'ക്യൂ',
           'online_shops': 'ഓൺലൈൻ കടകൾ',
           'book_now': 'ഇപ്പോൾ ബുക്ക് ചെയ്യുക',
           'view_details': 'കൂടുതൽ വിവരങ്ങൾ',
@@ -1159,8 +1163,11 @@ class AppTranslations extends Translations {
           'order_placed_success': 'നിങ്ങളുടെ ഓർഡർ വിജയകരമായി നൽകി.',
           'order_id_copied': 'ഓർഡർ ഐഡി പകർത്തി',
           'continue_shopping_btn': 'ഷോപ്പിംഗ് തുടരുക',
+          'coming_soon': 'ഉടൻ വരുന്നു!',
+          'this_feature_is_coming_soon': 'ഈ ഫീച്ചർ ഉടൻ ലഭ്യമാകും.',
         },
         'hi': {
+          'queue': 'कतार',
           'choose_language': 'भाषा चुनें',
           'select_preferred_language': 'अपनी पसंदीदा भाषा चुनें',
           'language_changes_immediately': 'भाषा तुरंत बदल जाती है।',
@@ -1173,7 +1180,7 @@ class AppTranslations extends Translations {
           'home': 'होम',
           'workers': 'कर्मचारी',
           'bus': 'बस',
-          'local_ads': 'स्थानीय विज्ञापन',
+          'local_ads': 'कतार',
           'online_shops': 'ऑनलाइन दुकानें',
           'book_now': 'अभी बुक करें',
           'view_details': 'विवरण देखें',
@@ -1734,6 +1741,8 @@ class AppTranslations extends Translations {
           'order_placed_success': 'आपका ऑर्डर सफलतापूर्वक दे दिया गया है।',
           'order_id_copied': 'ऑर्डर आईडी कॉपी हो गई',
           'continue_shopping_btn': 'खरीदारी जारी रखें',
+          'coming_soon': 'जल्द आ रहा है!',
+          'this_feature_is_coming_soon': 'यह सुविधा जल्द ही उपलब्ध होगी।',
         },
       };
 }

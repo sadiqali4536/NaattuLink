@@ -7,10 +7,17 @@ import 'package:naattulink/MVVM/View/Screen/Seller/Registration/seller_registrat
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_dashboard_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/subscription_plans_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Registration/seller_verification_screen.dart';
+import 'package:naattulink/MVVM/controller/seller/subscription_controller.dart';
+import 'package:naattulink/MVVM/utils/subscription_date_utils.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 
 class SellerAccessController extends GetxController {
-  static SellerAccessController get to => Get.find();
+  static SellerAccessController get to {
+    if (!Get.isRegistered<SellerAccessController>()) {
+      return Get.put(SellerAccessController(), permanent: true);
+    }
+    return Get.find<SellerAccessController>();
+  }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -38,15 +45,12 @@ class SellerAccessController extends GetxController {
         if (seller.registrationStatus == 'pending_verification') {
           Get.to(() => const SellerVerificationScreen());
         } else if (seller.registrationStatus == 'rejected') {
-          // You might want to create a dedicated Rejected screen in the future
           Get.to(() => const SellerIntroductionScreen());
         } else if (seller.registrationStatus == 'approved') {
-          if (hasSellerAccess) {
-            Get.to(() => const SellerDashboardScreen());
-          } else {
-            // Approved, but subscription is expired or not active
-            Get.to(() => const SubscriptionPlansScreen());
-          }
+          // Both active and expired approved sellers can enter dashboard
+          // Expired sellers have locked Products and Orders tabs with read-only Home & History
+          SubscriptionController.to.initSubscriptionStream();
+          Get.to(() => const SellerDashboardScreen());
         } else {
           // Catch-all for not_started, draft, or any unknown state
           Get.to(() => const SubscriptionPlansScreen());
@@ -76,15 +80,13 @@ class SellerAccessController extends GetxController {
   bool get hasActiveTrial {
     final seller = currentSeller.value;
     if (seller == null || seller.trialEndDate == null) return false;
-    // Note: This relies on device time for quick UI checks,
-    // actual validation should happen via Server timestamp in DB rules or cloud functions.
-    return DateTime.now().isBefore(seller.trialEndDate!);
+    return SubscriptionDateUtils.isSubscriptionActive(seller.trialEndDate);
   }
 
   bool get hasActiveSubscription {
     final seller = currentSeller.value;
     if (seller == null || seller.subscriptionEndDate == null) return false;
-    return DateTime.now().isBefore(seller.subscriptionEndDate!);
+    return SubscriptionDateUtils.isSubscriptionActive(seller.subscriptionEndDate);
   }
 
   bool get hasSellerAccess {
@@ -98,14 +100,14 @@ class SellerAccessController extends GetxController {
     bool isValidSubscription =
         seller.subscriptionStatus == 'active' && hasActiveSubscription;
 
-    // Allow access if they are approved AND have either an active subscription or an active trial
+    // Allow full access if they are approved AND have either an active subscription or an active trial
     return isApproved && (isValidSubscription || hasActiveTrial);
   }
 
   int get remainingTrialDays {
     final seller = currentSeller.value;
     if (seller == null || seller.trialEndDate == null) return 0;
-    final diff = seller.trialEndDate!.difference(DateTime.now()).inDays;
-    return diff > 0 ? diff : 0;
+    return SubscriptionDateUtils.calculateRemainingDays(seller.trialEndDate);
   }
 }
+

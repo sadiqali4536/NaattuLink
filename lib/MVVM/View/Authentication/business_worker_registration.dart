@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:naattulink/MVVM/utils/Founctions/firebase_error_handler.dart';
 import 'package:naattulink/MVVM/View/Screen/Worker/Worker_Dashboard/Worker_Dashboard.dart';
+import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 import 'package:naattulink/MVVM/model/services/app_location_service.dart';
 import 'package:naattulink/MVVM/View/Screen/location/select_location_map_page.dart';
 import 'package:cherry_toast/cherry_toast.dart';
@@ -73,18 +74,74 @@ class _BusinessWorkerRegistrationPageState
 
   void _toastSuccess(String msg) {
     CherryToast.success(
-  title: Text("Success", style: const TextStyle(fontWeight: FontWeight.bold)),
-  description: Text(msg),
-  animationType: AnimationType.fromTop,
-).show(Get.context!);
+      title:
+          Text("Success", style: const TextStyle(fontWeight: FontWeight.bold)),
+      description: Text(msg),
+      animationType: AnimationType.fromTop,
+    ).show(Get.context!);
   }
 
   void _toastError(String msg) {
     CherryToast.error(
-  title: Text("Error", style: const TextStyle(fontWeight: FontWeight.bold)),
-  description: Text(msg),
-  animationType: AnimationType.fromTop,
-).show(Get.context!);
+      title: Text("Error", style: const TextStyle(fontWeight: FontWeight.bold)),
+      description: Text(msg),
+      animationType: AnimationType.fromTop,
+    ).show(Get.context!);
+  }
+
+  int _getIconForCategory(String category) {
+    switch (category) {
+      case "Restaurant":
+        return Icons.restaurant_outlined.codePoint;
+      case "Bakery":
+        return Icons.cake_outlined.codePoint;
+      case "Grocery":
+        return Icons.local_grocery_store_outlined.codePoint;
+      case "Supermarket":
+        return Icons.store_outlined.codePoint;
+      case "Online Store":
+        return Icons.shopping_cart_outlined.codePoint;
+      case "Fruits & Vegetables":
+        return Icons.eco_outlined.codePoint;
+      case "Vegetable & Fruits":
+        return Icons.eco_outlined.codePoint;
+      case "Meat Shop":
+      case "Chicken Shop":
+      case "Fish Shop":
+      case "Meat & Fish":
+        return Icons.set_meal_outlined.codePoint;
+      case "Stationery":
+      case "Stationery Shop":
+      case "Book Store":
+        return Icons.menu_book_outlined.codePoint;
+      case "Mobile Shop":
+        return Icons.phone_android_outlined.codePoint;
+      case "Electronics Store":
+        return Icons.electrical_services_outlined.codePoint;
+      case "Fashion":
+      case "Clothing Store":
+        return Icons.checkroom_outlined.codePoint;
+      case "Footwear":
+      case "Footwear Store":
+        return Icons.dry_cleaning_outlined.codePoint;
+      case "Jewellery":
+        return Icons.diamond_outlined.codePoint;
+      case "Hospital":
+      case "Clinic":
+      case "Medical Centre":
+        return Icons.local_hospital_outlined.codePoint;
+      case "Tuition Centre":
+      case "Coaching Centre":
+        return Icons.school_outlined.codePoint;
+      case "Car Service":
+      case "Bike Service":
+        return Icons.directions_car_outlined.codePoint;
+      case "Electrical Shop":
+      case "Plumbing":
+        return Icons.plumbing_outlined.codePoint;
+      default:
+        return Icons.storefront_outlined.codePoint;
+    }
   }
 
   Future<void> _register() async {
@@ -156,6 +213,7 @@ class _BusinessWorkerRegistrationPageState
         "role": "business",
         "category": "Shops & Businesses",
         "profession": _category,
+        "category_icon": _getIconForCategory(_category),
         "address": _addressCtrl.text.trim(),
         "facility_name": _businessNameCtrl.text.trim(),
         "contact_number": "+91${_contactNumberCtrl.text.trim()}",
@@ -175,7 +233,7 @@ class _BusinessWorkerRegistrationPageState
       });
 
       _toastSuccess("Account created successfully. Awaiting admin approval.");
-      Get.offAll(() => const WorkerDashboard());
+      Get.offAll(() => const user_Dashboard());
     } on FirebaseAuthException catch (e) {
       _toastError(FirebaseErrorHandler.getReadableErrorMessage(e));
     } catch (e) {
@@ -496,75 +554,346 @@ class _BusinessWorkerRegistrationPageState
                 letterSpacing: 0.5),
           ),
           const SizedBox(height: 8),
-          TextFormField(
-            controller: ctrl,
-            obscureText: isPassword,
-            keyboardType: type,
-            maxLength: maxLength,
-            inputFormatters: inputFormatters,
-            readOnly: readOnly,
-            onTap: onTap,
-            validator: validator ??
-                (v) => v == null || v.trim().isEmpty ? 'Required field' : null,
-            decoration: InputDecoration(
-              counterText: "",
-              hintText: hint,
-              prefixText: prefixText,
-              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
-              prefixIcon: icon != null
-                  ? Icon(icon, color: Colors.grey[400], size: 20)
-                  : null,
-              suffixIcon: suffixIcon,
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(color: Colors.grey[200]!)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(color: Colors.grey[200]!)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: Color(0xFF0A235C))),
-              errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: Colors.red)),
-            ),
-          ),
+          isPassword
+              ? ToggleablePasswordField(
+                  controller: ctrl,
+                  hint: hint,
+                  prefixIcon: icon,
+                  validator: validator)
+              : TextFormField(
+                  controller: ctrl,
+                  obscureText: false,
+                  keyboardType: type,
+                  maxLength: maxLength,
+                  inputFormatters: inputFormatters,
+                  readOnly: readOnly,
+                  onTap: onTap,
+                  validator: validator ??
+                      (v) => v == null || v.trim().isEmpty
+                          ? 'Required field'
+                          : null,
+                  decoration: InputDecoration(
+                    counterText: "",
+                    hintText: hint,
+                    prefixText: prefixText,
+                    hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                    prefixIcon: icon != null
+                        ? Icon(icon, color: Colors.grey[400], size: 20)
+                        : null,
+                    suffixIcon: suffixIcon,
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide(color: Colors.grey[200]!)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide(color: Colors.grey[200]!)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: Color(0xFF0A235C))),
+                    errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: Colors.red)),
+                  ),
+                ),
         ],
       ),
     );
   }
 
+  final Map<String, List<String>> _categoryGroups = {
+    "Food & Dining": [
+      "Restaurant",
+      "Bakery",
+      "Cafe",
+      "Fast Food",
+      "Tea Shop",
+      "Juice Shop",
+      "Catering",
+      "Hotel",
+      "Cloud Kitchen",
+      "Sweets & Snacks",
+      "Ice Cream Shop"
+    ],
+    "Shopping & Retail": [
+      "Grocery",
+      "Supermarket",
+      "Retail",
+      "Online Store",
+      "Department Store",
+      "Clothing Store",
+      "Footwear Store",
+      "Electronics Store",
+      "Mobile Shop",
+      "Computer Store",
+      "Furniture Store",
+      "Home Appliances",
+      "Hardware Store",
+      "Gift Shop",
+      "Book Store",
+      "Stationery Shop",
+      "Jewellery",
+      "Cosmetic Store",
+      "Pharmacy",
+      "Meat Shop",
+      "Chicken Shop",
+      "Fish Shop",
+      "Vegetable & Fruits",
+      "Medical Store"
+    ],
+    "Health & Wellness": [
+      "Hospital",
+      "Clinic",
+      "Dental Clinic",
+      "Diagnostic Lab",
+      "Medical Centre",
+      "Physiotherapy",
+      "Optical Store",
+      "Ayurveda",
+      "Wellness Centre"
+    ],
+    "Hair & Beauty": [
+      "Hair Salon",
+      "Barber",
+      "Beauty Salon",
+      "Spa",
+      "Makeup Artist",
+      "Bridal Studio",
+      "Skin Care",
+      "Nail Salon"
+    ],
+    "Automotive & Transport": [
+      "Car Service",
+      "Bike Service",
+      "Automobile Workshop",
+      "Tyre Shop",
+      "Battery Shop",
+      "Car Wash",
+      "Auto Parts",
+      "Vehicle Detailing",
+      "Driving School"
+    ],
+    "Home & Repair Services": [
+      "Electrical Shop",
+      "Plumbing",
+      "AC Service",
+      "Appliance Repair",
+      "Mobile Repair",
+      "Computer Repair",
+      "CCTV Service",
+      "Carpenter",
+      "Welding",
+      "Painting",
+      "Home Cleaning",
+      "Pest Control",
+      "Interior Design"
+    ],
+    "Education": [
+      "Tuition Centre",
+      "Coaching Centre",
+      "Training Centre",
+      "Computer Institute",
+      "Language Institute",
+      "Music Academy",
+      "Dance Academy"
+    ],
+    "Professional Services": [
+      "Travel Agency",
+      "Photography",
+      "Event Management",
+      "Printing",
+      "Advertising",
+      "Courier Service",
+      "Real Estate",
+      "Insurance",
+      "Financial Services",
+      "Legal Services",
+      "Consultancy"
+    ],
+    "Other Local Businesses": [
+      "Laundry",
+      "Dry Cleaning",
+      "Tailoring",
+      "Florist",
+      "Pet Shop",
+      "Pet Care",
+      "Agriculture",
+      "Farm",
+      "Construction",
+      "Building Materials",
+      "Other"
+    ],
+  };
+
+  void _showCategoryBottomSheet() {
+    String searchQuery = '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            // Filter categories based on search
+            final Map<String, List<String>> filteredGroups = {};
+            _categoryGroups.forEach((group, items) {
+              final filteredItems = items
+                  .where((item) =>
+                      item.toLowerCase().contains(searchQuery.toLowerCase()) ||
+                      group.toLowerCase().contains(searchQuery.toLowerCase()))
+                  .toList();
+
+              if (filteredItems.isNotEmpty) {
+                filteredGroups[group] = filteredItems;
+              }
+            });
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.8,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text("Select Business Category",
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF082B63))),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: "Search business category...",
+                        prefixIcon:
+                            const Icon(Icons.search, color: Color(0xFF082B63)),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      ),
+                      onChanged: (val) {
+                        setModalState(() {
+                          searchQuery = val;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: filteredGroups.isEmpty
+                        ? const Center(child: Text("No categories found"))
+                        : ListView.builder(
+                            itemCount: filteredGroups.length,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemBuilder: (context, index) {
+                              final group =
+                                  filteredGroups.keys.elementAt(index);
+                              final items = filteredGroups[group]!;
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12.0),
+                                    child: Text(
+                                      group,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey,
+                                          fontSize: 14),
+                                    ),
+                                  ),
+                                  ...items.map((item) {
+                                    final isSelected = _category == item;
+                                    return ListTile(
+                                      title: Text(item,
+                                          style: TextStyle(
+                                              color: isSelected
+                                                  ? const Color(0xFFF5B400)
+                                                  : const Color(0xFF082B63),
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal)),
+                                      trailing: isSelected
+                                          ? const Icon(Icons.check,
+                                              color: Color(0xFFF5B400))
+                                          : null,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      tileColor: isSelected
+                                          ? const Color(0xFFF5B400)
+                                              .withValues(alpha: 0.1)
+                                          : Colors.transparent,
+                                      onTap: () {
+                                        setState(() {
+                                          _category = item;
+                                        });
+                                        Navigator.pop(context);
+                                      },
+                                    );
+                                  }).toList(),
+                                  const Divider(),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildCategorySelector() {
-    return Column(
-      children: [
-        Row(
+    return GestureDetector(
+      onTap: _showCategoryBottomSheet,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(child: _buildRadioOption("Restaurant")),
-            const SizedBox(width: 12),
-            Expanded(child: _buildRadioOption("Bakery")),
+            Text(
+              _category,
+              style: const TextStyle(
+                color: Color(0xFF082B63),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down, color: Color(0xFF082B63)),
           ],
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildRadioOption("Grocery")),
-            const SizedBox(width: 12),
-            Expanded(child: _buildRadioOption("Retail")),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildRadioOption("Supermarket")),
-            const SizedBox(width: 12),
-            const Spacer(),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
@@ -792,6 +1121,65 @@ class _BusinessWorkerRegistrationPageState
           ],
         ),
       ],
+    );
+  }
+}
+
+class ToggleablePasswordField extends StatefulWidget {
+  final TextEditingController controller;
+  final String hint;
+  final IconData? prefixIcon;
+  final String? Function(String?)? validator;
+
+  const ToggleablePasswordField({
+    Key? key,
+    required this.controller,
+    required this.hint,
+    this.prefixIcon,
+    this.validator,
+  }) : super(key: key);
+
+  @override
+  State<ToggleablePasswordField> createState() =>
+      _ToggleablePasswordFieldState();
+}
+
+class _ToggleablePasswordFieldState extends State<ToggleablePasswordField> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: widget.controller,
+      obscureText: _obscure,
+      validator: widget.validator ??
+          (v) => v == null || v.trim().isEmpty ? 'Required field' : null,
+      decoration: InputDecoration(
+        counterText: "",
+        hintText: widget.hint,
+        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+        prefixIcon: widget.prefixIcon != null
+            ? Icon(widget.prefixIcon, color: Colors.grey[400], size: 20)
+            : null,
+        suffixIcon: IconButton(
+          icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
+              color: Colors.grey),
+          onPressed: () => setState(() => _obscure = !_obscure),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey[200]!)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey[200]!)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: Color(0xFF0A235C))),
+      ),
     );
   }
 }

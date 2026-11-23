@@ -584,6 +584,52 @@ class Profile extends StatelessWidget {
               ),
               const SizedBox(height: 30),
             ],
+            if (data['role'] == 'business') ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A235C),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0A235C).withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.storefront, color: Colors.white, size: 24),
+                          const SizedBox(width: 12),
+                          const Text(
+                            "Business Details",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPharmacyInfoRow(Icons.business, "Facility", data['facility_name'] ?? 'N/A'),
+                      const SizedBox(height: 12),
+                      _buildPharmacyInfoRow(Icons.category, "Category", data['profession'] ?? data['category'] ?? 'N/A'),
+                      const SizedBox(height: 12),
+                      _buildPharmacyInfoRow(Icons.phone_in_talk, "Contact", data['contact_number'] ?? data['phone'] ?? 'N/A'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+            ],
+
             Padding(
               padding: EdgeInsets.only(right: mq.height * 0.37),
               child: Text(

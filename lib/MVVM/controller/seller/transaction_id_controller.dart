@@ -99,41 +99,87 @@ class TransactionIdController extends GetxController {
 
       final orderId = 'SUB-${DateTime.now().millisecondsSinceEpoch}';
 
+      // Check if seller already exists and is an existing approved seller renewing
+      final existingSellerSnap = await sellerRef.get();
+      final bool isExistingApprovedSeller = existingSellerSnap.exists &&
+          existingSellerSnap.data()?['registrationStatus'] == 'approved';
+
       // 1. Save Subscription Transaction Details
       batch.set(subscriptionRef, {
         'orderId': orderId,
         'planId': plan.planId,
+        'planName': authPlanName,
+        'durationDays': authDurationDays,
+        'amount': authPrice,
         'transactionId': transactionId,
         'paymentMethod': paymentMethod,
         'paymentStatus': 'completed',
         'subscriptionStatus': 'pending_verification',
+        'renewalStatus': 'pending',
         'paymentDate': formattedDate,
         'paymentTime': formattedTime,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 2. Update Seller Document with snapshot and strict flags
-      batch.update(sellerRef, {
-        'registrationStatus': 'pending_verification',
-        'subscriptionStatus': 'pending',
-        'adminVerified': false,
-        'storeAccess': false,
-        'selectedPlanId': plan.planId,
-        'selectedPlanName': authPlanName,
-        'planDurationDays': authDurationDays,
-        'planPrice': authPrice,
-        // Explicitly null out dates until admin approves
-        'subscriptionStartDate': null,
-        'subscriptionEndDate': null,
-        'updatedAt': FieldValue.serverTimestamp(),
+      // 2. Add an audit log to subscription_history subcollection
+      final historyRef = sellerRef.collection('subscription_history').doc();
+      batch.set(historyRef, {
+        'historyId': historyRef.id,
+        'sellerId': uid,
+        'planId': plan.planId,
+        'planName': authPlanName,
+        'durationDays': authDurationDays,
+        'amount': authPrice,
+        'actionType': isExistingApprovedSeller ? 'renewal_request' : 'new_subscription_request',
+        'paymentMethod': paymentMethod,
+        'transactionId': transactionId,
+        'performedBy': 'seller',
+        'timestamp': FieldValue.serverTimestamp(),
       });
+
+      // 3. Update Seller Document with snapshot and strict flags
+      if (isExistingApprovedSeller) {
+        // Renewal for existing seller: keep registrationStatus as approved, mark renewalStatus pending
+        batch.update(sellerRef, {
+          'renewalStatus': 'pending',
+          'pendingPlanId': plan.planId,
+          'pendingPlanName': authPlanName,
+          'pendingPlanDuration': authDurationDays,
+          'pendingPlanPrice': authPrice,
+          'pendingTransactionId': transactionId,
+          'pendingPaymentMethod': paymentMethod,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // First-time registration
+        batch.update(sellerRef, {
+          'registrationStatus': 'pending_verification',
+          'subscriptionStatus': 'pending',
+          'adminVerified': false,
+          'storeAccess': false,
+          'selectedPlanId': plan.planId,
+          'selectedPlanName': authPlanName,
+          'planDurationDays': authDurationDays,
+          'planPrice': authPrice,
+          'subscriptionStartDate': null,
+          'subscriptionEndDate': null,
+          'renewalStatus': 'none',
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       // Commit batch
       await batch.commit();
 
-      toastSuccess("Subscription submitted successfully!");
-      Get.offAll(() => const SellerVerificationScreen());
+      toastSuccess(isExistingApprovedSeller
+          ? "Renewal request submitted for verification!"
+          : "Subscription submitted successfully!");
+      if (isExistingApprovedSeller) {
+        Get.back(); // Return to dashboard or details
+      } else {
+        Get.offAll(() => const SellerVerificationScreen());
+      }
     } on FirebaseException catch (e) {
       debugPrint("Firebase error: $e");
       toastError(

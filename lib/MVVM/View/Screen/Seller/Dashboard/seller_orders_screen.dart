@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:naattulink/MVVM/utils/order_status_utils.dart';
+import 'package:naattulink/MVVM/controller/seller/subscription_controller.dart';
 import 'order_details_screen.dart';
 
 class SellerOrdersScreen extends StatefulWidget {
@@ -37,6 +38,11 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!SubscriptionController.to.hasActiveStoreAccess) {
+        SubscriptionController.to.promptExpiredDialog();
+      }
+    });
     _fetchCounts();
     _fetchOrders();
     _scrollController.addListener(() {

@@ -10,6 +10,7 @@ import 'package:naattulink/MVVM/View/Authentication/SplashScreen.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/location_controller.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/auth_controller.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/recommendation_controller.dart';
+import 'package:naattulink/MVVM/model/services/app_config_service.dart';
 import 'package:naattulink/MVVM/Viewmodel/themes_bloc.dart';
 import 'package:naattulink/MVVM/View/Authentication/controller/common_controller.dart';
 import 'package:naattulink/firebase_options.dart';
@@ -61,6 +62,9 @@ void main() async {
   await NotificationService.instance.initialize();
   await Hive.initFlutter();
   await Hive.openBox('saved_routes_box');
+
+  // Register AppConfigService globally
+  Get.put(AppConfigService(), permanent: true);
 
   // Register CommonController
   Get.put(CommonController(), permanent: true);

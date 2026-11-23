@@ -184,12 +184,7 @@ class AuthController extends GetxController {
         }
       } else if (foundCollection == 'shops_businesses' ||
           foundCollection == 'businesses') {
-        final category = data['category'] ?? '';
-        if (category == 'Online services') {
-          Get.offAll(() => const user_Dashboard());
-        } else {
-          Get.offAll(() => const FindingLocationPage());
-        }
+        Get.offAll(() => const user_Dashboard());
       } else if (foundCollection == 'users') {
         Get.offAll(() => const FindingLocationPage());
       }
@@ -374,23 +369,9 @@ class AuthController extends GetxController {
             .where('email', isEqualTo: selectedEmail)
             .get();
         if (query.docs.isNotEmpty) {
-          if (col == 'businesses' || col == 'shops_businesses') {
-            final data = query.docs.first.data();
-            final category = data['category'] ?? '';
-            if (category == 'Online services') {
-              found = true;
-              debugPrint("User found in collection: $col with Online services");
-              break;
-            } else {
-              debugPrint(
-                  "Found in $col but category is '$category', not 'Online services'. Skipping.");
-              continue;
-            }
-          } else {
-            found = true;
-            debugPrint("User found in collection: $col");
-            break;
-          }
+          found = true;
+          debugPrint("User found in collection: $col");
+          break;
         }
       }
 

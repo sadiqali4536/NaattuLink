@@ -1,3 +1,10 @@
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:intl/intl.dart';
+import 'package:naattulink/MVVM/controller/user/queue_controller.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Queue/business_queue_profile_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Queue/pinned_shops_see_all_page.dart';
+import 'package:naattulink/MVVM/View/Screen/User/Queue/active_token_card.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 import 'package:naattulink/MVVM/utils/dynamic_theme_manager.dart';
 import 'package:naattulink/MVVM/utils/dynamic_content_service.dart';
 import 'product_search_page.dart';
@@ -26,6 +33,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:naattulink/MVVM/utils/Founctions/helper_functions.dart';
+import 'package:naattulink/MVVM/utils/service_functions/auth_lookup_service.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/vehicles_auto_taxi_bookings/auto_taxi_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/education_categories_page.dart';
 import 'package:naattulink/MVVM/View/Screen/User/Booking_page/public_services_categories_page.dart';
@@ -66,6 +74,7 @@ class Homepage extends StatefulWidget {
 
 // Public so user_Dashboard can call resetToForYou() via GlobalKey
 class HomepageState extends State<Homepage> {
+  bool _isLiveQueueCardExpanded = true;
   // Pagination State for Endless Feed
   final List<DocumentSnapshot> _loadedFeedProducts = [];
   DocumentSnapshot? _lastFeedDocument;
@@ -325,7 +334,7 @@ class HomepageState extends State<Homepage> {
     "For You",
     "Workers",
     "Bus",
-    "Local Ads",
+    "Queue",
     "Online Shops",
   ];
 
@@ -340,8 +349,7 @@ class HomepageState extends State<Homepage> {
     _homeScrollController.addListener(() {
       if (_homeScrollController.position.pixels >=
           _homeScrollController.position.maxScrollExtent - 500) {
-        if ((selectedCategory == "Workers" ||
-                selectedCategory == "Local Ads") &&
+        if ((selectedCategory == "Workers" || selectedCategory == "Queue") &&
             !_isLoadingWorkers) {
           _loadMoreWorkers();
         } else if ((selectedCategory == "Online Shops" ||
@@ -1091,7 +1099,7 @@ class HomepageState extends State<Homepage> {
                 "For You",
                 "Workers",
                 "Bus",
-                "Local Ads",
+                "Queue",
                 "Online Shops",
               ];
               // Clamp the selected category index
@@ -1106,7 +1114,7 @@ class HomepageState extends State<Homepage> {
                 dbSelected = "All";
               else if (selected == "Bus")
                 dbSelected = "Interior";
-              else if (selected == "Local Ads") dbSelected = "Vehicle";
+              else if (selected == "Queue") dbSelected = "Queue";
 
               // 2. Filter services
               final filtered = allServices.where((doc) {
@@ -2071,9 +2079,9 @@ class HomepageState extends State<Homepage> {
                           )
                         else if (selectedCategory == "Bus")
                           buildBusTab()
-                        else if (selectedCategory == "Local Ads" &&
+                        else if (selectedCategory == "Queue" &&
                             _searchController.text.isEmpty)
-                          buildLocalAdsTab(allServices)
+                          buildQueueTab()
                         else if (selectedCategory == "Online Shops" &&
                             _searchController.text.isEmpty)
                           buildOnlineShopsTab()
@@ -2101,7 +2109,7 @@ class HomepageState extends State<Homepage> {
                         SizedBox(
                           height: selectedCategory == "For You" ||
                                   selectedCategory == "Bus" ||
-                                  selectedCategory == "Local Ads"
+                                  selectedCategory == "Queue"
                               ? 100
                               : 20,
                         ), // bottom bar spacing
@@ -2926,18 +2934,35 @@ class HomepageState extends State<Homepage> {
                             );
                           },
                         ),
-                        buildEssentialItem(
-                          imagePath: 'assets/image/shops.png',
-                          label: 'shops'.tr,
-                          bgColor: const Color.fromARGB(255, 255, 255, 255),
-                          iconColor: const Color(0xFF0F2E5A),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ShopsCategoriesPage(),
-                              ),
-                            );
+                        FutureBuilder<QuerySnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection('businesses')
+                              .where('category',
+                                  isEqualTo: 'Shops & Businesses')
+                              .limit(1)
+                              .get(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData &&
+                                snapshot.data != null &&
+                                snapshot.data!.docs.isNotEmpty) {
+                              return buildEssentialItem(
+                                imagePath: 'assets/image/shops.png',
+                                label: 'shops'.tr,
+                                bgColor:
+                                    const Color.fromARGB(255, 255, 255, 255),
+                                iconColor: const Color(0xFF0F2E5A),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ShopsCategoriesPage(),
+                                    ),
+                                  );
+                                },
+                              );
+                            }
+                            return const SizedBox.shrink();
                           },
                         ),
                         buildEssentialItem(
@@ -6674,194 +6699,1493 @@ class HomepageState extends State<Homepage> {
     );
   }
 
-  // ─── Local Ads Tab ──────────────────────────────────────────────────────────
-  Widget buildLocalAdsTab(List<dynamic> allServices) {
-    if (allServices.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: 60),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(Icons.campaign_outlined, size: 48, color: Color(0xFFCBD5E1)),
-              SizedBox(height: 12),
-              Text(
-                'no_ads_yet'.tr,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF64748B),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+  Widget _buildPinnedShops() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+    return FutureBuilder<List<String>>(
+      future: () async {
+        final prefs = await SharedPreferences.getInstance();
+        final ids = <String>{};
+        final storedPid = prefs.getString('publicId');
+        if (storedPid != null && storedPid.isNotEmpty) {
+          ids.add(storedPid);
+        }
+        ids.add(user.uid);
+        try {
+          final participant =
+              await AuthLookupService.resolveUniversalParticipant(user.uid);
+          if (participant != null) {
+            if (participant.publicId.isNotEmpty) {
+              ids.add(participant.publicId);
+            }
+            if (participant.documentId.isNotEmpty) {
+              ids.add(participant.documentId);
+            }
+          }
+        } catch (_) {}
+
+        try {
+          final query = await FirebaseFirestore.instance
+              .collection('users')
+              .where('authUid', isEqualTo: user.uid)
+              .limit(1)
+              .get();
+          if (query.docs.isNotEmpty) {
+            ids.add(query.docs.first.id);
+          }
+        } catch (_) {}
+
+        return ids.toList();
+      }(),
+      builder: (context, idsSnapshot) {
+        if (idsSnapshot.connectionState == ConnectionState.waiting &&
+            !idsSnapshot.hasData) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: ShimmerEffect(
+              child: Container(
+                height: 160,
+                width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFB800).withAlpha(30),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.local_offer_outlined,
-                      size: 13,
-                      color: Color(0xFFD97706),
-                    ),
-                    SizedBox(width: 4),
-                    Text(
-                      'sponsored'.tr,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFD97706),
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ],
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'local_ads'.tr,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F2E5A),
-                      ),
-                    ),
-                    Text(
-                      'discover_deals'.tr,
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        }
 
-        // ── Category Filter Chips ──────────────────────────────────────────
-        Builder(
-          builder: (context) {
-            // Derive unique categories from the live data
-            final categories = <String>['All'];
-            for (final doc in allServices) {
-              final cat =
-                  ((doc.data() as Map<String, dynamic>)['category'] ?? '')
-                      .toString()
-                      .trim();
-              if (cat.isNotEmpty && !categories.contains(cat)) {
-                categories.add(cat);
+        if (!idsSnapshot.hasData || idsSnapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final userIds = idsSnapshot.data!;
+
+        final streams = userIds.map((id) => FirebaseFirestore.instance
+            .collection('users')
+            .doc(id)
+            .collection('pinnedShops')
+            .snapshots());
+
+        return StreamBuilder<List<QuerySnapshot>>(
+          stream: Rx.combineLatestList(streams),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: ShimmerEffect(
+                  child: Container(
+                    height: 160,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            if (!snapshot.hasData || snapshot.data == null) {
+              return const SizedBox.shrink();
+            }
+
+            final Map<String, QueryDocumentSnapshot> uniquePinned = {};
+            for (final querySnap in snapshot.data!) {
+              for (final doc in querySnap.docs) {
+                if (!uniquePinned.containsKey(doc.id)) {
+                  uniquePinned[doc.id] = doc;
+                }
               }
             }
 
-            // Clamp selection if the category no longer exists
-            if (!categories.contains(_selectedAdCategory)) {
-              _selectedAdCategory = 'All';
+            if (uniquePinned.isEmpty) {
+              return const SizedBox.shrink();
             }
+
+            final pinnedDocs = uniquePinned.values.toList();
+            pinnedDocs.sort((a, b) {
+              final aTime = (a.data() as Map<String, dynamic>?)?['pinnedAt'];
+              final bTime = (b.data() as Map<String, dynamic>?)?['pinnedAt'];
+              if (aTime is Timestamp && bTime is Timestamp) {
+                return bTime.compareTo(aTime);
+              }
+              return 0;
+            });
+
+            final todayDate =
+                "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}";
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Scrollable chip row
-                SizedBox(
-                  height: 40,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: categories.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) {
-                      final cat = categories[i];
-                      final isSelected = _selectedAdCategory == cat;
-
-                      final Map<String, Color> catColors = {
-                        'All': const Color(0xFF0F2E5A),
-                        'Exterior': const Color(0xFF0F2E5A),
-                        'Interior': const Color(0xFF7C3AED),
-                        'Vehicle': const Color(0xFF059669),
-                        'Pet': const Color(0xFFDB2777),
-                        'Home': const Color(0xFFEA580C),
-                      };
-                      final Color chipColor =
-                          catColors[cat] ?? const Color(0xFF0F2E5A);
-
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() => _selectedAdCategory = cat);
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? chipColor
-                                : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected
-                                  ? chipColor
-                                  : const Color(0xFFE2E8F0),
-                            ),
-                          ),
-                          child: Text(
-                            cat,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? Colors.white
-                                  : const Color(0xFF64748B),
-                              fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
-                            ),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F3E7A).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.push_pin,
+                          color: Color(0xFF0F3E7A),
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Pinned Shops',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F2E5A),
                           ),
                         ),
+                      ),
+                      if (pinnedDocs.length >= 5)
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const PinnedShopsSeeAllPage(),
+                              ),
+                            );
+                          },
+                          child: const Row(
+                            children: [
+                              Text(
+                                'See All',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F3E7A),
+                                ),
+                              ),
+                              SizedBox(width: 2),
+                              Icon(Icons.arrow_forward,
+                                  size: 14, color: Color(0xFF0F3E7A)),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 180,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    itemCount: pinnedDocs.length,
+                    itemBuilder: (context, index) {
+                      final data =
+                          pinnedDocs[index].data() as Map<String, dynamic>;
+                      final businessName =
+                          data['shopName'] ?? 'Pinned Business';
+                      final category = data['category'] ?? '';
+                      final profession = data['profession'] ?? '';
+                      final address = data['address'] ?? '';
+                      final businessDocId = data['shopId'] ?? '';
+                      final businessPublicId = data['shopPublicId'] ?? '';
+                      final shopImage = data['shopImage'] ?? '';
+
+                      return StreamBuilder<DocumentSnapshot>(
+                        stream: businessDocId.isNotEmpty
+                            ? FirebaseFirestore.instance
+                                .collection('businesses')
+                                .doc(businessDocId)
+                                .collection('queue_state')
+                                .doc(todayDate)
+                                .snapshots()
+                            : const Stream.empty(),
+                        builder: (context, qsSnap) {
+                          int queueCount = 0;
+                          if (qsSnap.hasData && qsSnap.data!.exists) {
+                            final qsData =
+                                qsSnap.data!.data() as Map<String, dynamic>?;
+                            queueCount = qsData?['waitingCount'] ??
+                                qsData?['waitingLength'] ??
+                                0;
+                          }
+
+                          return Container(
+                            width: 130,
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                              border: Border.all(
+                                  color: const Color(0xFFF1F5F9), width: 1),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(18),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(18),
+                                onTap: () {
+                                  final type = data['type'] ?? 'business';
+                                  if (type == 'worker') {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ServiceDetailsPage(
+                                          category: category,
+                                          serviceName: businessName,
+                                          rating: 4.5,
+                                          originalPrice: 0,
+                                          discount: 0,
+                                          image: shopImage,
+                                          discountPrice: 0,
+                                          providerId: businessPublicId,
+                                          serviceId: businessDocId,
+                                          businessAddress: address,
+                                          serviceType: profession,
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            BusinessQueueProfilePage(
+                                          businessDocId: businessDocId,
+                                          businessPublicId: businessPublicId,
+                                          businessName: businessName,
+                                          category: category,
+                                          profession: profession,
+                                          rating: 4.6,
+                                          address: address,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Stack(
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(6.0),
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                            child: Container(
+                                              height: 85,
+                                              width: double.infinity,
+                                              color: const Color(0xFFF1F5F9),
+                                              child: shopImage.isNotEmpty
+                                                  ? Image.network(
+                                                      shopImage,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context,
+                                                              error,
+                                                              stackTrace) =>
+                                                          const Icon(
+                                                        Icons
+                                                            .storefront_outlined,
+                                                        color:
+                                                            Color(0xFF0F3E7A),
+                                                        size: 30,
+                                                      ),
+                                                    )
+                                                  : const Icon(
+                                                      Icons.storefront_outlined,
+                                                      color: Color(0xFF0F3E7A),
+                                                      size: 30,
+                                                    ),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 10,
+                                          right: 10,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFF0F3E7A),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.push_pin,
+                                              color: Colors.white,
+                                              size: 11,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6),
+                                      child: Text(
+                                        businessName,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'Q • $queueCount',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1D4ED8),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                // Filtered Ad Cards
+                const SizedBox(height: 16),
               ],
-            ); // closes outer Column
+            );
           },
-        ), // closes outer Builder (category derivation + chips)
-        if (_isLoadingWorkers)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+        );
+      },
+    );
+  }
+
+  Widget _buildMyActiveQueues() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
+
+    return FutureBuilder<List<String>>(
+      future: () async {
+        final prefs = await SharedPreferences.getInstance();
+        final ids = <String>{};
+        final storedPid = prefs.getString('publicId');
+        if (storedPid != null && storedPid.isNotEmpty) {
+          ids.add(storedPid);
+        }
+        ids.add(user.uid);
+        try {
+          final participant =
+              await AuthLookupService.resolveUniversalParticipant(user.uid);
+          if (participant != null) {
+            if (participant.publicId.isNotEmpty) {
+              ids.add(participant.publicId);
+            }
+            if (participant.documentId.isNotEmpty) {
+              ids.add(participant.documentId);
+            }
+          }
+        } catch (_) {}
+
+        try {
+          final query = await FirebaseFirestore.instance
+              .collection('users')
+              .where('authUid', isEqualTo: user.uid)
+              .limit(1)
+              .get();
+          if (query.docs.isNotEmpty) {
+            ids.add(query.docs.first.id);
+          }
+        } catch (_) {}
+
+        return ids.toList();
+      }(),
+      builder: (context, idsSnapshot) {
+        if (idsSnapshot.connectionState == ConnectionState.waiting &&
+            !idsSnapshot.hasData) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: ShimmerEffect(
+              child: Container(
+                height: 120,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
             ),
-          ),
+          );
+        }
+
+        if (!idsSnapshot.hasData || idsSnapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final userIds = idsSnapshot.data!;
+
+        final streams = userIds.map((id) => FirebaseFirestore.instance
+            .collection('users')
+            .doc(id)
+            .collection('active_queue')
+            .snapshots());
+
+        return StreamBuilder<List<QuerySnapshot>>(
+          stream: Rx.combineLatestList(streams),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: ShimmerEffect(
+                  child: Container(
+                    height: 120,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            if (!snapshot.hasData || snapshot.data == null) {
+              return const SizedBox.shrink();
+            }
+
+            final now = DateTime.now();
+            final todayStr =
+                "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+            final Map<String, QueryDocumentSnapshot> uniqueActive = {};
+            for (final querySnap in snapshot.data!) {
+              for (final doc in querySnap.docs) {
+                final data = doc.data() as Map<String, dynamic>;
+                final status = data['status'] ?? '';
+                final date = data['queueDate'] ?? '';
+                if (['waiting', 'called', 'in_service'].contains(status) &&
+                    date == todayStr) {
+                  if (!uniqueActive.containsKey(doc.id)) {
+                    uniqueActive[doc.id] = doc;
+                  }
+                }
+              }
+            }
+
+            if (uniqueActive.isEmpty) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEFF6FF),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.confirmation_number_outlined,
+                        color: Color(0xFF2563EB),
+                        size: 30,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No Active Queue',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'You have not joined any queue today. Visit a shop or service to take a token.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final activeDocs = uniqueActive.values.toList();
+            final bool isSingle = activeDocs.length == 1;
+
+            if (isSingle) {
+              final data = activeDocs.first.data() as Map<String, dynamic>;
+              final tokenNumber = data['tokenNumber'] ?? 0;
+              final businessName = data['businessName'] ?? 'Business';
+              final status = data['status'] ?? '';
+              final businessDocId = data['businessId'] ?? '';
+              final businessPublicId = activeDocs.first.id;
+              final joinedAt = data['joinedAt'];
+              String joinedTimeStr = 'Just now';
+              if (joinedAt is Timestamp) {
+                joinedTimeStr = DateFormat('h:mm a').format(joinedAt.toDate());
+              }
+
+              return StreamBuilder<DocumentSnapshot>(
+                stream: businessDocId.isNotEmpty
+                    ? FirebaseFirestore.instance
+                        .collection('businesses')
+                        .doc(businessDocId)
+                        .collection('queue_state')
+                        .doc(todayStr)
+                        .snapshots()
+                    : const Stream.empty(),
+                builder: (context, queueStateSnap) {
+                  final qsData = queueStateSnap.hasData &&
+                          queueStateSnap.data!.exists
+                      ? (queueStateSnap.data!.data() as Map<String, dynamic>)
+                      : <String, dynamic>{};
+
+                  final currentServing = qsData['currentToken'] ??
+                      qsData['currentServingNumber'] ??
+                      0;
+                  final averageServiceMinutes =
+                      data['averageServiceTime'] ?? 15;
+
+                  final peopleAhead =
+                      (tokenNumber - currentServing - 1).clamp(0, 9999);
+                  final totalWaitMinutes =
+                      peopleAhead * (averageServiceMinutes as int);
+                  final leaveByTime = DateTime.now().add(Duration(
+                      minutes: (totalWaitMinutes - 10).clamp(0, 9999)));
+                  final leaveByFormatted =
+                      DateFormat('h:mm a').format(leaveByTime);
+
+                  final bool isUrgent = peopleAhead <= 1 || status == 'called';
+                  final String adviceText = status == 'called'
+                      ? 'Head to counter now!'
+                      : (status == 'in_service'
+                          ? 'Currently serving you'
+                          : (peopleAhead <= 1
+                              ? 'Head to shop now'
+                              : 'Stay home for now'));
+
+                  return Container(
+                    margin:
+                        const EdgeInsets.only(bottom: 18, left: 20, right: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(
+                          color: const Color(0xFFF1F5F9), width: 1.2),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => BusinessQueueProfilePage(
+                                businessDocId: businessDocId,
+                                businessPublicId: businessPublicId,
+                                businessName: businessName,
+                                category: '',
+                                profession: '',
+                                rating: 4.6,
+                                address: '',
+                              ),
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Top Header: Green Dot + LIVE QUEUE + Up/Down Chevron
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 9,
+                                    height: 9,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF009688),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'LIVE QUEUE',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.8,
+                                      color: Color(0xFF00897B),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _isLiveQueueCardExpanded =
+                                            !_isLiveQueueCardExpanded;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFEFF6FF),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        _isLiveQueueCardExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        size: 18,
+                                        color: const Color(0xFF2563EB),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_isLiveQueueCardExpanded) ...[
+                                const SizedBox(height: 14),
+
+                                // Middle Section: Top row (Shop thumbnail + Name + Joined at + In Queue)
+                                // followed by Split Pill Box [Now Serving #18 | Your Token #24]
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Shop thumbnail
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        width: 68,
+                                        height: 68,
+                                        color: const Color(0xFFF1F5F9),
+                                        child: (data['shopImage'] ?? '')
+                                                .isNotEmpty
+                                            ? Image.network(
+                                                data['shopImage'],
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error,
+                                                        stackTrace) =>
+                                                    const Icon(
+                                                        Icons
+                                                            .storefront_outlined,
+                                                        color:
+                                                            Color(0xFF0F3E7A),
+                                                        size: 32),
+                                              )
+                                            : const Icon(
+                                                Icons.storefront_outlined,
+                                                color: Color(0xFF0F3E7A),
+                                                size: 32),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+
+                                    // Shop name, joined at, in-queue badge
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            businessName,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0F172A),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                  Icons.access_time_rounded,
+                                                  size: 13,
+                                                  color: Color(0xFF64748B)),
+                                              const SizedBox(width: 4),
+                                              Flexible(
+                                                child: Text(
+                                                  'Joined at ',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF64748B),
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFEF3C7),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  width: 6,
+                                                  height: 6,
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                    color: Color(0xFFD97706),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 5),
+                                                Flexible(
+                                                  child: Text(
+                                                    'In Queue • #$tokenNumber',
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Color(0xFF92400E),
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+
+                                // Split Box: [ Now Serving #18 | Your Token #24 ]
+                                Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                        width: 1),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      // Left side: Now Serving (mint bg)
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 10),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFEFFDF5),
+                                            borderRadius: BorderRadius.only(
+                                              topLeft: Radius.circular(15),
+                                              bottomLeft: Radius.circular(15),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Text(
+                                                'Now Serving',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF00897B),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                currentServing > 0 ? '#' : '--',
+                                                style: const TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Color(0xFF00897B),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Vertical Divider line
+                                      Container(
+                                        width: 1,
+                                        height: 50,
+                                        color: const Color(0xFFE2E8F0),
+                                      ),
+
+                                      // Right side: Your Token (soft blue bg)
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 10),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFEFF6FF),
+                                            borderRadius: BorderRadius.only(
+                                              topRight: Radius.circular(15),
+                                              bottomRight: Radius.circular(15),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Text(
+                                                'Your Token',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF1D4ED8),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '#$tokenNumber',
+                                                style: const TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Color(0xFF1D4ED8),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+
+                                // Bottom Container: Home Icon + Leave Home By 10:42 AM | Stay home for now
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9)
+                                        .withOpacity(0.65),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                        width: 0.8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.home_rounded,
+                                          color: Color(0xFF475569), size: 22),
+                                      const SizedBox(width: 10),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Leave Home By',
+                                            style: TextStyle(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w500,
+                                              color: Color(0xFF64748B),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 1),
+                                          Text(
+                                            leaveByFormatted,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                              color: Color(0xFF0F172A),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        height: 28,
+                                        width: 1,
+                                        color: const Color(0xFFCBD5E1),
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: isUrgent
+                                              ? const Color(0xFFFEF2F2)
+                                              : const Color(0xFFDCFCE7),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          border: Border.all(
+                                            color: isUrgent
+                                                ? const Color(0xFFFECACA)
+                                                : const Color(0xFFBBF7D0),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 7,
+                                              height: 7,
+                                              decoration: BoxDecoration(
+                                                color: isUrgent
+                                                    ? Colors.red
+                                                    : const Color(0xFF16A34A),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              adviceText,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: isUrgent
+                                                    ? const Color(0xFFB91C1C)
+                                                    : const Color(0xFF15803D),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            }
+
+            // Multiple active queues fallback
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F3E7A).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.groups_rounded,
+                          color: Color(0xFF0F3E7A),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Your Queue',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F2E5A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  itemCount: activeDocs.length,
+                  itemBuilder: (context, index) {
+                    final data =
+                        activeDocs[index].data() as Map<String, dynamic>;
+                    final tokenNumber = data['tokenNumber'] ?? 0;
+                    final businessName = data['businessName'] ?? 'Business';
+                    final businessDocId = data['businessId'] ?? '';
+                    final businessPublicId = activeDocs[index].id;
+                    final joinedAt = data['joinedAt'];
+                    String joinedTimeStr = 'Just now';
+                    if (joinedAt is Timestamp) {
+                      joinedTimeStr =
+                          DateFormat('h:mm a').format(joinedAt.toDate());
+                    }
+
+                    return StreamBuilder<DocumentSnapshot>(
+                      stream: businessDocId.isNotEmpty
+                          ? FirebaseFirestore.instance
+                              .collection('businesses')
+                              .doc(businessDocId)
+                              .collection('queue_state')
+                              .doc(todayStr)
+                              .snapshots()
+                          : const Stream.empty(),
+                      builder: (context, queueStateSnap) {
+                        final qsData = queueStateSnap.hasData &&
+                                queueStateSnap.data!.exists
+                            ? (queueStateSnap.data!.data()
+                                as Map<String, dynamic>)
+                            : <String, dynamic>{};
+
+                        final currentServing = qsData['currentToken'] ??
+                            qsData['currentServingNumber'] ??
+                            0;
+                        final averageServiceMinutes =
+                            data['averageServiceTime'] ?? 15;
+
+                        final peopleAhead =
+                            (tokenNumber - currentServing - 1).clamp(0, 9999);
+                        final totalWaitMinutes =
+                            peopleAhead * (averageServiceMinutes as int);
+
+                        return Container(
+                          margin: const EdgeInsets.only(
+                              bottom: 14, left: 20, right: 20),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                            border: Border.all(
+                                color: const Color(0xFFF1F5F9), width: 1.2),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      BusinessQueueProfilePage(
+                                    businessDocId: businessDocId,
+                                    businessPublicId: businessPublicId,
+                                    businessName: businessName,
+                                    category: '',
+                                    profession: '',
+                                    rating: 4.6,
+                                    address: '',
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    width: 72,
+                                    height: 72,
+                                    color: const Color(0xFFF1F5F9),
+                                    child: (data['shopImage'] ?? '').isNotEmpty
+                                        ? Image.network(
+                                            data['shopImage'],
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error,
+                                                    stackTrace) =>
+                                                const Icon(
+                                                    Icons.storefront_outlined,
+                                                    color: Color(0xFF0F3E7A),
+                                                    size: 32),
+                                          )
+                                        : const Icon(Icons.storefront_outlined,
+                                            color: Color(0xFF0F3E7A), size: 32),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        businessName,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.access_time_rounded,
+                                              size: 13,
+                                              color: Color(0xFF64748B)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Joined at $joinedTimeStr',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF64748B),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEF3C7),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFFD97706),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              'In Queue • #$tokenNumber',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF92400E),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEEF2FF),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'Est. Wait',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF4F46E5),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '$totalWaitMinutes min',
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF1E1B4B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildQueueAdBanner() {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _globalContactStream,
+      builder: (context, globalContactSnap) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: _productAdsStream,
+          builder: (context, productAdsSnap) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: _advertisementsStream,
+              builder: (context, bannerSnap) {
+                final bannerDocs = bannerSnap.data?.docs ?? [];
+                final now = DateTime.now();
+                final filteredDocs = bannerDocs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final position = data['bannerPosition'] ?? '';
+                  final showOnHome = data['showInForYou'] ?? true;
+                  final bool matchesCategory = (position == 'Home -> Queue') ||
+                      (position == 'Home -> For You') ||
+                      showOnHome;
+                  if (!matchesCategory) return false;
+                  final startTimestamp = data['startDate'] as Timestamp?;
+                  final endTimestamp = data['endDate'] as Timestamp?;
+                  if (startTimestamp != null &&
+                      startTimestamp.toDate().isAfter(now)) {
+                    return false;
+                  }
+                  if (endTimestamp != null &&
+                      endTimestamp.toDate().isBefore(now)) {
+                    return false;
+                  }
+                  return true;
+                }).toList();
+
+                final List<Widget> bannerItems = [];
+
+                final globalContactData =
+                    globalContactSnap.data?.data() as Map<String, dynamic>?;
+                if (globalContactData != null &&
+                    globalContactData['bannerImageUrl'] != null &&
+                    globalContactData['bannerImageUrl'].toString().isNotEmpty) {
+                  bannerItems.add(
+                    buildPromoCard(
+                      imageUrl: globalContactData['bannerImageUrl'],
+                      onTap: () {
+                        _showGlobalContactSheet(
+                          context,
+                          globalContactData,
+                        );
+                      },
+                    ),
+                  );
+                }
+
+                final List<Widget> adminBanners =
+                    filteredDocs.map<Widget>((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return buildPromoCard(
+                    imageUrl: data['imageUrl'] ?? '',
+                    bannerImageUrl: data['bannerImageUrl'],
+                    title: data['title'] ?? '',
+                    buttonText: data['buttonText'],
+                    buttonBackgroundColor: data['buttonBackgroundColor'],
+                    buttonTextColor: data['buttonTextColor'],
+                    onTap: () async {
+                      final action =
+                          data['bannerAction'] ?? data['buttonAction'] ?? '';
+                      final value =
+                          data['actionValue'] ?? data['website'] ?? '';
+                      if (action == 'Open Product') {
+                        await _openProductFromBanner(
+                          context,
+                          data['productId']?.toString(),
+                        );
+                      } else if (action == 'Open Service') {
+                        await _openServiceFromBanner(
+                          context,
+                          data['serviceId']?.toString(),
+                        );
+                      } else if (action == 'Open In-App Page') {
+                        await _openInAppPageFromBanner(
+                          context,
+                          data['inAppPageId']?.toString() ??
+                              data['actionValue']?.toString(),
+                        );
+                      } else if (action == 'Open URL' &&
+                          value.toString().isNotEmpty) {
+                        final uri = Uri.tryParse(value.toString());
+                        if (uri != null) {
+                          try {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          } catch (e) {
+                            debugPrint('Error launching URL: $e');
+                          }
+                        }
+                      }
+                    },
+                    onButtonTap: () async {
+                      final action =
+                          data['buttonAction'] ?? data['bannerAction'] ?? '';
+                      final value =
+                          data['actionValue'] ?? data['website'] ?? '';
+                      if (action == 'Open Product') {
+                        await _openProductFromBanner(
+                          context,
+                          data['productId']?.toString(),
+                        );
+                      } else if (action == 'Open Service') {
+                        await _openServiceFromBanner(
+                          context,
+                          data['serviceId']?.toString(),
+                        );
+                      } else if (action == 'Open In-App Page') {
+                        await _openInAppPageFromBanner(
+                          context,
+                          data['inAppPageId']?.toString() ??
+                              data['actionValue']?.toString(),
+                        );
+                      } else if (action == 'Open URL' &&
+                          value.toString().isNotEmpty) {
+                        final uri = Uri.tryParse(value.toString());
+                        if (uri != null) {
+                          try {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          } catch (e) {
+                            debugPrint('Error launching URL: $e');
+                          }
+                        }
+                      }
+                    },
+                  );
+                }).toList();
+                bannerItems.addAll(adminBanners);
+
+                if (bannerItems.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                final bannerCount = bannerItems.length;
+                int localActiveIndex = 0;
+
+                return StatefulBuilder(
+                  builder: (context, setLocalState) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          CarouselSlider(
+                            items: bannerItems,
+                            options: CarouselOptions(
+                              autoPlay: bannerCount > 1,
+                              enlargeCenterPage: false,
+                              aspectRatio: 1.8,
+                              viewportFraction: 1,
+                              onPageChanged: (index, reason) {
+                                setLocalState(() {
+                                  localActiveIndex = index;
+                                });
+                              },
+                            ),
+                          ),
+                          if (bannerCount > 1)
+                            Positioned(
+                              bottom: 24,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(bannerCount, (index) {
+                                  return AnimatedContainer(
+                                    duration: const Duration(milliseconds: 250),
+                                    width: localActiveIndex == index ? 24 : 8,
+                                    height: 8,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 3),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(4),
+                                      color: localActiveIndex == index
+                                          ? const Color(0xFF0F3E7A)
+                                          : Colors.grey.withOpacity(0.4),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget buildQueueTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildPinnedShops(),
+        _buildMyActiveQueues(),
+        _buildQueueAdBanner(),
         const SizedBox(height: 20),
       ],
     );

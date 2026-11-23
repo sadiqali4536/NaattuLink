@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/controller/seller/add_product_controller.dart';
+import 'package:naattulink/MVVM/controller/seller/subscription_controller.dart';
 import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 
 String formatPrice(dynamic value) {
@@ -39,6 +40,14 @@ class AddProductScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Route guard check: If expired, immediately pop and prompt dialog
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!SubscriptionController.to.hasActiveStoreAccess) {
+        Get.back();
+        SubscriptionController.to.promptExpiredDialog();
+      }
+    });
+
     final controller = Get.put(AddProductController());
     final isEdit = controller.productToEdit != null;
     final primaryColor = const Color(0xFF0F2E5A);

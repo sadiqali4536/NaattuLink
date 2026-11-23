@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:naattulink/MVVM/controller/seller/seller_dashboard_controller.dart';
+import 'package:naattulink/MVVM/controller/seller/subscription_controller.dart';
+import 'package:naattulink/MVVM/View/Screen/Seller/Subscription/subscription_plans_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_orders_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Dashboard/seller_products_screen.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Products/add_product_screen.dart';
@@ -27,134 +29,311 @@ class SellerDashboardScreen extends StatelessWidget {
     }
     final controller = SellerDashboardController.to;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Obx(() {
-        if (controller.bottomNavIndex.value == 1) {
-          return const SellerOrdersScreen();
-        }
-        if (controller.bottomNavIndex.value == 2) {
-          return const SellerProductsScreen();
-        }
-        if (controller.bottomNavIndex.value == 3) {
-          return const SellerHistoryOrdersScreen();
-        }
-        return Stack(
-          children: [
-            Column(
-              children: [
-                _buildHeader(controller),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding:
-                        const EdgeInsets.only(bottom: 80), // for bottom nav
-                    child: Column(
-                      children: [
-                        const SizedBox(
-                            height: 70), // space for overlapping card
-                        Obx(() {
-                          final hasOutOfStock =
-                              controller.outOfStockProducts.value > 0;
-                          final hasRefundPending =
-                              controller.refundPendingOrders.value > 0;
+    return Obx(() {
+      final int currentTab = controller.bottomNavIndex.value;
+      // Tab 0 has a dark navy header (#0F2E5A), so status bar icons must be light (white).
+      // Tabs 1, 2, 3 have white/light appbars, so status bar icons must be dark.
+      final SystemUiOverlayStyle overlayStyle = currentTab == 0
+          ? SystemUiOverlayStyle.light.copyWith(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.light,
+              statusBarBrightness: Brightness.dark,
+            )
+          : SystemUiOverlayStyle.dark.copyWith(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.dark,
+              statusBarBrightness: Brightness.light,
+            );
 
-                          return Column(
-                            children: [
-                              if (hasOutOfStock)
-                                Container(
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 5),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade50,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border:
-                                        Border.all(color: Colors.red.shade200),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.warning_amber_rounded,
-                                          color: Colors.red),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          "Products count (${controller.outOfStockProducts.value}) are out of stock. Please update the stock.",
-                                          style: const TextStyle(
-                                            color: Colors.red,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                          ),
-                                        ),
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayStyle,
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          body: Obx(() {
+            if (controller.bottomNavIndex.value == 1) {
+              return const SellerOrdersScreen();
+            }
+            if (controller.bottomNavIndex.value == 2) {
+              return const SellerProductsScreen();
+            }
+            if (controller.bottomNavIndex.value == 3) {
+              return const SellerHistoryOrdersScreen();
+            }
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    _buildHeader(controller),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding:
+                            const EdgeInsets.only(bottom: 80), // for bottom nav
+                        child: Column(
+                          children: [
+                            const SizedBox(
+                                height: 70), // space for overlapping card
+                            Obx(() {
+                              final hasOutOfStock =
+                                  controller.outOfStockProducts.value > 0;
+                              final hasRefundPending =
+                                  controller.refundPendingOrders.value > 0;
+                              final subCtrl = SubscriptionController.to;
+                              final subState = subCtrl.state.value;
+                              final remDays = subCtrl.remainingDays.value;
+
+                              return Column(
+                                children: [
+                                  // Subscription Expiring Soon Reminder Banner (7 days or fewer)
+                                  if (subState ==
+                                      SubscriptionState.expiringSoon)
+                                    Container(
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 20, vertical: 5),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                            color: Colors.amber.shade300),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              if (hasRefundPending)
-                                GestureDetector(
-                                  onTap: () {
-                                    Get.to(() =>
-                                        const SellerRefundPendingOrdersScreen());
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 20, vertical: 5),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.shade50,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                          color: Colors.orange.shade200),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                            Icons.currency_rupee,
-                                            color: Colors.orange),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            "You have ${controller.refundPendingOrders.value} online order(s) pending refund. Please process them within 2 days.",
-                                            style: const TextStyle(
-                                              color: Colors.orange,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 13,
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.timer_outlined,
+                                              color: Color(0xFFD97706)),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  "Subscription Expiring Soon ($remDays ${remDays == 1 ? 'day' : 'days'} left)",
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF92400E),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  "Renew now to keep your store active and avoid interruption in receiving orders.",
+                                                  style: TextStyle(
+                                                    color:
+                                                        Colors.amber.shade900,
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Icon(Icons.arrow_forward_ios,
-                                            color: Colors.orange, size: 14),
-                                      ],
+                                          const SizedBox(width: 8),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              Get.to(() =>
+                                                  const SubscriptionPlansScreen());
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  const Color(0xFFD97706),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 6),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              "Renew",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              if (!hasOutOfStock && !hasRefundPending)
-                                const SizedBox.shrink(),
-                            ],
-                          );
-                        }),
-                        //_buildQuickActions(),
-                        _buildTodaysOverview(controller),
-                        _buildPromotionalBanner(),
-                        _buildRecentOrders(controller),
-                        _buildBottomStats(controller),
-                      ],
+
+                                  // Subscription Expired Banner
+                                  if (subState == SubscriptionState.expired)
+                                    Container(
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 20, vertical: 5),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                            color: Colors.red.shade300),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.lock_clock,
+                                              color: Colors.red),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: const [
+                                                Text(
+                                                  "Store Subscription Expired",
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 2),
+                                                Text(
+                                                  "Product & order management are locked. Renew now to restore full access.",
+                                                  style: TextStyle(
+                                                    color: Color(0xFFB91C1C),
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              subCtrl.promptExpiredDialog();
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  Colors.red.shade700,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 6),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              "Renew",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                  if (hasOutOfStock)
+                                    Container(
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 20, vertical: 5),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                            color: Colors.red.shade200),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                              Icons.warning_amber_rounded,
+                                              color: Colors.red),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              "Products count (${controller.outOfStockProducts.value}) are out of stock. Please update the stock.",
+                                              style: const TextStyle(
+                                                color: Colors.red,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (hasRefundPending)
+                                    GestureDetector(
+                                      onTap: () {
+                                        Get.to(() =>
+                                            const SellerRefundPendingOrdersScreen());
+                                      },
+                                      child: Container(
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 20, vertical: 5),
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.shade50,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                              color: Colors.orange.shade200),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.currency_rupee,
+                                                color: Colors.orange),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                "You have ${controller.refundPendingOrders.value} online order(s) pending refund. Please process them within 2 days.",
+                                                style: const TextStyle(
+                                                  color: Colors.orange,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Icon(Icons.arrow_forward_ios,
+                                                color: Colors.orange, size: 14),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  if (!hasOutOfStock && !hasRefundPending)
+                                    const SizedBox.shrink(),
+                                ],
+                              );
+                            }),
+                            //_buildQuickActions(),
+                            _buildTodaysOverview(controller),
+                            _buildPromotionalBanner(),
+                            _buildRecentOrders(controller),
+                            _buildBottomStats(controller),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+                Positioned(
+                  top: 130, // adjust based on header height
+                  left: 20,
+                  right: 20,
+                  child: _buildStoreCard(controller),
                 ),
               ],
-            ),
-            Positioned(
-              top: 130, // adjust based on header height
-              left: 20,
-              right: 20,
-              child: _buildStoreCard(controller),
-            ),
-          ],
-        );
-      }),
-      bottomNavigationBar: Obx(() => _buildBottomNavBar(controller)),
-    );
+            );
+          }),
+          bottomNavigationBar: Obx(() => _buildBottomNavBar(controller)),
+        ),
+      );
+    });
   }
 
   Widget _buildHeader(SellerDashboardController controller) {
@@ -221,180 +400,192 @@ class SellerDashboardScreen extends StatelessWidget {
 
   Widget _buildStoreCard(SellerDashboardController controller) {
     final seller = controller.currentSeller;
+    final subCtrl = SubscriptionController.to;
 
-    String subscriptionText = "Active Subscription";
-    Color subscriptionColor = Colors.green;
+    return Obx(() {
+      final days = subCtrl.remainingDays.value;
+      final state = subCtrl.state.value;
 
-    if (seller != null) {
-      if (seller.subscriptionStatus == 'trial' && seller.trialEndDate != null) {
-        final daysLeft = seller.trialEndDate!.difference(DateTime.now()).inDays;
+      String subscriptionText = "Active Subscription";
+      Color subscriptionColor = Colors.green;
+
+      if (state == SubscriptionState.renewalPending) {
+        subscriptionText = "Renewal Pending";
+        subscriptionColor = Colors.orange;
+      } else if (state == SubscriptionState.suspended) {
+        subscriptionText = "Subscription Suspended";
+        subscriptionColor = Colors.red;
+      } else if (state == SubscriptionState.expired) {
+        subscriptionText = "Subscription Expired";
+        subscriptionColor = Colors.red;
+      } else if (state == SubscriptionState.expiringSoon) {
         subscriptionText =
-            daysLeft > 0 ? "$daysLeft days left trial" : "Trial expired";
-        if (daysLeft <= 0) subscriptionColor = Colors.red;
-      } else if (seller.subscriptionStatus == 'active' &&
-          seller.subscriptionEndDate != null) {
-        final daysLeft =
-            seller.subscriptionEndDate!.difference(DateTime.now()).inDays;
-        subscriptionText =
-            daysLeft > 0 ? "$daysLeft days left" : "Subscription expired";
-        if (daysLeft <= 0) subscriptionColor = Colors.red;
+            "$days ${days == 1 ? 'day' : 'days'} left (Expiring Soon)";
+        subscriptionColor = Colors.orange.shade800;
+      } else if (days > 0) {
+        subscriptionText = "$days ${days == 1 ? 'day' : 'days'} left";
+        subscriptionColor = Colors.green;
       } else {
-        subscriptionText = seller.subscriptionStatus.toUpperCase();
+        subscriptionText = "Active Subscription";
       }
-    }
 
-    String openSince = "Open recently";
-    if (seller?.storeOpenedAt != null) {
-      openSince = "Open since ${seller!.storeOpenedAt!.year}";
-    } else if (seller?.createdAt != null) {
-      openSince = "Open since ${seller!.createdAt!.year}";
-    }
+      String openSince = "Opened recently";
+      if (seller?.storeOpenedAt != null) {
+        openSince =
+            "Opened on ${seller!.storeOpenedAt!.day.toString().padLeft(2, '0')} ${_getMonthName(seller.storeOpenedAt!.month)} ${seller.storeOpenedAt!.year}";
+      } else if (seller?.createdAt != null) {
+        openSince =
+            "Opened on ${seller!.createdAt!.day.toString().padLeft(2, '0')} ${_getMonthName(seller.createdAt!.month)} ${seller.createdAt!.year}";
+      }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.storefront,
-                    color: Color(0xFF0F2E5A), size: 28),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      controller.currentSeller?.storeName ?? "My Store",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F2E5A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      controller.currentSeller?.category ?? "Category",
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      ),
-                    ),
-                    if (controller.currentSeller?.sellerPublicId != null &&
-                        controller
-                            .currentSeller!.sellerPublicId!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            "ID: ${controller.currentSeller!.sellerPublicId}",
-                            style: const TextStyle(
-                              color: Color(0xFF0EA5E9),
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: () {
-                              Clipboard.setData(ClipboardData(
-                                  text: controller
-                                      .currentSeller!.sellerPublicId!));
-                              CherryToast.success(
-  title: Text('Success', style: const TextStyle(fontWeight: FontWeight.bold)),
-  description: Text('Seller ID copied'),
-  animationType: AnimationType.fromTop,
-).show(Get.context!);
-                            },
-                            child: const Icon(Icons.copy,
-                                size: 12, color: Color(0xFF0EA5E9)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Get.to(() => const SellerStoreProfileScreen());
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0F6FF),
-                    borderRadius: BorderRadius.circular(20),
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
-                    children: const [
+                  child: const Icon(Icons.storefront,
+                      color: Color(0xFF0F2E5A), size: 28),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        "View",
-                        style: TextStyle(
-                          color: Color(0xFF0EA5E9),
+                        controller.currentSeller?.storeName ?? "My Store",
+                        style: const TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F2E5A),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        controller.currentSeller?.category ?? "Category",
+                        style: const TextStyle(
+                          color: Colors.grey,
                           fontSize: 12,
                         ),
                       ),
-                      SizedBox(width: 4),
-                      Icon(Icons.arrow_forward,
-                          color: Color(0xFF0EA5E9), size: 14),
+                      if (controller.currentSeller?.sellerPublicId != null &&
+                          controller
+                              .currentSeller!.sellerPublicId!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              "ID: ${controller.currentSeller!.sellerPublicId}",
+                              style: const TextStyle(
+                                color: Color(0xFF0EA5E9),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(
+                                    text: controller
+                                        .currentSeller!.sellerPublicId!));
+                                CherryToast.success(
+                                  title: const Text('Success',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  description: const Text('Seller ID copied'),
+                                  animationType: AnimationType.fromTop,
+                                ).show(Get.context!);
+                              },
+                              child: const Icon(Icons.copy,
+                                  size: 12, color: Color(0xFF0EA5E9)),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.circle, color: subscriptionColor, size: 8),
-                  const SizedBox(width: 6),
-                  Text(
-                    subscriptionText,
-                    style: TextStyle(
-                      color: subscriptionColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                GestureDetector(
+                  onTap: () {
+                    Get.to(() => const SellerStoreProfileScreen());
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F6FF),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: const [
+                        Text(
+                          "View",
+                          style: TextStyle(
+                            color: Color(0xFF0EA5E9),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.arrow_forward,
+                            color: Color(0xFF0EA5E9), size: 14),
+                      ],
                     ),
                   ),
-                ],
-              ),
-              Text(
-                openSince,
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.circle, color: subscriptionColor, size: 8),
+                    const SizedBox(width: 6),
+                    Text(
+                      subscriptionText,
+                      style: TextStyle(
+                        color: subscriptionColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  openSince,
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildQuickActions() {
@@ -686,28 +877,44 @@ class SellerDashboardScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Get.to(() => const AddProductScreen());
-                    },
-                    icon: const Icon(Icons.add_circle_outline,
-                        size: 18, color: Colors.white),
-                    label: Text(
-                      hasProducts ? "Add Products" : "Add First Product",
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F2E5A),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                Obx(() {
+                  final canAdd = SubscriptionController.to.hasActiveStoreAccess;
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        if (!canAdd) {
+                          SubscriptionController.to.promptExpiredDialog();
+                          return;
+                        }
+                        Get.to(() => const AddProductScreen());
+                      },
+                      icon: Icon(
+                        canAdd ? Icons.add_circle_outline : Icons.lock_outline,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        canAdd
+                            ? (hasProducts
+                                ? "Add Products"
+                                : "Add First Product")
+                            : "Add Product (Locked)",
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: canAdd
+                            ? const Color(0xFF0F2E5A)
+                            : Colors.grey.shade600,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                }),
               ],
             ),
           ),
@@ -884,7 +1091,8 @@ class SellerDashboardScreen extends StatelessWidget {
                       'deliveryFee': 0,
                       'paymentMethod': data['paymentMethod'] ?? 'Unknown',
                       'paymentStatus': data['paymentStatus'] ?? 'Pending',
-                      'transactionId': data['transactionId'], 'Refuned': data['Refuned'],
+                      'transactionId': data['transactionId'],
+                      'Refuned': data['Refuned'],
                       'formattedReceipt': data['formattedReceipt'],
                       'ocrAmountExtracted': data['ocrAmountExtracted'],
                       'ocrReceiverUpi': data['ocrReceiverUpi'],
@@ -1425,21 +1633,29 @@ class SellerDashboardScreen extends StatelessWidget {
     final int currentIndex = controller.bottomNavIndex.value;
 
     final List<Map<String, dynamic>> items = [
-      {'icon': Icons.home_outlined, 'activeIcon': Icons.home, 'label': 'Home'},
+      {
+        'icon': Icons.home_outlined,
+        'activeIcon': Icons.home,
+        'label': 'Home',
+        'isLocked': false,
+      },
       {
         'icon': Icons.shopping_bag_outlined,
         'activeIcon': Icons.shopping_bag,
-        'label': 'Orders'
+        'label': 'Orders',
+        'isLocked': !SubscriptionController.to.hasActiveStoreAccess,
       },
       {
         'icon': Icons.inventory_2_outlined,
         'activeIcon': Icons.inventory_2,
-        'label': 'Products'
+        'label': 'Products',
+        'isLocked': !SubscriptionController.to.hasActiveStoreAccess,
       },
       {
         'icon': Icons.history_outlined,
         'activeIcon': Icons.history,
-        'label': 'History'
+        'label': 'History',
+        'isLocked': false,
       },
     ];
 
@@ -1462,6 +1678,11 @@ class SellerDashboardScreen extends StatelessWidget {
           child: Row(
             children: List.generate(items.length, (index) {
               final bool isSelected = currentIndex == index;
+              final bool isLocked = items[index]['isLocked'] as bool;
+              final IconData normalIcon = items[index]['icon'] as IconData;
+              final IconData activeIcon =
+                  items[index]['activeIcon'] as IconData;
+
               return Expanded(
                 child: GestureDetector(
                   onTap: () => controller.changeTabIndex(index),
@@ -1482,28 +1703,58 @@ class SellerDashboardScreen extends StatelessWidget {
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(
-                          isSelected
-                              ? items[index]['activeIcon'] as IconData
-                              : items[index]['icon'] as IconData,
-                          color: isSelected
-                              ? const Color(0xFF0F2E5A)
-                              : const Color(0xFFADB5BD),
-                          size: 24,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Icon(
+                              isSelected ? activeIcon : normalIcon,
+                              color: isLocked
+                                  ? Colors.grey.shade400
+                                  : (isSelected
+                                      ? const Color(0xFF0F2E5A)
+                                      : const Color(0xFFADB5BD)),
+                              size: 24,
+                            ),
+                            if (isLocked)
+                              Positioned(
+                                right: -4,
+                                top: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.lock,
+                                    size: 9,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 3),
-                      Text(
-                        items[index]['label'] as String,
-                        style: TextStyle(
-                          fontSize: 10,
-                          height: 1.0,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w400,
-                          color: isSelected
-                              ? const Color(0xFF0F2E5A)
-                              : const Color(0xFFADB5BD),
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            items[index]['label'] as String,
+                            style: TextStyle(
+                              fontSize: 10,
+                              height: 1.0,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                              color: isLocked
+                                  ? Colors.grey.shade400
+                                  : (isSelected
+                                      ? const Color(0xFF0F2E5A)
+                                      : const Color(0xFFADB5BD)),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                     ],

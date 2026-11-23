@@ -103,6 +103,8 @@ class ScrollableHorizontalButtons extends StatelessWidget {
       case 'vehicle':
       case 'local ads':
         return Icons.campaign_outlined;
+      case 'queue':
+        return Icons.confirmation_number_outlined;
       case 'pet':
       case 'market':
       case 'online shops':

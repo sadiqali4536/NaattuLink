@@ -221,6 +221,35 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ],
+            if (widget.role == 'business') ...[
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.only(left: 60),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5B400),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.storefront, color: Colors.white, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.profession ?? 'Business',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 15),
             Expanded(
               child: Container(

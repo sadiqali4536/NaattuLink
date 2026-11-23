@@ -8,6 +8,8 @@ import 'package:naattulink/MVVM/View/Screen/User/Booking_page/booking_confirm.da
 import 'package:naattulink/MVVM/View/Screen/User/User_Dashboard/user_Dashboard.dart';
 import 'package:naattulink/MVVM/View/Screen/User/checkout/confirm_details_page.dart';
 import 'package:naattulink/MVVM/model/user/cart_item_model.dart';
+import 'package:naattulink/MVVM/utils/subscription_date_utils.dart';
+import 'package:naattulink/MVVM/utils/Config/Toast.dart';
 import 'package:get/get.dart';
 
 class CartPage extends StatefulWidget {
@@ -396,11 +398,49 @@ class _CartPageState extends State<CartPage> {
               _buildCheckoutBar(
                 itemCount: _cartDocs.length,
                 totalPrice: totalPrice,
-                onCheckout: () {
+                onCheckout: () async {
+                  // Verify that sellers of the items in cart have active subscriptions
                   final cartItems = _cartDocs
                       .map((doc) => CartItemModel.fromMap(
                           doc.data() as Map<String, dynamic>, doc.id))
                       .toList();
+
+                  // Check seller subscription statuses
+                  Set<String> sellerIds = {};
+                  for (var item in cartItems) {
+                    if (item.sellerId != null && item.sellerId!.isNotEmpty) {
+                      sellerIds.add(item.sellerId!);
+                    }
+                  }
+
+                  if (sellerIds.isNotEmpty) {
+                    for (String sid in sellerIds) {
+                      try {
+                        final sellerDoc = await FirebaseFirestore.instance
+                            .collection('sellers')
+                            .doc(sid)
+                            .get();
+                        if (sellerDoc.exists && sellerDoc.data() != null) {
+                          final sdata = sellerDoc.data()!;
+                          final subStatus = sdata['subscriptionStatus']?.toString() ?? '';
+                          DateTime? expDate;
+                          if (sdata['subscriptionEndDate'] is Timestamp) {
+                            expDate = (sdata['subscriptionEndDate'] as Timestamp).toDate();
+                          }
+                          final isActive = SubscriptionDateUtils.isSubscriptionActive(expDate);
+                          if (!isActive || subStatus != 'active') {
+                            final storeName = sdata['storeName'] ?? "Store";
+                            toastError(
+                                "$storeName is currently not accepting new orders due to subscription expiry.");
+                            return;
+                          }
+                        }
+                      } catch (e) {
+                        debugPrint("Error validating seller subscription during checkout: $e");
+                      }
+                    }
+                  }
+
                   Get.to(() => ConfirmDetailsPage(
                       cartItems: cartItems, isFromCart: true));
                 },

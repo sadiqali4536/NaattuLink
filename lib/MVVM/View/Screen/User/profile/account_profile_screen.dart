@@ -529,7 +529,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
               if (userSnapshot.hasData && userSnapshot.data!.exists) {
                 final data = userSnapshot.data!.data() as Map<String, dynamic>?;
                 if (data != null) {
-                  return _buildProfileContent(context, data);
+                  return _buildProfileContent(
+                      context, data, identity['collection']!, identity['id']!);
                 }
               }
 
@@ -541,7 +542,8 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
     );
   }
 
-  Widget _buildProfileContent(BuildContext context, Map<String, dynamic> data) {
+  Widget _buildProfileContent(BuildContext context, Map<String, dynamic> data,
+      String collection, String docId) {
     final String appVersion =
         Theme.of(context).platform == TargetPlatform.android
             ? androidVersion
@@ -764,6 +766,142 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
               ],
             ),
           ),
+
+          if (role == 'business') ...[
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    )
+                  ],
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F2E5A).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.store_mall_directory_outlined,
+                              color: Color(0xFF0F2E5A), size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Shop Details',
+                            style: TextStyle(
+                              color: Color(0xFF0F2E5A),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _showEditBusinessDialog(context, data),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.edit,
+                                size: 18, color: Color(0xFF0F2E5A)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (facilityName.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.business,
+                              color: Colors.grey, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              facilityName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    Row(
+                      children: [
+                        const Icon(Icons.category_outlined,
+                            color: Colors.grey, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Category: ',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        Text(
+                          profession.isNotEmpty ? profession : category,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFF5B400),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (contactNumber.isNotEmpty && contactNumber != phone) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Icon(Icons.phone_outlined,
+                              color: Colors.grey, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            contactNumber,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          if (role == 'business' ||
+              role == 'shop' ||
+              role == 'shops_businesses' ||
+              collection == 'businesses' ||
+              collection == 'shops_businesses') ...[
+            const SizedBox(height: 16),
+            QueueSettingsCard(
+              data: data,
+              collection: collection,
+              docId: docId,
+            ),
+          ],
 
           if (role == 'healthcare' && profession == 'Emergency Services') ...[
             const SizedBox(height: 16),
@@ -1538,6 +1676,169 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
     );
   }
 
+  void _showEditBusinessDialog(
+      BuildContext context, Map<String, dynamic> data) {
+    final TextEditingController facilityCtrl =
+        TextEditingController(text: data['facility_name'] ?? '');
+
+    String currentContact = data['contact_number'] ?? '';
+    if (currentContact.startsWith('+91')) {
+      currentContact = currentContact.substring(3).trim();
+    }
+    final TextEditingController contactCtrl =
+        TextEditingController(text: currentContact);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      offset: const Offset(0, 2),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F2E5A).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.storefront_outlined,
+                          color: Color(0xFF0F2E5A)),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Edit Shop Details',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F2E5A),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Update your business information',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Form content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildModernTextField(
+                        controller: facilityCtrl,
+                        label: "Shop Name",
+                        icon: Icons.store_mall_directory_outlined,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildModernTextField(
+                        controller: contactCtrl,
+                        label: "Shop Phone Number",
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                        prefixText: "+91 ",
+                        maxLength: 10,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Save Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F2E5A),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          onPressed: () async {
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
+                            if (uid != null) {
+                              await FirebaseFirestore.instance
+                                  .collection('businesses')
+                                  .doc(uid)
+                                  .update({
+                                'facility_name': facilityCtrl.text.trim(),
+                                'contact_number':
+                                    "+91${contactCtrl.text.trim()}",
+                              });
+                            }
+                            Navigator.pop(context);
+                          },
+                          child: Text(
+                            'save_changes'.tr,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showEditOnlineServicesDialog(
       BuildContext context, Map<String, dynamic> data) {
     final TextEditingController facilityCtrl =
@@ -2008,6 +2309,234 @@ class _AccountProfileScreenState extends State<AccountProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class QueueSettingsCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String collection;
+  final String docId;
+
+  const QueueSettingsCard({
+    super.key,
+    required this.data,
+    required this.collection,
+    required this.docId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    bool queueEnabled = data['queueEnabled'] == true;
+    int averageServiceTime = data['averageServiceTime'] ?? 20;
+    int maxQueueCapacity = data['maxQueueCapacity'] ?? 30;
+    bool allowCancelToken = data['allowCancelToken'] ?? true;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            )
+          ],
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Queue & Token',
+                          style: TextStyle(
+                            color: Color(0xFF0F2E5A),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Manage your customer queue',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: queueEnabled,
+                    onChanged: (val) {
+                      FirebaseFirestore.instance
+                          .collection(collection)
+                          .doc(docId)
+                          .update({'queueEnabled': val});
+                    },
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: const Color(0xFFF5B400),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                queueEnabled ? 'Queue is Enabled' : 'Queue is Disabled',
+                style: TextStyle(
+                  color: queueEnabled
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              if (queueEnabled) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Average Service Time',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  subtitle: Text('$averageServiceTime minutes'),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () {
+                    _showEditDialog(context, 'averageServiceTime',
+                        averageServiceTime, 'minutes');
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Maximum Queue Capacity',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  subtitle: Text('$maxQueueCapacity customers'),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () {
+                    _showEditDialog(context, 'maxQueueCapacity',
+                        maxQueueCapacity, 'customers');
+                  },
+                ),
+                const Divider(),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Allow Customer Cancellation',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  value: allowCancelToken,
+                  onChanged: (val) {
+                    FirebaseFirestore.instance
+                        .collection(collection)
+                        .doc(docId)
+                        .update({'allowCancelToken': val});
+                  },
+                  activeThumbColor: Colors.white,
+                  activeTrackColor: const Color(0xFFF5B400),
+                ),
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditDialog(
+      BuildContext context, String field, int currentValue, String suffix) {
+    final TextEditingController ctrl =
+        TextEditingController(text: currentValue.toString());
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            field == 'averageServiceTime'
+                ? 'Update Service Time'
+                : 'Update Capacity',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F2E5A),
+              fontSize: 18,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: ctrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  suffixText: suffix,
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF0F2E5A)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actionsPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                    color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F2E5A),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              onPressed: () {
+                int? val = int.tryParse(ctrl.text);
+                if (val != null && val > 0) {
+                  FirebaseFirestore.instance
+                      .collection(collection)
+                      .doc(docId)
+                      .update({field: val});
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Save',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

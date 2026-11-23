@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:naattulink/MVVM/controller/seller/seller_access_controller.dart';
+import 'package:naattulink/MVVM/controller/seller/subscription_controller.dart';
 import 'package:naattulink/MVVM/model/seller/seller_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -34,13 +35,13 @@ class SellerDashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Heavy queries moved to onReady to avoid freezing the route transition
+    // Ensure subscription controller stream is active
+    SubscriptionController.to.initSubscriptionStream();
   }
 
   @override
   void onReady() {
     super.onReady();
-    // Add a slight delay to let the page transition animation finish smoothly
     Future.delayed(const Duration(milliseconds: 300), () {
       fetchProductCount();
       fetchDashboardMetrics();
@@ -49,11 +50,19 @@ class SellerDashboardController extends GetxController {
   }
 
   void changeTabIndex(int index) {
+    // Access control check for locked tabs (1 = Orders, 2 = Products)
+    final subCtrl = SubscriptionController.to;
+    if ((index == 1 || index == 2) && !subCtrl.hasActiveStoreAccess) {
+      subCtrl.promptExpiredDialog();
+      return;
+    }
+
     bottomNavIndex.value = index;
     if (index == 0) {
       // Refresh metrics when coming back to dashboard tab
       fetchProductCount();
       fetchDashboardMetrics();
+      subCtrl.recalculateRemaining();
     }
   }
 

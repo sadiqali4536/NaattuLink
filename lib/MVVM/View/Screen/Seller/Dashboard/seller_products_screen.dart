@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:naattulink/MVVM/View/Screen/Seller/Products/add_product_screen.dart';
+import 'package:naattulink/MVVM/controller/seller/subscription_controller.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -340,32 +341,45 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
   }
 
   Widget _buildAddProductButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () async {
-          await Get.to(() => const AddProductScreen());
-          _fetchCounts();
-          _fetchProducts();
-        },
-        icon: const Icon(Icons.add, color: Colors.white, size: 18),
-        label: const Text(
-          "ADD PRODUCT",
-          style: TextStyle(
+    return Obx(() {
+      final canAdd = SubscriptionController.to.hasActiveStoreAccess;
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () async {
+            if (!canAdd) {
+              SubscriptionController.to.promptExpiredDialog();
+              return;
+            }
+            await Get.to(() => const AddProductScreen());
+            _fetchCounts();
+            _fetchProducts();
+          },
+          icon: Icon(
+            canAdd ? Icons.add : Icons.lock_outline,
             color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
+            size: 18,
+          ),
+          label: Text(
+            canAdd ? "ADD PRODUCT" : "ADD PRODUCT (LOCKED)",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor:
+                canAdd ? const Color(0xFF0F2E5A) : Colors.grey.shade600,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
           ),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0F2E5A),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildSearchBar() {
@@ -826,6 +840,10 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                             if (value == 'view') {
                               _showProductDetails(product);
                             } else if (value == 'edit') {
+                              if (!SubscriptionController.to.hasActiveStoreAccess) {
+                                SubscriptionController.to.promptExpiredDialog();
+                                return;
+                              }
                               Get.dialog(
                                   const Center(
                                       child: CircularProgressIndicator()),
@@ -856,10 +874,18 @@ class _SellerProductsScreenState extends State<SellerProductsScreen> {
                               _fetchCounts();
                               _fetchProducts();
                             } else if (value == 'update_stock') {
+                              if (!SubscriptionController.to.hasActiveStoreAccess) {
+                                SubscriptionController.to.promptExpiredDialog();
+                                return;
+                              }
                               await _showStockUpdateDialog(product);
                               _fetchCounts();
                               _fetchProducts();
                             } else if (value == 'delete') {
+                              if (!SubscriptionController.to.hasActiveStoreAccess) {
+                                SubscriptionController.to.promptExpiredDialog();
+                                return;
+                              }
                               bool confirm = await Get.dialog<bool>(
                                     Dialog(
                                       shape: RoundedRectangleBorder(
